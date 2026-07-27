@@ -72,9 +72,17 @@ export default function Home() {
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [packageType, setPackageType] = useState("Rs. 16/km Mumbai start");
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
   const [advanceAmount, setAdvanceAmount] = useState("500");
   const [paymentStatus, setPaymentStatus] = useState("");
+  const [bookingStatus, setBookingStatus] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<{
+    bookingId: string;
+    estimatedFare: number;
+    billableKm: number;
+  } | null>(null);
   const numericDistance = Math.max(0, Number(distanceKm) || 0);
   const billableDistance =
     tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
@@ -101,6 +109,7 @@ export default function Home() {
       `Date/Time: ${date || "Please confirm"}`,
       `Name: ${name || "Guest"}`,
       `Mobile: ${mobile || "Please confirm"}`,
+      `Package: ${packageType}`,
       `Payment: ${paymentMode}`,
     ].join("\n");
   }, [
@@ -114,6 +123,7 @@ export default function Home() {
     date,
     name,
     mobile,
+    packageType,
     paymentMode,
   ]);
 
@@ -121,9 +131,48 @@ export default function Home() {
     bookingText,
   )}`;
 
-  function submitBooking(event: FormEvent<HTMLFormElement>) {
+  async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    setIsBooking(true);
+    setBookingStatus("");
+    setConfirmedBooking(null);
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tripType,
+          vehicle,
+          destination: drop,
+          distanceKm: numericDistance,
+          date,
+          name,
+          mobile,
+          paymentMode,
+        }),
+      });
+      const result = (await response.json()) as {
+        booking?: {
+          bookingId: string;
+          estimatedFare: number;
+          billableKm: number;
+        };
+        error?: string;
+      };
+
+      if (!response.ok || !result.booking) {
+        setBookingStatus(result.error || "Booking save nahi ho payi.");
+        return;
+      }
+
+      setConfirmedBooking(result.booking);
+      setBookingStatus("Booking site par live save ho gayi.");
+    } catch {
+      setBookingStatus("Network issue ki wajah se booking save nahi ho payi.");
+    } finally {
+      setIsBooking(false);
+    }
   }
 
   async function startPayment() {
@@ -357,7 +406,10 @@ export default function Home() {
               </label>
               <label>
                 Select Package
-                <select>
+                <select
+                  value={packageType}
+                  onChange={(event) => setPackageType(event.target.value)}
+                >
                   <option>Rs. 16/km Mumbai start</option>
                   <option>Full day local rental</option>
                   <option>Half day local rental</option>
@@ -407,12 +459,27 @@ export default function Home() {
                 <option>Corporate billing</option>
               </select>
             </label>
-            <button className="submit-button" type="submit">
-              Continue
+            <button className="submit-button" type="submit" disabled={isBooking}>
+              {isBooking ? "Saving Booking..." : "Book Now"}
             </button>
+            {bookingStatus ? (
+              <p className={confirmedBooking ? "booking-success" : "booking-error"}>
+                {bookingStatus}
+              </p>
+            ) : null}
+            {confirmedBooking ? (
+              <div className="booking-confirmation" aria-live="polite">
+                <span>Booking ID</span>
+                <strong>{confirmedBooking.bookingId}</strong>
+                <small>
+                  {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
+                  {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
+                </small>
+              </div>
+            ) : null}
             <p className="microcopy">
-              Fare, driver details and payment link are confirmed by Vishnu
-              Tours before final booking.
+              Booking site par live save hoti hai. Fare Rs. 16/km Mumbai start
+              point se calculate hota hai.
             </p>
           </form>
         </div>
