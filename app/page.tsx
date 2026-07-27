@@ -57,6 +57,7 @@ const destinationDistances: Record<string, number> = {
 
 const destinationSuggestions = [
   "Pune",
+  "Pune Airport",
   "Nashik",
   "Shirdi",
   "Surat",
@@ -79,6 +80,25 @@ const destinationSuggestions = [
   "Udaipur",
   "Chennai",
   "Kolkata",
+  "Agra",
+  "Amritsar",
+  "Ayodhya",
+  "Chandigarh",
+  "Dehradun",
+  "Gurugram",
+  "Gwalior",
+  "Jodhpur",
+  "Kota",
+  "Lucknow",
+  "Mathura",
+  "Mount Abu",
+  "Noida",
+  "Patna",
+  "Prayagraj",
+  "Rajkot",
+  "Ranchi",
+  "Varanasi",
+  "Vapi",
 ];
 
 const packageOptions = [
@@ -233,7 +253,31 @@ type GoogleAutocomplete = {
 };
 
 function getDestinationDistance(destination: string) {
-  return destinationDistances[destination.trim().toLowerCase()];
+  const normalizedDestination = destination.trim().toLowerCase();
+  const directDistance = destinationDistances[normalizedDestination];
+
+  if (directDistance) {
+    return directDistance;
+  }
+
+  const matchingCity = Object.keys(destinationDistances).find((city) =>
+    normalizedDestination.includes(city),
+  );
+
+  return matchingCity ? destinationDistances[matchingCity] : undefined;
+}
+
+function getPlaceSuggestions(
+  input: string,
+  suggestions: string[],
+  fallbackCount: number,
+) {
+  const normalizedInput = input.trim().toLowerCase();
+  const filtered = normalizedInput
+    ? suggestions.filter((item) => item.toLowerCase().includes(normalizedInput))
+    : suggestions;
+
+  return filtered.slice(0, fallbackCount);
 }
 
 function formatInr(amount: number) {
@@ -339,6 +383,9 @@ export default function Home() {
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [showVehicleStep, setShowVehicleStep] = useState(false);
+  const [activeSuggestionField, setActiveSuggestionField] = useState<
+    "from" | "to" | null
+  >(null);
   const [confirmedBooking, setConfirmedBooking] = useState<{
     bookingId: string;
     estimatedFare: number;
@@ -382,6 +429,12 @@ export default function Home() {
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
   const formattedFare = formatInr(fareTotal);
   const pickupAllowed = isMumbaiPickup(startPoint);
+  const visibleFromSuggestions = getPlaceSuggestions(startPoint, fromSuggestions, 7);
+  const visibleDestinationSuggestions = getPlaceSuggestions(
+    drop,
+    destinationSuggestions,
+    8,
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -815,32 +868,76 @@ export default function Home() {
                 ),
               )}
             </div>
-            <label>
+            <label className="place-field">
               From - Mumbai pickup only
               <input
                 ref={fromInputRef}
                 value={startPoint}
                 onChange={(event) => updateStartPoint(event.target.value)}
+                onFocus={() => setActiveSuggestionField("from")}
+                onBlur={() =>
+                  window.setTimeout(() => setActiveSuggestionField(null), 140)
+                }
                 list="from-suggestions"
                 placeholder="Search Mumbai pickup location"
                 required
               />
+              {activeSuggestionField === "from" && visibleFromSuggestions.length ? (
+                <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
+                  {visibleFromSuggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        updateStartPoint(item);
+                        setActiveSuggestionField(null);
+                      }}
+                    >
+                      <span>Pickup</span>
+                      <strong>{item}</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {!pickupAllowed ? (
                 <small className="field-error">
                   Hum Mumbai se bahar pickup nahi karte. Mumbai area select karein.
                 </small>
               ) : null}
             </label>
-            <label>
+            <label className="place-field">
               To - All India destination
               <input
                 ref={toInputRef}
                 value={drop}
                 onChange={(event) => updateDestination(event.target.value)}
+                onFocus={() => setActiveSuggestionField("to")}
+                onBlur={() =>
+                  window.setTimeout(() => setActiveSuggestionField(null), 140)
+                }
                 list="destination-suggestions"
                 placeholder="Search any India destination"
                 required
               />
+              {activeSuggestionField === "to" && visibleDestinationSuggestions.length ? (
+                <div className="place-suggestions" aria-label="India destination suggestions">
+                  {visibleDestinationSuggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        updateDestination(item);
+                        setActiveSuggestionField(null);
+                      }}
+                    >
+                      <span>Destination</span>
+                      <strong>{item}</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </label>
             <div className="form-grid">
               <label>
