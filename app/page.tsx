@@ -181,40 +181,30 @@ const vehicles = [
     type: "Premium MUV",
     seats: "6-7 seats",
     bestFor: "VIP, family, airport and highway travel",
-    image:
-      "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Toyota Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 seats",
     bestFor: "Executive guests, weddings and long routes",
-    image:
-      "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
     seats: "6-7 seats",
     bestFor: "Round trip, family tour and station pickup",
-    image:
-      "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Maruti Rumion",
     type: "Spacious MUV",
     seats: "6-7 seats",
     bestFor: "Local booking, outstation and group travel",
-    image:
-      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Toyota Etios",
     type: "Sedan",
     seats: "4 seats",
     bestFor: "City rides, business visits and one day travel",
-    image:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
@@ -304,7 +294,7 @@ function loadGooglePlaces() {
 
   return new Promise<boolean>((resolve) => {
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+    script.src = `https://maps.google.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.dataset.googlePlaces = "true";
@@ -753,19 +743,20 @@ export default function Home() {
       <section className="hero" id="home">
         <div className="taxi-visual" aria-hidden="true">
           <span className="road-line" />
-          <img
-            src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1200&q=80"
-            alt=""
-          />
+          <div className="vip-visual-card">
+            <span>VIP</span>
+            <strong>Luxury Cab Service</strong>
+            <small>Mumbai pickup | All India trips</small>
+          </div>
         </div>
         <div className="hero-content">
           <div className="hero-copy">
             <p className="eyebrow">Visnu S Tours & Travels</p>
-            <h1>Book Taxi Online With Vishnu Tours</h1>
+            <h1>VIP Luxury Cab Service by Vishnu Tours</h1>
               <p>
-            Local, outstation, round trip aur VIP luxury cab service ke liye
-                direct site booking. From/To select karke distance, package,
-                cab-wise fare aur Razorpay payment ek hi flow me milega.
+                Mumbai pickup se VIP guest, corporate travel, airport transfer
+                aur all India outstation booking. Route search, cab selection
+                aur Razorpay payment direct site par.
               </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
@@ -930,7 +921,7 @@ export default function Home() {
           <div className="car-results-head">
             <div>
               <p className="eyebrow">Choose your cab</p>
-              <h2>Available cars for your journey</h2>
+              <h2>VIP fleet options for your journey</h2>
             </div>
             <div className="journey-summary wide">
               <span>{startPoint} to {drop}</span>
@@ -1111,12 +1102,15 @@ export default function Home() {
       <section className="section fleet-section" id="fleet">
         <div className="section-heading">
           <p className="eyebrow">Our fleet</p>
-          <h2>Comfortable cars for family, business and VIP guests</h2>
+          <h2>Owner fleet for family, business and VIP guests</h2>
         </div>
         <div className="fleet-grid">
           {vehicles.map((item) => (
             <article className="fleet-card" key={item.name}>
-              <img src={item.image} alt={`${item.name} cab service`} />
+              <div className="fleet-photo-placeholder" aria-hidden="true">
+                <span>VT</span>
+                <strong>Actual Owner Fleet</strong>
+              </div>
               <div>
                 <span>{item.type}</span>
                 <h3>{item.name}</h3>

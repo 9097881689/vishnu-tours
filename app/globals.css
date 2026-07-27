@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #181818;
+  --ink: #111111;
   --muted: #6f6f6f;
   --line: #e7e7e7;
   --paper: #ffffff;
-  --soft: #f5f5f5;
-  --olive: #151515;
-  --gold: #f6bd16;
+  --soft: #f3f1ec;
+  --olive: #0f0f0f;
+  --gold: #d7b35a;
   --rose: #e84b3c;
-  --sky: #fff7d7;
+  --sky: #fff8df;
 }
 
 @theme inline {
@@ -48,6 +48,25 @@ select {
 img {
   display: block;
   max-width: 100%;
+}
+
+.pac-container {
+  z-index: 999999 !important;
+  border: 1px solid #d7b35a;
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.pac-item {
+  padding: 9px 12px;
+  color: #171717;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pac-item:hover {
+  background: #fff8df;
 }
 
 .top-strip {
@@ -159,8 +178,8 @@ nav {
   isolation: isolate;
   overflow: hidden;
   background:
-    linear-gradient(112deg, #f6bd16 0 57%, #161616 57% 100%),
-    #f6bd16;
+    linear-gradient(112deg, #d7b35a 0 52%, #0d0d0d 52% 100%),
+    #d7b35a;
 }
 
 .hero::after {
@@ -192,6 +211,38 @@ nav {
   border: 8px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   box-shadow: 0 28px 60px rgba(0, 0, 0, 0.32);
+}
+
+.vip-visual-card {
+  display: grid;
+  gap: 8px;
+  min-height: 220px;
+  padding: 28px;
+  border: 1px solid rgba(215, 179, 90, 0.55);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(215, 179, 90, 0.18), transparent 42%),
+    #111;
+  color: #fff;
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.42);
+}
+
+.vip-visual-card span {
+  color: var(--gold);
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.vip-visual-card strong {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.vip-visual-card small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .road-line {
@@ -900,22 +951,47 @@ input[readonly] {
 .fleet-card {
   min-width: 240px;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(215, 179, 90, 0.38);
   border-radius: 8px;
   background: var(--paper);
+  box-shadow: 0 14px 34px rgba(17, 17, 17, 0.08);
 }
 
-.fleet-card img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
+.fleet-photo-placeholder {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  min-height: 156px;
+  padding: 20px;
+  background:
+    linear-gradient(135deg, rgba(215, 179, 90, 0.2), transparent 44%),
+    #111;
+  color: #fff;
+  text-align: center;
 }
 
-.fleet-card div {
+.fleet-photo-placeholder span {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 1px solid rgba(215, 179, 90, 0.72);
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.fleet-photo-placeholder strong {
+  color: #fff;
+  font-size: 14px;
+}
+
+.fleet-card > div:last-child {
   padding: 18px;
 }
 
-.fleet-card span {
+.fleet-card > div:last-child span {
   color: #a53024;
   font-size: 12px;
   font-weight: 900;
