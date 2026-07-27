@@ -3,6 +3,8 @@
 import { FormEvent, useMemo, useState } from "react";
 
 const whatsappNumber = "917004291529";
+const headOffice = "Mumbai Head Office";
+const perKmRate = 16;
 
 declare global {
   interface Window {
@@ -65,28 +67,55 @@ const serviceTypes = [
 export default function Home() {
   const [tripType, setTripType] = useState("Outstation Cab");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
-  const [pickup, setPickup] = useState("");
   const [drop, setDrop] = useState("");
+  const [distanceKm, setDistanceKm] = useState("");
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
   const [advanceAmount, setAdvanceAmount] = useState("500");
   const [paymentStatus, setPaymentStatus] = useState("");
+  const numericDistance = Math.max(0, Number(distanceKm) || 0);
+  const billableDistance =
+    tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
+  const fareTotal = billableDistance * perKmRate;
+  const formattedFare = fareTotal
+    ? new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+      }).format(fareTotal)
+    : "Enter KM";
 
   const bookingText = useMemo(() => {
     return [
       "Namaste Vishnu Tours, mujhe cab booking karni hai.",
       `Trip: ${tripType}`,
       `Cab: ${vehicle}`,
-      `Pickup: ${pickup || "Please confirm"}`,
+      `Start Point: ${headOffice}`,
       `Destination: ${drop || "Please confirm"}`,
+      `One-side Distance: ${numericDistance || "Please confirm"} km`,
+      `Billable Distance: ${billableDistance || "Please confirm"} km`,
+      `Rate: Rs. ${perKmRate}/km`,
+      `Estimated Fare: ${fareTotal ? formattedFare : "Please confirm"}`,
       `Date/Time: ${date || "Please confirm"}`,
       `Name: ${name || "Guest"}`,
       `Mobile: ${mobile || "Please confirm"}`,
       `Payment: ${paymentMode}`,
     ].join("\n");
-  }, [tripType, vehicle, pickup, drop, date, name, mobile, paymentMode]);
+  }, [
+    tripType,
+    vehicle,
+    drop,
+    numericDistance,
+    billableDistance,
+    fareTotal,
+    formattedFare,
+    date,
+    name,
+    mobile,
+    paymentMode,
+  ]);
 
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
     bookingText,
@@ -117,10 +146,12 @@ export default function Home() {
           notes: {
             name,
             mobile,
-            pickup,
+            pickup: headOffice,
             drop,
             vehicle,
             tripType,
+            distanceKm: String(numericDistance),
+            estimatedFare: String(fareTotal),
           },
         }),
       });
@@ -175,10 +206,12 @@ export default function Home() {
         contact: mobile,
       },
       notes: {
-        pickup,
+        pickup: headOffice,
         drop,
         vehicle,
         tripType,
+        distanceKm: String(numericDistance),
+        estimatedFare: String(fareTotal),
       },
       theme: {
         color: "#f6bd16",
@@ -243,9 +276,9 @@ export default function Home() {
             <p className="eyebrow">Visnu S Tours & Travels</p>
             <h1>Book Taxi Online With Vishnu Tours</h1>
               <p>
-                Local, outstation, round trip aur VIP luxury cab service ke liye
-                direct booking. Fare confirmation, driver update aur advance
-                payment support ek hi jagah.
+            Local, outstation, round trip aur VIP luxury cab service ke liye
+                direct booking. Start point Mumbai Head Office rahega aur fare
+                Rs. 16/km ke hisab se calculate hoga.
               </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
@@ -259,7 +292,7 @@ export default function Home() {
 
           <form className="booking-panel" id="booking" onSubmit={submitBooking}>
             <div className="panel-head">
-              <span>Set Your Location First</span>
+              <span>Mumbai se all India booking</span>
               <strong>Book Your Ride</strong>
             </div>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
@@ -278,12 +311,7 @@ export default function Home() {
             </div>
             <label>
               Start Location
-              <input
-                value={pickup}
-                onChange={(event) => setPickup(event.target.value)}
-                placeholder="Business, place, hotel, station or address"
-                required
-              />
+              <input value={headOffice} readOnly aria-readonly="true" />
             </label>
             <label>
               Enter Destination
@@ -296,6 +324,16 @@ export default function Home() {
             </label>
             <div className="form-grid">
               <label>
+                Distance from Mumbai (KM)
+                <input
+                  value={distanceKm}
+                  onChange={(event) => setDistanceKm(event.target.value)}
+                  placeholder="Example: 250"
+                  inputMode="numeric"
+                  required
+                />
+              </label>
+              <label>
                 Pickup date and time
                 <input
                   value={date}
@@ -304,6 +342,8 @@ export default function Home() {
                   required
                 />
               </label>
+            </div>
+            <div className="form-grid">
               <label>
                 Select Cab
                 <select
@@ -315,17 +355,25 @@ export default function Home() {
                   ))}
                 </select>
               </label>
+              <label>
+                Select Package
+                <select>
+                  <option>Rs. 16/km Mumbai start</option>
+                  <option>Full day local rental</option>
+                  <option>Half day local rental</option>
+                  <option>VIP / corporate package</option>
+                </select>
+              </label>
             </div>
-            <label>
-              Select Package
-              <select>
-                <option>Fare confirmation on WhatsApp</option>
-                <option>Full day local rental</option>
-                <option>Half day local rental</option>
-                <option>Outstation per km package</option>
-                <option>VIP / corporate package</option>
-              </select>
-            </label>
+            <div className="fare-box" aria-live="polite">
+              <span>Estimated fare</span>
+              <strong>{formattedFare}</strong>
+              <small>
+                {tripType === "Round Trip"
+                  ? `${numericDistance || 0} km x 2 x Rs. ${perKmRate}/km`
+                  : `${numericDistance || 0} km x Rs. ${perKmRate}/km`}
+              </small>
+            </div>
             <div className="form-grid">
               <label>
                 Your name

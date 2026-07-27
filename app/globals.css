@@ -369,6 +369,12 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(213, 166, 66, 0.2);
 }
 
+input[readonly] {
+  background: #fff8da;
+  color: #4a3500;
+  font-weight: 900;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -379,6 +385,37 @@ select:focus {
   width: 100%;
   min-height: 40px;
   font-size: 15px;
+}
+
+.fare-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #f0d98a;
+  border-radius: 8px;
+  background: #fff8da;
+}
+
+.fare-box span {
+  color: #6c5200;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fare-box strong {
+  color: #151515;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.fare-box small {
+  grid-column: 1 / -1;
+  color: #795f09;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .microcopy {
