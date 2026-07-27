@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai Head Office";
 const perKmRate = 16;
+const googleMapsApiKey =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  "AIzaSyD0HdQH5pjAXlli2hc3Lvfb8hMZ5Pvy1Ho";
 const fromSuggestions = [
   "Mumbai Head Office",
   "Mumbai Airport",
@@ -145,6 +148,30 @@ const rateTable: Record<
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    google?: {
+      maps?: {
+        places?: {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            options: Record<string, unknown>,
+          ) => {
+            addListener: (event: string, handler: () => void) => void;
+            getPlace: () => {
+              formatted_address?: string;
+              name?: string;
+              address_components?: Array<{
+                long_name: string;
+                short_name: string;
+                types: string[];
+              }>;
+            };
+          };
+        };
+        event?: {
+          clearInstanceListeners: (instance: unknown) => void;
+        };
+      };
+    };
   }
 }
 
@@ -201,6 +228,19 @@ const serviceTypes = [
 ];
 
 type PackageId = (typeof packageOptions)[number]["id"];
+type GooglePlace = {
+  formatted_address?: string;
+  name?: string;
+  address_components?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
+};
+type GoogleAutocomplete = {
+  addListener: (event: string, handler: () => void) => void;
+  getPlace: () => GooglePlace;
+};
 
 function getDestinationDistance(destination: string) {
   return destinationDistances[destination.trim().toLowerCase()];
@@ -242,7 +282,57 @@ function isMumbaiPickup(value: string) {
   ].some((area) => pickup.includes(area));
 }
 
+function loadGooglePlaces() {
+  if (!googleMapsApiKey) {
+    return Promise.resolve(false);
+  }
+
+  if (window.google?.maps?.places) {
+    return Promise.resolve(true);
+  }
+
+  const existingScript = document.querySelector<HTMLScriptElement>(
+    "script[data-google-places='true']",
+  );
+
+  if (existingScript) {
+    return new Promise<boolean>((resolve) => {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+    });
+  }
+
+  return new Promise<boolean>((resolve) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googlePlaces = "true";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+function isMumbaiPlace(place: GooglePlace) {
+  const locationText = [
+    place.name,
+    place.formatted_address,
+    ...(place.address_components || []).flatMap((component) => [
+      component.long_name,
+      component.short_name,
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return isMumbaiPickup(locationText);
+}
+
 export default function Home() {
+  const fromInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef = useRef<HTMLInputElement>(null);
+  const carResultsRef = useRef<HTMLElement>(null);
   const [tripType, setTripType] = useState("Outstation Cab");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
   const [startPoint, setStartPoint] = useState(headOffice);
@@ -302,6 +392,74 @@ export default function Home() {
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
   const formattedFare = formatInr(fareTotal);
   const pickupAllowed = isMumbaiPickup(startPoint);
+
+  useEffect(() => {
+    let mounted = true;
+    let fromAutocomplete: GoogleAutocomplete | undefined;
+    let toAutocomplete: GoogleAutocomplete | undefined;
+
+    loadGooglePlaces().then((loaded) => {
+      if (!mounted || !loaded || !window.google?.maps?.places) {
+        return;
+      }
+
+      if (fromInputRef.current) {
+        fromAutocomplete = new window.google.maps.places.Autocomplete(
+          fromInputRef.current,
+          {
+            componentRestrictions: { country: "in" },
+            fields: ["address_components", "formatted_address", "name"],
+            strictBounds: false,
+            bounds: {
+              north: 19.45,
+              south: 18.82,
+              east: 73.25,
+              west: 72.72,
+            },
+          },
+        );
+
+        fromAutocomplete.addListener("place_changed", () => {
+          const place = fromAutocomplete.getPlace();
+          const label = place.formatted_address || place.name || "";
+
+          updateStartPoint(label);
+
+          if (!isMumbaiPlace(place)) {
+            setBookingStatus(
+              "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
+            );
+          }
+        });
+      }
+
+      if (toInputRef.current) {
+        toAutocomplete = new window.google.maps.places.Autocomplete(toInputRef.current, {
+          componentRestrictions: { country: "in" },
+          fields: ["formatted_address", "name"],
+        });
+
+        toAutocomplete.addListener("place_changed", () => {
+          const place = toAutocomplete.getPlace();
+          updateDestination(place.formatted_address || place.name || "");
+        });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      window.google?.maps?.event?.clearInstanceListeners(fromAutocomplete);
+      window.google?.maps?.event?.clearInstanceListeners(toAutocomplete);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (showVehicleStep) {
+      window.setTimeout(() => {
+        carResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  }, [showVehicleStep]);
 
   const bookingText = useMemo(() => {
     return [
@@ -667,12 +825,13 @@ export default function Home() {
               )}
             </div>
             <label>
-              From
+              From - Mumbai pickup only
               <input
+                ref={fromInputRef}
                 value={startPoint}
                 onChange={(event) => updateStartPoint(event.target.value)}
                 list="from-suggestions"
-                placeholder="Mumbai Head Office"
+                placeholder="Search Mumbai pickup location"
                 required
               />
               {!pickupAllowed ? (
@@ -682,12 +841,13 @@ export default function Home() {
               ) : null}
             </label>
             <label>
-              To
+              To - All India destination
               <input
+                ref={toInputRef}
                 value={drop}
                 onChange={(event) => updateDestination(event.target.value)}
                 list="destination-suggestions"
-                placeholder="City select karein, example Pune"
+                placeholder="Search any India destination"
                 required
               />
             </label>
@@ -755,145 +915,8 @@ export default function Home() {
                 Continue to Cab Options
               </button>
             ) : (
-              <div className="cab-step">
-                <div className="journey-summary">
-                  <span>{startPoint} to {drop}</span>
-                  <strong>
-                    {numericDistance} km one side | {tripType}
-                  </strong>
-                  <button type="button" onClick={() => setShowVehicleStep(false)}>
-                    Edit Detail
-                  </button>
-                </div>
-                <div className="package-grid" aria-label="Select package">
-                  {packageOptions.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={
-                        packageType === item.id ? "package-card active" : "package-card"
-                      }
-                      onClick={() => {
-                        setPackageType(item.id);
-                        if (item.id === "vip") {
-                          setTripType("VIP Luxury Cab");
-                        }
-                      }}
-                    >
-                      <strong>{item.label}</strong>
-                      <span>{item.description}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="fare-box" aria-live="polite">
-                  <span>Selected estimate</span>
-                  <strong>{formattedFare}</strong>
-                  <small>
-                    {packageType === "perKm"
-                      ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
-                      : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
-                  </small>
-                  <small>
-                    Distance Mumbai se approximate hai. Unknown city ke liye KM
-                    manually edit karein.
-                  </small>
-                </div>
-                <label>
-                  Payment preference
-                  <select
-                    value={paymentMode}
-                    onChange={(event) => setPaymentMode(event.target.value)}
-                  >
-                    <option>Pay advance after fare confirmation</option>
-                    <option>UPI payment link required</option>
-                    <option>Cash after trip</option>
-                    <option>Corporate billing</option>
-                  </select>
-                </label>
-                <div className="vehicle-rate-list" aria-live="polite">
-                  {vehicleRates.map((item) => (
-                    <article
-                      key={item.name}
-                      className={
-                        vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"
-                      }
-                    >
-                      <div>
-                        <span className="vehicle-tag">{item.tag}</span>
-                        <strong>{item.name}</strong>
-                        <small>{item.seats} | {item.type}</small>
-                      </div>
-                      <div className="vehicle-rate-meta">
-                        <span>{item.fareLabel}</span>
-                        <strong>{formatInr(item.estimatedFare)}</strong>
-                      </div>
-                      <button
-                        className="book-cab-button"
-                        type="button"
-                        onClick={() => submitBooking(item.name)}
-                        disabled={isBooking}
-                      >
-                        {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              </div>
+              <p className="step-ready">Cab options neeche full page par khul gaye hain.</p>
             )}
-            {confirmedBooking ? (
-              <div className="booking-confirmation" aria-live="polite">
-                <span>Booking ID</span>
-                <strong>{confirmedBooking.bookingId}</strong>
-                <small>
-                  {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
-                  {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
-                </small>
-              </div>
-            ) : null}
-            {confirmedBooking ? (
-              <div className="post-booking-payment">
-                <div>
-                  <span>Payment option</span>
-                  <strong>Pay after booking</strong>
-                  <small>Use Razorpay for advance or full fare.</small>
-                </div>
-                <div className="payment-choice-row">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAdvanceAmount(
-                        String(Math.max(500, Math.round(confirmedBooking.estimatedFare * 0.2))),
-                      )
-                    }
-                  >
-                    20% Advance
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdvanceAmount(String(confirmedBooking.estimatedFare))}
-                  >
-                    Full Fare
-                  </button>
-                </div>
-                <label>
-                  Payment amount
-                  <input
-                    value={advanceAmount}
-                    onChange={(event) => setAdvanceAmount(event.target.value)}
-                    inputMode="numeric"
-                  />
-                </label>
-                <button
-                  className="submit-button"
-                  type="button"
-                  onClick={startPayment}
-                  disabled={isPaying}
-                >
-                  {isPaying ? "Opening Razorpay..." : "Pay with Razorpay"}
-                </button>
-                {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
-              </div>
-            ) : null}
             <p className="microcopy">
               Booking site par live save hoti hai. Etios Rs. 16/km se start,
               baaki cab ka rate card ke hisab se calculate hota hai.
@@ -901,6 +924,151 @@ export default function Home() {
           </form>
         </div>
       </section>
+
+      {showVehicleStep ? (
+        <section className="car-results-section" ref={carResultsRef}>
+          <div className="car-results-head">
+            <div>
+              <p className="eyebrow">Choose your cab</p>
+              <h2>Available cars for your journey</h2>
+            </div>
+            <div className="journey-summary wide">
+              <span>{startPoint} to {drop}</span>
+              <strong>
+                {numericDistance} km one side | {tripType}
+              </strong>
+              <button type="button" onClick={() => setShowVehicleStep(false)}>
+                Change Journey
+              </button>
+            </div>
+          </div>
+          <div className="car-results-controls">
+            <div className="package-grid wide" aria-label="Select package">
+              {packageOptions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={packageType === item.id ? "package-card active" : "package-card"}
+                  onClick={() => {
+                    setPackageType(item.id);
+                    if (item.id === "vip") {
+                      setTripType("VIP Luxury Cab");
+                    }
+                  }}
+                >
+                  <strong>{item.label}</strong>
+                  <span>{item.description}</span>
+                </button>
+              ))}
+            </div>
+            <div className="fare-box wide" aria-live="polite">
+              <span>Selected estimate</span>
+              <strong>{formattedFare}</strong>
+              <small>
+                {packageType === "perKm"
+                  ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
+                  : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
+              </small>
+              <small>
+                Distance Mumbai se approximate hai. Unknown city ke liye KM
+                manually edit karein.
+              </small>
+            </div>
+          </div>
+          <label className="payment-preference-wide">
+            Payment preference
+            <select
+              value={paymentMode}
+              onChange={(event) => setPaymentMode(event.target.value)}
+            >
+              <option>Pay advance after fare confirmation</option>
+              <option>UPI payment link required</option>
+              <option>Cash after trip</option>
+              <option>Corporate billing</option>
+            </select>
+          </label>
+          <div className="vehicle-rate-list horizontal" aria-live="polite">
+            {vehicleRates.map((item) => (
+              <article
+                key={item.name}
+                className={vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"}
+              >
+                <div>
+                  <span className="vehicle-tag">{item.tag}</span>
+                  <strong>{item.name}</strong>
+                  <small>{item.seats} | {item.type}</small>
+                </div>
+                <div className="vehicle-rate-meta">
+                  <span>{item.fareLabel}</span>
+                  <strong>{formatInr(item.estimatedFare)}</strong>
+                </div>
+                <button
+                  className="book-cab-button"
+                  type="button"
+                  onClick={() => submitBooking(item.name)}
+                  disabled={isBooking}
+                >
+                  {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
+                </button>
+              </article>
+            ))}
+          </div>
+          {confirmedBooking ? (
+            <div className="booking-confirmation results-confirmation" aria-live="polite">
+              <span>Booking ID</span>
+              <strong>{confirmedBooking.bookingId}</strong>
+              <small>
+                {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
+                {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
+              </small>
+            </div>
+          ) : null}
+          {confirmedBooking ? (
+            <div className="post-booking-payment results-payment">
+              <div>
+                <span>Payment option</span>
+                <strong>Pay after booking</strong>
+                <small>Use Razorpay for advance or full fare.</small>
+              </div>
+              <div className="payment-choice-row">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdvanceAmount(
+                      String(Math.max(500, Math.round(confirmedBooking.estimatedFare * 0.2))),
+                    )
+                  }
+                >
+                  20% Advance
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdvanceAmount(String(confirmedBooking.estimatedFare))}
+                >
+                  Full Fare
+                </button>
+              </div>
+              <label>
+                Payment amount
+                <input
+                  value={advanceAmount}
+                  onChange={(event) => setAdvanceAmount(event.target.value)}
+                  inputMode="numeric"
+                />
+              </label>
+              <button
+                className="submit-button"
+                type="button"
+                onClick={startPayment}
+                disabled={isPaying}
+              >
+                {isPaying ? "Opening Razorpay..." : "Pay with Razorpay"}
+              </button>
+              {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="trust-strip" aria-label="Service highlights">
         <div>
