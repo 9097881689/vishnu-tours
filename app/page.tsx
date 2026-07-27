@@ -1,10 +1,136 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai Head Office";
 const perKmRate = 16;
+const fromSuggestions = [
+  "Mumbai Head Office",
+  "Mumbai Airport",
+  "Mumbai Central",
+  "Dadar Mumbai",
+  "Andheri Mumbai",
+  "Navi Mumbai",
+  "Thane Mumbai",
+];
+
+const destinationDistances: Record<string, number> = {
+  pune: 150,
+  nashik: 170,
+  shirdi: 240,
+  surat: 280,
+  vadodara: 420,
+  ahmedabad: 525,
+  goa: 590,
+  indore: 585,
+  ujjain: 640,
+  hyderabad: 710,
+  bangalore: 980,
+  jaipur: 1150,
+  delhi: 1420,
+  bhopal: 780,
+  nagpur: 820,
+  kolhapur: 375,
+  aurangabad: 335,
+  lonavala: 85,
+  alibaug: 95,
+  mahableshwar: 260,
+  mahabaleshwar: 260,
+  udaipur: 760,
+  chennai: 1340,
+  kolkata: 1960,
+};
+
+const destinationSuggestions = [
+  "Pune",
+  "Nashik",
+  "Shirdi",
+  "Surat",
+  "Vadodara",
+  "Ahmedabad",
+  "Goa",
+  "Indore",
+  "Ujjain",
+  "Hyderabad",
+  "Bangalore",
+  "Jaipur",
+  "Delhi",
+  "Bhopal",
+  "Nagpur",
+  "Kolhapur",
+  "Aurangabad",
+  "Lonavala",
+  "Alibaug",
+  "Mahabaleshwar",
+  "Udaipur",
+  "Chennai",
+  "Kolkata",
+];
+
+const packageOptions = [
+  {
+    id: "perKm",
+    label: "Per KM Outstation",
+    description: "Mumbai se all India per km fare",
+  },
+  {
+    id: "fullDay",
+    label: "Full Day Local",
+    description: "8 hours / 80 km package",
+  },
+  {
+    id: "halfDay",
+    label: "Half Day Local",
+    description: "4 hours / 40 km package",
+  },
+  {
+    id: "vip",
+    label: "VIP Luxury Pack",
+    description: "Premium car, priority driver, executive service",
+  },
+] as const;
+
+const rateTable: Record<
+  string,
+  { perKm: number; fullDay: number; halfDay: number; vip: number; tag: string }
+> = {
+  "Toyota Etios": {
+    perKm: 16,
+    fullDay: 3200,
+    halfDay: 1900,
+    vip: 5200,
+    tag: "Economy",
+  },
+  "Maruti Ertiga": {
+    perKm: 18,
+    fullDay: 4200,
+    halfDay: 2600,
+    vip: 6200,
+    tag: "Family",
+  },
+  "Maruti Rumion": {
+    perKm: 18,
+    fullDay: 4300,
+    halfDay: 2700,
+    vip: 6500,
+    tag: "Comfort",
+  },
+  "Toyota Innova Crysta": {
+    perKm: 22,
+    fullDay: 5800,
+    halfDay: 3600,
+    vip: 8500,
+    tag: "VIP",
+  },
+  "Toyota Hycross": {
+    perKm: 26,
+    fullDay: 7200,
+    halfDay: 4600,
+    vip: 11000,
+    tag: "Luxury VIP",
+  },
+};
 
 declare global {
   interface Window {
@@ -64,15 +190,32 @@ const serviceTypes = [
   "Wedding / Corporate Booking",
 ];
 
+type PackageId = (typeof packageOptions)[number]["id"];
+
+function getDestinationDistance(destination: string) {
+  return destinationDistances[destination.trim().toLowerCase()];
+}
+
+function formatInr(amount: number) {
+  return amount
+    ? new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+      }).format(amount)
+    : "Enter KM";
+}
+
 export default function Home() {
   const [tripType, setTripType] = useState("Outstation Cab");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
+  const [startPoint, setStartPoint] = useState(headOffice);
   const [drop, setDrop] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [packageType, setPackageType] = useState("Rs. 16/km Mumbai start");
+  const [packageType, setPackageType] = useState<PackageId>("perKm");
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
   const [advanceAmount, setAdvanceAmount] = useState("500");
   const [paymentStatus, setPaymentStatus] = useState("");
@@ -83,39 +226,66 @@ export default function Home() {
     bookingId: string;
     estimatedFare: number;
     billableKm: number;
+    ratePerKm: number;
   } | null>(null);
   const numericDistance = Math.max(0, Number(distanceKm) || 0);
   const billableDistance =
     tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
-  const fareTotal = billableDistance * perKmRate;
-  const formattedFare = fareTotal
-    ? new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-      }).format(fareTotal)
-    : "Enter KM";
+  const selectedPackage =
+    packageOptions.find((item) => item.id === packageType) || packageOptions[0];
+  const vehicleRates = useMemo(
+    () =>
+      vehicles
+        .map((item) => {
+          const rates = rateTable[item.name];
+          const estimatedFare =
+            packageType === "perKm"
+              ? Math.round(billableDistance * rates.perKm)
+              : rates[packageType];
+
+          return {
+            ...item,
+            ...rates,
+            estimatedFare,
+            fareLabel:
+              packageType === "perKm"
+                ? `Rs. ${rates.perKm}/km`
+                : packageType === "fullDay"
+                  ? "8 hr / 80 km"
+                  : packageType === "halfDay"
+                    ? "4 hr / 40 km"
+                    : "VIP package",
+          };
+        })
+        .sort((first, second) => first.estimatedFare - second.estimatedFare),
+    [billableDistance, packageType],
+  );
+  const selectedVehicleRate =
+    vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
+  const fareTotal = selectedVehicleRate?.estimatedFare || 0;
+  const formattedFare = formatInr(fareTotal);
 
   const bookingText = useMemo(() => {
     return [
       "Namaste Vishnu Tours, mujhe cab booking karni hai.",
       `Trip: ${tripType}`,
       `Cab: ${vehicle}`,
-      `Start Point: ${headOffice}`,
+      `Start Point: ${startPoint}`,
       `Destination: ${drop || "Please confirm"}`,
       `One-side Distance: ${numericDistance || "Please confirm"} km`,
       `Billable Distance: ${billableDistance || "Please confirm"} km`,
-      `Rate: Rs. ${perKmRate}/km`,
+      `Rate: ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`,
       `Estimated Fare: ${fareTotal ? formattedFare : "Please confirm"}`,
       `Date/Time: ${date || "Please confirm"}`,
       `Name: ${name || "Guest"}`,
       `Mobile: ${mobile || "Please confirm"}`,
-      `Package: ${packageType}`,
+      `Package: ${selectedPackage.label}`,
       `Payment: ${paymentMode}`,
     ].join("\n");
   }, [
     tripType,
     vehicle,
+    startPoint,
     drop,
     numericDistance,
     billableDistance,
@@ -124,7 +294,8 @@ export default function Home() {
     date,
     name,
     mobile,
-    packageType,
+    selectedPackage.label,
+    selectedVehicleRate?.fareLabel,
     paymentMode,
   ]);
 
@@ -132,8 +303,22 @@ export default function Home() {
     bookingText,
   )}`;
 
-  async function submitBooking(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function updateDestination(value: string) {
+    setDrop(value);
+    const distance = getDestinationDistance(value);
+
+    if (distance) {
+      setDistanceKm(String(distance));
+    }
+  }
+
+  async function submitBooking(selectedCab = vehicle) {
+    if (!drop || !numericDistance || !date || !name || !mobile) {
+      setBookingStatus("Please From/To, KM, date, name aur mobile fill karein.");
+      return;
+    }
+
+    setVehicle(selectedCab);
     setIsBooking(true);
     setBookingStatus("");
     setConfirmedBooking(null);
@@ -144,12 +329,14 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tripType,
-          vehicle,
+          vehicle: selectedCab,
+          startPoint,
           destination: drop,
           distanceKm: numericDistance,
           date,
           name,
           mobile,
+          packageType,
           paymentMode,
         }),
       });
@@ -158,6 +345,7 @@ export default function Home() {
           bookingId: string;
           estimatedFare: number;
           billableKm: number;
+          ratePerKm: number;
         };
         error?: string;
       };
@@ -169,7 +357,7 @@ export default function Home() {
 
       setConfirmedBooking(result.booking);
       setAdvanceAmount(String(result.booking.estimatedFare));
-      setBookingStatus("Booking site par live save ho gayi.");
+      setBookingStatus(`${selectedCab} booking site par live save ho gayi.`);
     } catch {
       setBookingStatus("Network issue ki wajah se booking save nahi ho payi.");
     } finally {
@@ -206,12 +394,13 @@ export default function Home() {
             bookingId: confirmedBooking.bookingId,
             name,
             mobile,
-            pickup: headOffice,
+            pickup: startPoint,
             drop,
             vehicle,
             tripType,
             distanceKm: String(numericDistance),
-            estimatedFare: String(fareTotal),
+            packageType,
+            estimatedFare: String(confirmedBooking.estimatedFare),
           },
         }),
       });
@@ -269,12 +458,13 @@ export default function Home() {
       },
       notes: {
         bookingId: confirmedBooking.bookingId,
-        pickup: headOffice,
+        pickup: startPoint,
         drop,
         vehicle,
         tripType,
         distanceKm: String(numericDistance),
-        estimatedFare: String(fareTotal),
+        packageType,
+        estimatedFare: String(confirmedBooking.estimatedFare),
       },
       theme: {
         color: "#f6bd16",
@@ -344,24 +534,41 @@ export default function Home() {
             <h1>Book Taxi Online With Vishnu Tours</h1>
               <p>
             Local, outstation, round trip aur VIP luxury cab service ke liye
-                direct booking. Start point Mumbai Head Office rahega aur fare
-                Rs. 16/km ke hisab se calculate hoga.
+                direct site booking. From/To select karke distance, package,
+                cab-wise fare aur Razorpay payment ek hi flow me milega.
               </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
                 Book Cab Now
               </a>
-              <a className="secondary-action" href={whatsappUrl} target="_blank">
-                WhatsApp Booking
+              <a className="secondary-action" href="tel:+917004291529">
+                Call for Help
               </a>
             </div>
           </div>
 
-          <form className="booking-panel" id="booking" onSubmit={submitBooking}>
+          <form
+            className="booking-panel"
+            id="booking"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitBooking(vehicle);
+            }}
+          >
             <div className="panel-head">
               <span>Mumbai se all India booking</span>
               <strong>Book Your Ride</strong>
             </div>
+            <datalist id="from-suggestions">
+              {fromSuggestions.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
+            <datalist id="destination-suggestions">
+              {destinationSuggestions.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
               {["Outstation Cab", "Round Trip", "Local Rental", "VIP Luxury Cab"].map(
                 (type) => (
@@ -377,15 +584,22 @@ export default function Home() {
               )}
             </div>
             <label>
-              Start Location
-              <input value={headOffice} readOnly aria-readonly="true" />
+              From
+              <input
+                value={startPoint}
+                onChange={(event) => setStartPoint(event.target.value)}
+                list="from-suggestions"
+                placeholder="Mumbai Head Office"
+                required
+              />
             </label>
             <label>
-              Enter Destination
+              To
               <input
                 value={drop}
-                onChange={(event) => setDrop(event.target.value)}
-                placeholder="Business, place or city name"
+                onChange={(event) => updateDestination(event.target.value)}
+                list="destination-suggestions"
+                placeholder="City select karein, example Pune"
                 required
               />
             </label>
@@ -410,38 +624,35 @@ export default function Home() {
                 />
               </label>
             </div>
-            <div className="form-grid">
-              <label>
-                Select Cab
-                <select
-                  value={vehicle}
-                  onChange={(event) => setVehicle(event.target.value)}
+            <div className="package-grid" aria-label="Select package">
+              {packageOptions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={packageType === item.id ? "package-card active" : "package-card"}
+                  onClick={() => {
+                    setPackageType(item.id);
+                    if (item.id === "vip") {
+                      setTripType("VIP Luxury Cab");
+                    }
+                  }}
                 >
-                  {vehicles.map((item) => (
-                    <option key={item.name}>{item.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Select Package
-                <select
-                  value={packageType}
-                  onChange={(event) => setPackageType(event.target.value)}
-                >
-                  <option>Rs. 16/km Mumbai start</option>
-                  <option>Full day local rental</option>
-                  <option>Half day local rental</option>
-                  <option>VIP / corporate package</option>
-                </select>
-              </label>
+                  <strong>{item.label}</strong>
+                  <span>{item.description}</span>
+                </button>
+              ))}
             </div>
             <div className="fare-box" aria-live="polite">
-              <span>Estimated fare</span>
+              <span>Selected estimate</span>
               <strong>{formattedFare}</strong>
               <small>
-                {tripType === "Round Trip"
-                  ? `${numericDistance || 0} km x 2 x Rs. ${perKmRate}/km`
-                  : `${numericDistance || 0} km x Rs. ${perKmRate}/km`}
+                {packageType === "perKm"
+                  ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
+                  : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
+              </small>
+              <small>
+                Distance Mumbai se approximate hai. Unknown city ke liye KM
+                manually edit karein.
               </small>
             </div>
             <div className="form-grid">
@@ -477,9 +688,32 @@ export default function Home() {
                 <option>Corporate billing</option>
               </select>
             </label>
-            <button className="submit-button" type="submit" disabled={isBooking}>
-              {isBooking ? "Saving Booking..." : "Book Now"}
-            </button>
+            <div className="vehicle-rate-list" aria-live="polite">
+              {vehicleRates.map((item) => (
+                <article
+                  key={item.name}
+                  className={vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"}
+                >
+                  <div>
+                    <span className="vehicle-tag">{item.tag}</span>
+                    <strong>{item.name}</strong>
+                    <small>{item.seats} | {item.type}</small>
+                  </div>
+                  <div className="vehicle-rate-meta">
+                    <span>{item.fareLabel}</span>
+                    <strong>{formatInr(item.estimatedFare)}</strong>
+                  </div>
+                  <button
+                    className="book-cab-button"
+                    type="button"
+                    onClick={() => submitBooking(item.name)}
+                    disabled={isBooking}
+                  >
+                    {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
+                  </button>
+                </article>
+              ))}
+            </div>
             {bookingStatus ? (
               <p className={confirmedBooking ? "booking-success" : "booking-error"}>
                 {bookingStatus}
@@ -540,8 +774,8 @@ export default function Home() {
               </div>
             ) : null}
             <p className="microcopy">
-              Booking site par live save hoti hai. Fare Rs. 16/km Mumbai start
-              point se calculate hota hai.
+              Booking site par live save hoti hai. Etios Rs. 16/km se start,
+              baaki cab ka rate card ke hisab se calculate hota hai.
             </p>
           </form>
         </div>
@@ -645,7 +879,7 @@ export default function Home() {
           <li>Outstation, round trip and local packages</li>
           <li>Luxury cab service for VIP and corporate guests</li>
           <li>Innova Crysta, Hycross, Ertiga, Rumion and Etios available</li>
-          <li>Direct WhatsApp booking with payment link request</li>
+          <li>Site booking ke baad Razorpay payment option</li>
         </ul>
       </section>
 
@@ -657,15 +891,15 @@ export default function Home() {
         <details>
           <summary>Cab booking kaise confirm hogi?</summary>
           <p>
-            Form submit karte hi WhatsApp par complete trip details jayengi.
-            Vishnu Tours fare, driver aur payment confirm karega.
+            From/To, package aur cab select karne ke baad Book This Cab dabate
+            hi booking site database me save hoti hai aur Booking ID milti hai.
           </p>
         </details>
         <details>
           <summary>Online payment gateway live hai?</summary>
           <p>
-            Razorpay checkout code add hai. Aapki Razorpay Merchant Key ID add
-            karte hi advance payment button live charge accept karega.
+            Haan, booking save hone ke baad same form me Razorpay advance ya
+            full fare payment button dikhta hai.
           </p>
         </details>
         <details>
@@ -685,7 +919,7 @@ export default function Home() {
         <div>
           <a href="tel:+917004291529">Call: 7004291529</a>
           <a href={whatsappUrl} target="_blank">
-            WhatsApp Booking
+            WhatsApp Help
           </a>
         </div>
       </footer>

@@ -1,16 +1,30 @@
 import { env } from "cloudflare:workers";
 
-const perKmRate = 16;
 const headOffice = "Mumbai Head Office";
+
+const rateTable: Record<
+  string,
+  { perKm: number; fullDay: number; halfDay: number; vip: number }
+> = {
+  "Toyota Etios": { perKm: 16, fullDay: 3200, halfDay: 1900, vip: 5200 },
+  "Maruti Ertiga": { perKm: 18, fullDay: 4200, halfDay: 2600, vip: 6200 },
+  "Maruti Rumion": { perKm: 18, fullDay: 4300, halfDay: 2700, vip: 6500 },
+  "Toyota Innova Crysta": { perKm: 22, fullDay: 5800, halfDay: 3600, vip: 8500 },
+  "Toyota Hycross": { perKm: 26, fullDay: 7200, halfDay: 4600, vip: 11000 },
+};
+
+type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
 
 type BookingPayload = {
   tripType?: string;
   vehicle?: string;
+  startPoint?: string;
   destination?: string;
   distanceKm?: number;
   date?: string;
   name?: string;
   mobile?: string;
+  packageType?: string;
   paymentMode?: string;
 };
 
@@ -38,10 +52,16 @@ async function ensureBookingsTable() {
         pickup_datetime TEXT NOT NULL,
         customer_name TEXT NOT NULL,
         customer_mobile TEXT NOT NULL,
+        package_type TEXT NOT NULL DEFAULT 'perKm',
         payment_mode TEXT NOT NULL
       )`,
     )
     .run();
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN package_type TEXT NOT NULL DEFAULT 'perKm'")
+    .run()
+    .catch(() => undefined);
 
   await db
     .prepare(
@@ -55,10 +75,12 @@ export async function POST(request: Request) {
     const payload = (await request.json()) as BookingPayload;
     const tripType = clean(payload.tripType);
     const vehicle = clean(payload.vehicle);
+    const startPoint = clean(payload.startPoint) || headOffice;
     const destination = clean(payload.destination);
     const date = clean(payload.date);
     const name = clean(payload.name);
     const mobile = clean(payload.mobile);
+    const packageType = normalizePackage(payload.packageType);
     const paymentMode = clean(payload.paymentMode) || "Pay advance after booking";
     const oneSideKm = Number(payload.distanceKm);
 
@@ -76,8 +98,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const billableKm = tripType === "Round Trip" ? oneSideKm * 2 : oneSideKm;
-    const estimatedFare = Math.round(billableKm * perKmRate);
+    const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
+    const billableKm =
+      packageType === "perKm"
+        ? tripType === "Round Trip"
+          ? oneSideKm * 2
+          : oneSideKm
+        : packageType === "halfDay"
+          ? 40
+          : 80;
+    const estimatedFare =
+      packageType === "perKm"
+        ? Math.round(billableKm * selectedRate.perKm)
+        : selectedRate[packageType];
     const bookingId = `VT${Date.now().toString(36).toUpperCase()}`;
     const createdAt = new Date().toISOString();
 
@@ -98,8 +131,9 @@ export async function POST(request: Request) {
         pickup_datetime,
         customer_name,
         customer_mobile,
+        package_type,
         payment_mode
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         bookingId,
@@ -107,15 +141,16 @@ export async function POST(request: Request) {
         "pending",
         tripType,
         vehicle,
-        headOffice,
+        startPoint,
         destination,
         oneSideKm,
         billableKm,
-        perKmRate,
+        selectedRate.perKm,
         estimatedFare,
         date,
         name,
         mobile,
+        packageType,
         paymentMode,
       )
       .run();
@@ -125,11 +160,12 @@ export async function POST(request: Request) {
         booking: {
           bookingId,
           status: "pending",
-          startPoint: headOffice,
+          startPoint,
           destination,
           oneSideKm,
           billableKm,
-          ratePerKm: perKmRate,
+          ratePerKm: selectedRate.perKm,
+          packageType,
           estimatedFare,
         },
       },
@@ -144,4 +180,12 @@ export async function POST(request: Request) {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizePackage(value: unknown): PackageType {
+  if (value === "fullDay" || value === "halfDay" || value === "vip") {
+    return value;
+  }
+
+  return "perKm";
 }

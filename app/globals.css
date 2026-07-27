@@ -381,6 +381,47 @@ input[readonly] {
   gap: 8px;
 }
 
+.package-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.package-card {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2b22;
+  text-align: left;
+  cursor: pointer;
+}
+
+.package-card strong {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.package-card span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.package-card.active {
+  border-color: #171717;
+  background: #171717;
+  color: #fff;
+}
+
+.package-card.active span {
+  color: #f7d45b;
+}
+
 .submit-button {
   width: 100%;
   min-height: 40px;
@@ -421,6 +462,81 @@ input[readonly] {
   color: #795f09;
   font-size: 11px;
   font-weight: 800;
+}
+
+.vehicle-rate-list {
+  display: grid;
+  gap: 7px;
+}
+
+.vehicle-rate-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(106px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.vehicle-rate-card.active {
+  border-color: #f2c331;
+  box-shadow: inset 0 0 0 1px #f2c331;
+}
+
+.vehicle-rate-card strong {
+  display: block;
+  color: #171717;
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.vehicle-rate-card small,
+.vehicle-rate-card span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.vehicle-tag {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 3px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #fff2bd;
+  color: #604600 !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase;
+}
+
+.vehicle-rate-meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.vehicle-rate-meta strong {
+  font-size: 17px;
+}
+
+.book-cab-button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--gold);
+  color: #181818;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.book-cab-button:disabled {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 .booking-success,
@@ -849,9 +965,19 @@ details p {
 
   .trip-tabs,
   .form-grid,
+  .package-grid,
   .trust-strip,
   .service-grid {
     grid-template-columns: 1fr;
+  }
+
+  .vehicle-rate-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .vehicle-rate-meta {
+    justify-items: start;
   }
 
   .trust-strip {
