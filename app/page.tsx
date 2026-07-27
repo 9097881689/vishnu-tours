@@ -12,6 +12,7 @@ const fromSuggestions = [
   "Mumbai Head Office",
   "Mumbai Airport",
   "Mumbai Central",
+  "BKC Mumbai",
   "Dadar Mumbai",
   "Andheri Mumbai",
   "Navi Mumbai",
@@ -99,6 +100,23 @@ const destinationSuggestions = [
   "Ranchi",
   "Varanasi",
   "Vapi",
+];
+
+const bookingTypes = ["Airport", "In-City", "Outstation"];
+const popularPickupSuggestions = [
+  "Mumbai Airport",
+  "BKC Mumbai",
+  "Andheri Mumbai",
+  "Bandra Mumbai",
+  "Powai Mumbai",
+];
+const popularDestinationSuggestions = [
+  "Pune",
+  "Nashik",
+  "Surat",
+  "Goa",
+  "Delhi",
+  "Bangalore",
 ];
 
 const packageOptions = [
@@ -229,12 +247,12 @@ const vehicles = [
 ];
 
 const serviceTypes = [
-  "Outstation Cab",
-  "Round Trip",
-  "Local Rental",
-  "VIP Luxury Cab",
-  "Airport / Railway Pickup",
-  "Wedding / Corporate Booking",
+  "Airport",
+  "In-City",
+  "Outstation",
+  "Corporate Booking",
+  "Executive Transfers",
+  "All India Trips",
 ];
 
 type PackageId = (typeof packageOptions)[number]["id"];
@@ -299,6 +317,7 @@ function isMumbaiPickup(value: string) {
 
   return [
     "mumbai",
+    "bkc",
     "andheri",
     "bandra",
     "borivali",
@@ -367,7 +386,7 @@ export default function Home() {
   const fromInputRef = useRef<HTMLInputElement>(null);
   const toInputRef = useRef<HTMLInputElement>(null);
   const carResultsRef = useRef<HTMLElement>(null);
-  const [tripType, setTripType] = useState("Outstation Cab");
+  const [tripType, setTripType] = useState("Outstation");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
   const [startPoint, setStartPoint] = useState(headOffice);
   const [drop, setDrop] = useState("");
@@ -393,8 +412,7 @@ export default function Home() {
     ratePerKm: number;
   } | null>(null);
   const numericDistance = Math.max(0, Number(distanceKm) || 0);
-  const billableDistance =
-    tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
+  const billableDistance = numericDistance;
   const selectedPackage =
     packageOptions.find((item) => item.id === packageType) || packageOptions[0];
   const vehicleRates = useMemo(
@@ -511,7 +529,7 @@ export default function Home() {
       `Cab: ${vehicle}`,
       `Start Point: ${startPoint}`,
       `Destination: ${drop || "Please confirm"}`,
-      `One-side Distance: ${numericDistance || "Please confirm"} km`,
+      `Estimated Distance: ${numericDistance || "Please confirm"} km`,
       `Billable Distance: ${billableDistance || "Please confirm"} km`,
       `Rate: ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`,
       `Estimated Fare: ${fareTotal ? formattedFare : "Please confirm"}`,
@@ -799,7 +817,7 @@ export default function Home() {
           <div className="vip-visual-card">
             <span>VIP</span>
             <strong>Luxury Cab Service</strong>
-            <small>Mumbai pickup | All India trips</small>
+            <small>Mumbai corporate pickup | All India trips</small>
           </div>
         </div>
         <div className="hero-content">
@@ -807,9 +825,9 @@ export default function Home() {
             <p className="eyebrow">Visnu S Tours & Travels</p>
             <h1>VIP Luxury Cab Service by Vishnu Tours</h1>
               <p>
-                Mumbai pickup se VIP guest, corporate travel, airport transfer
-                aur all India outstation booking. Route search, cab selection
-                aur Razorpay payment direct site par.
+                Corporate guests, airport transfers, in-city movement aur
+                outstation trips ke liye Mumbai se premium cab booking. Clean
+                journey detail, cab selection aur payment direct site par.
               </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
@@ -834,7 +852,7 @@ export default function Home() {
             }}
           >
             <div className="panel-head">
-              <span>Mumbai se all India booking</span>
+              <span>Corporate cab booking</span>
               <strong>Book Your Ride</strong>
             </div>
             <div className="booking-steps" aria-label="Booking steps">
@@ -852,7 +870,7 @@ export default function Home() {
               ))}
             </datalist>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
-              {["Outstation Cab", "Round Trip", "Local Rental", "VIP Luxury Cab"].map(
+              {bookingTypes.map(
                 (type) => (
                   <button
                     key={type}
@@ -906,6 +924,20 @@ export default function Home() {
                 </small>
               ) : null}
             </label>
+            <div className="quick-suggestions" aria-label="Popular Mumbai pickup">
+              <span>Popular pickup</span>
+              <div>
+                {popularPickupSuggestions.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => updateStartPoint(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="place-field">
               To - All India destination
               <input
@@ -939,6 +971,20 @@ export default function Home() {
                 </div>
               ) : null}
             </label>
+            <div className="quick-suggestions" aria-label="Popular destinations">
+              <span>Popular destination</span>
+              <div>
+                {popularDestinationSuggestions.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => updateDestination(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="form-grid">
               <label>
                 Distance from Mumbai (KM)
@@ -1006,8 +1052,8 @@ export default function Home() {
               <p className="step-ready">Cab options neeche full page par khul gaye hain.</p>
             )}
             <p className="microcopy">
-              Booking site par live save hoti hai. Etios Rs. 16/km se start,
-              baaki cab ka rate card ke hisab se calculate hota hai.
+              Mumbai ke andar se service start hoti hai. Airport, in-city aur
+              outstation corporate trips ke liye direct booking.
             </p>
           </form>
         </div>
@@ -1023,7 +1069,7 @@ export default function Home() {
             <div className="journey-summary wide">
               <span>{startPoint} to {drop}</span>
               <strong>
-                {numericDistance} km one side | {tripType}
+                {numericDistance} km estimate | {tripType}
               </strong>
               <button type="button" onClick={() => setShowVehicleStep(false)}>
                 Change Journey
@@ -1040,7 +1086,7 @@ export default function Home() {
                   onClick={() => {
                     setPackageType(item.id);
                     if (item.id === "vip") {
-                      setTripType("VIP Luxury Cab");
+                          setTripType("Outstation");
                     }
                   }}
                 >
@@ -1161,26 +1207,26 @@ export default function Home() {
       <section className="trust-strip" aria-label="Service highlights">
         <div>
           <strong>Best Rate Options</strong>
-          <span>Direct fare confirmation</span>
+          <span>Corporate-friendly pricing</span>
         </div>
         <div>
-          <strong>Save Commission</strong>
-          <span>Owner-side booking</span>
+          <strong>Direct Owner Fleet</strong>
+          <span>No middle commission</span>
         </div>
         <div>
-          <strong>24x7 Support</strong>
-          <span>Call and WhatsApp help</span>
+          <strong>VIP Coordination</strong>
+          <span>Guest movement support</span>
         </div>
         <div>
-          <strong>Secure Payment</strong>
-          <span>UPI gateway ready</span>
+          <strong>Online Payment</strong>
+          <span>Razorpay after booking</span>
         </div>
       </section>
 
       <section className="section" id="services">
         <div className="section-heading">
           <p className="eyebrow">Cab services</p>
-          <h2>Book for any route, any purpose</h2>
+          <h2>Corporate travel, airport movement and outstation trips</h2>
         </div>
         <div className="service-grid">
           {serviceTypes.map((service) => (
@@ -1188,8 +1234,8 @@ export default function Home() {
               <span className="service-icon" aria-hidden="true" />
               <h3>{service}</h3>
               <p>
-                Clean cab, trained driver, transparent fare discussion and
-                direct owner-side booking without extra commission pressure.
+                Corporate guest pickup, airport movement, in-city duty and
+                outstation travel with direct owner-side booking.
               </p>
             </article>
           ))}
@@ -1256,7 +1302,7 @@ export default function Home() {
           </a>
         </div>
         <ul className="check-list">
-          <li>Outstation, round trip and local packages</li>
+          <li>Airport, in-city and outstation bookings</li>
           <li>Luxury cab service for VIP and corporate guests</li>
           <li>Innova Crysta, Hycross, Ertiga, Rumion and Etios available</li>
           <li>Site booking ke baad Razorpay payment option</li>
