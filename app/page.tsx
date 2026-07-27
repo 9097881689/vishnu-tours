@@ -405,6 +405,7 @@ export default function Home() {
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
   >(null);
+  const [pickupFieldTouched, setPickupFieldTouched] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
     bookingId: string;
     estimatedFare: number;
@@ -447,6 +448,11 @@ export default function Home() {
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
   const formattedFare = formatInr(fareTotal);
   const pickupAllowed = isMumbaiPickup(startPoint);
+  const showPickupError =
+    pickupFieldTouched &&
+    !pickupAllowed &&
+    startPoint.trim().length >= 3 &&
+    activeSuggestionField !== "from";
   const visibleFromSuggestions = getPlaceSuggestions(startPoint, fromSuggestions, 7);
   const visibleDestinationSuggestions = getPlaceSuggestions(
     drop,
@@ -582,6 +588,7 @@ export default function Home() {
     setConfirmedBooking(null);
 
     if (!pickupAllowed) {
+      setPickupFieldTouched(true);
       setBookingStatus(
         "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
       );
@@ -598,6 +605,7 @@ export default function Home() {
 
   async function submitBooking(selectedCab = vehicle) {
     if (!pickupAllowed) {
+      setPickupFieldTouched(true);
       setBookingStatus(
         "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
       );
@@ -855,10 +863,6 @@ export default function Home() {
               <span>Corporate cab booking</span>
               <strong>Book Your Ride</strong>
             </div>
-            <div className="booking-steps" aria-label="Booking steps">
-              <span className={!showVehicleStep ? "active" : ""}>1 Journey Detail</span>
-              <span className={showVehicleStep ? "active" : ""}>2 Cab & Payment</span>
-            </div>
             <datalist id="from-suggestions">
               {fromSuggestions.map((item) => (
                 <option key={item} value={item} />
@@ -891,11 +895,18 @@ export default function Home() {
               <input
                 ref={fromInputRef}
                 value={startPoint}
-                onChange={(event) => updateStartPoint(event.target.value)}
-                onFocus={() => setActiveSuggestionField("from")}
-                onBlur={() =>
-                  window.setTimeout(() => setActiveSuggestionField(null), 140)
-                }
+                onChange={(event) => {
+                  setPickupFieldTouched(false);
+                  updateStartPoint(event.target.value);
+                }}
+                onFocus={() => {
+                  setPickupFieldTouched(false);
+                  setActiveSuggestionField("from");
+                }}
+                onBlur={() => {
+                  setPickupFieldTouched(true);
+                  window.setTimeout(() => setActiveSuggestionField(null), 140);
+                }}
                 list="from-suggestions"
                 placeholder="Search Mumbai pickup location"
                 required
@@ -908,6 +919,7 @@ export default function Home() {
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
+                        setPickupFieldTouched(false);
                         updateStartPoint(item);
                         setActiveSuggestionField(null);
                       }}
@@ -918,7 +930,7 @@ export default function Home() {
                   ))}
                 </div>
               ) : null}
-              {!pickupAllowed ? (
+              {showPickupError ? (
                 <small className="field-error">
                   Hum Mumbai se bahar pickup nahi karte. Mumbai area select karein.
                 </small>
@@ -931,7 +943,10 @@ export default function Home() {
                   <button
                     key={item}
                     type="button"
-                    onClick={() => updateStartPoint(item)}
+                    onClick={() => {
+                      setPickupFieldTouched(false);
+                      updateStartPoint(item);
+                    }}
                   >
                     {item}
                   </button>
