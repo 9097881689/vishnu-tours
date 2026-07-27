@@ -4,6 +4,12 @@ import { FormEvent, useMemo, useState } from "react";
 
 const whatsappNumber = "917004291529";
 
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
 const vehicles = [
   {
     name: "Toyota Innova Crysta",
@@ -65,6 +71,8 @@ export default function Home() {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
+  const [advanceAmount, setAdvanceAmount] = useState("500");
+  const [paymentStatus, setPaymentStatus] = useState("");
 
   const bookingText = useMemo(() => {
     return [
@@ -87,6 +95,104 @@ export default function Home() {
   function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function startPayment() {
+    const amount = Number(advanceAmount);
+
+    if (!amount || amount < 1) {
+      setPaymentStatus("Please enter a valid advance amount.");
+      return;
+    }
+
+    let order: { keyId?: string; orderId?: string; error?: string };
+
+    try {
+      const response = await fetch("/api/razorpay-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Math.round(amount * 100),
+          receipt: `vishnu-${Date.now()}`,
+          notes: {
+            name,
+            mobile,
+            pickup,
+            drop,
+            vehicle,
+            tripType,
+          },
+        }),
+      });
+      order = (await response.json()) as {
+        keyId?: string;
+        orderId?: string;
+        error?: string;
+      };
+    } catch {
+      order = { error: "Payment gateway could not be reached." };
+    }
+
+    if (!order.keyId || !order.orderId) {
+      setPaymentStatus(
+        order.error ||
+          "Payment gateway is ready. Add Razorpay credentials to activate online payment.",
+      );
+      window.open(
+        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+          `Namaste Vishnu Tours, mujhe Rs. ${advanceAmount} advance payment link chahiye.\nBooking: ${name || "Guest"}\nMobile: ${mobile || "Please confirm"}\nTrip: ${tripType}\nCab: ${vehicle}`,
+        )}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+
+    if (!window.Razorpay) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Razorpay failed to load"));
+        document.body.appendChild(script);
+      }).catch(() => {
+        setPaymentStatus("Payment gateway could not load. Please try WhatsApp.");
+      });
+    }
+
+    if (!window.Razorpay) {
+      return;
+    }
+
+    const checkout = new window.Razorpay({
+      key: order.keyId,
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      name: "Vishnu Tours",
+      description: `${tripType} advance booking`,
+      order_id: order.orderId,
+      prefill: {
+        name,
+        contact: mobile,
+      },
+      notes: {
+        pickup,
+        drop,
+        vehicle,
+        tripType,
+      },
+      theme: {
+        color: "#f6bd16",
+      },
+      handler: () => {
+        setPaymentStatus("Payment received. Please share screenshot on WhatsApp.");
+      },
+      modal: {
+        ondismiss: () => setPaymentStatus("Payment was closed before completion."),
+      },
+    });
+
+    checkout.open();
   }
 
   return (
@@ -120,15 +226,22 @@ export default function Home() {
       </header>
 
       <section className="hero" id="home">
+        <div className="taxi-visual" aria-hidden="true">
+          <span className="road-line" />
+          <img
+            src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1200&q=80"
+            alt=""
+          />
+        </div>
         <div className="hero-content">
           <div className="hero-copy">
             <p className="eyebrow">Visnu S Tours & Travels</p>
             <h1>Book Taxi Online With Vishnu Tours</h1>
-            <p>
-              Local, outstation, round trip aur VIP luxury cab service ke liye
-              direct owner-side booking. Commission free enquiry, quick fare
-              confirmation aur payment link support.
-            </p>
+              <p>
+                Local, outstation, round trip aur VIP luxury cab service ke liye
+                direct booking. Fare confirmation, driver update aur advance
+                payment support ek hi jagah.
+              </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
                 Book Cab Now
@@ -312,12 +425,12 @@ export default function Home() {
 
       <section className="payment-band" id="payment">
         <div>
-          <p className="eyebrow">Payment gateway ready</p>
+          <p className="eyebrow">Payment gateway</p>
           <h2>Proceed with payment after fare confirmation</h2>
           <p>
-            Abhi booking WhatsApp par confirm hoti hai. Razorpay, PhonePe,
-            PayU, Cashfree ya UPI QR details milte hi isi section se online
-            advance payment live kiya ja sakta hai.
+            Razorpay checkout integration add hai. Merchant Key ID set karte hi
+            customer card, UPI, netbanking aur wallet se advance pay kar sakta
+            hai. Tab tak WhatsApp payment link request fallback active hai.
           </p>
         </div>
         <div className="payment-options">
@@ -326,9 +439,21 @@ export default function Home() {
           <span>Netbanking</span>
           <span>Wallet</span>
         </div>
-        <a className="primary-action" href={whatsappUrl} target="_blank">
-          Request Payment Link
-        </a>
+        <div className="payment-card">
+          <label>
+            Advance amount
+            <input
+              value={advanceAmount}
+              onChange={(event) => setAdvanceAmount(event.target.value)}
+              inputMode="numeric"
+              placeholder="500"
+            />
+          </label>
+          <button className="primary-action payment-button" type="button" onClick={startPayment}>
+            Pay Advance
+          </button>
+          {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
+        </div>
       </section>
 
       <section className="section split-section">
@@ -367,8 +492,8 @@ export default function Home() {
         <details>
           <summary>Online payment gateway live hai?</summary>
           <p>
-            Site payment gateway ke liye ready hai. Merchant account keys ya UPI
-            QR milte hi advance payment button live ho jayega.
+            Razorpay checkout code add hai. Aapki Razorpay Merchant Key ID add
+            karte hi advance payment button live charge accept karega.
           </p>
         </details>
         <details>
