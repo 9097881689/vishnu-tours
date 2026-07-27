@@ -2,9 +2,9 @@ export async function POST(request: Request) {
   const keyId = process.env.RAZORPAY_KEY_ID || "";
   const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
 
-  if (!keyId || !keySecret) {
+  if (!keyId) {
     return Response.json(
-      { error: "Razorpay credentials are not configured." },
+      { error: "Razorpay Key ID is not configured." },
       { status: 503 },
     );
   }
@@ -21,6 +21,14 @@ export async function POST(request: Request) {
       { error: "Minimum payment amount is Rs. 1." },
       { status: 400 },
     );
+  }
+
+  if (!keySecret) {
+    return Response.json({
+      keyId,
+      orderId: null,
+      mode: "checkout-only",
+    });
   }
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {
@@ -49,5 +57,6 @@ export async function POST(request: Request) {
   return Response.json({
     keyId,
     orderId: result.id,
+    mode: "order",
   });
 }

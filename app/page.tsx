@@ -105,7 +105,7 @@ export default function Home() {
       return;
     }
 
-    let order: { keyId?: string; orderId?: string; error?: string };
+    let order: { keyId?: string; orderId?: string | null; error?: string };
 
     try {
       const response = await fetch("/api/razorpay-order", {
@@ -126,14 +126,14 @@ export default function Home() {
       });
       order = (await response.json()) as {
         keyId?: string;
-        orderId?: string;
+        orderId?: string | null;
         error?: string;
       };
     } catch {
       order = { error: "Payment gateway could not be reached." };
     }
 
-    if (!order.keyId || !order.orderId) {
+    if (!order.keyId) {
       setPaymentStatus(
         order.error ||
           "Payment gateway is ready. Add Razorpay credentials to activate online payment.",
@@ -164,13 +164,12 @@ export default function Home() {
       return;
     }
 
-    const checkout = new window.Razorpay({
+    const checkoutOptions: Record<string, unknown> = {
       key: order.keyId,
       amount: Math.round(amount * 100),
       currency: "INR",
       name: "Vishnu Tours",
       description: `${tripType} advance booking`,
-      order_id: order.orderId,
       prefill: {
         name,
         contact: mobile,
@@ -190,7 +189,13 @@ export default function Home() {
       modal: {
         ondismiss: () => setPaymentStatus("Payment was closed before completion."),
       },
-    });
+    };
+
+    if (order.orderId) {
+      checkoutOptions.order_id = order.orderId;
+    }
+
+    const checkout = new window.Razorpay(checkoutOptions);
 
     checkout.open();
   }
