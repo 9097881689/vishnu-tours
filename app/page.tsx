@@ -91,6 +91,13 @@ export default function Home() {
 
   return (
     <main>
+      <div className="top-strip">
+        <span>Welcome Guest</span>
+        <a href="tel:+917004291529">Call: +91 7004291529</a>
+        <a href={whatsappUrl} target="_blank">
+          Request Help
+        </a>
+      </div>
       <header className="site-header">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
           <span className="brand-mark">VT</span>
@@ -100,7 +107,9 @@ export default function Home() {
           </span>
         </a>
         <nav aria-label="Primary navigation">
+          <a href="#home">Home</a>
           <a href="#services">Services</a>
+          <a href="#booking">Book Taxi</a>
           <a href="#fleet">Fleet</a>
           <a href="#payment">Payment</a>
           <a href="#contact">Contact</a>
@@ -111,19 +120,14 @@ export default function Home() {
       </header>
 
       <section className="hero" id="home">
-        <div className="hero-media" aria-hidden="true">
-          <img
-            src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85"
-            alt=""
-          />
-        </div>
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="eyebrow">Ready to book cab service</p>
-            <h1>Vishnu Tours</h1>
+            <p className="eyebrow">Visnu S Tours & Travels</p>
+            <h1>Book Taxi Online With Vishnu Tours</h1>
             <p>
-              Innova Crysta, Hycross, Ertiga, Rumion aur Etios ke saath local,
-              outstation, round trip aur VIP luxury cab booking.
+              Local, outstation, round trip aur VIP luxury cab service ke liye
+              direct owner-side booking. Commission free enquiry, quick fare
+              confirmation aur payment link support.
             </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
@@ -137,8 +141,8 @@ export default function Home() {
 
           <form className="booking-panel" id="booking" onSubmit={submitBooking}>
             <div className="panel-head">
-              <span>Quick Booking</span>
-              <strong>Direct WhatsApp Confirm</strong>
+              <span>Set Your Location First</span>
+              <strong>Book Your Ride</strong>
             </div>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
               {["Outstation Cab", "Round Trip", "Local Rental", "VIP Luxury Cab"].map(
@@ -155,26 +159,26 @@ export default function Home() {
               )}
             </div>
             <label>
-              Pickup location
+              Start Location
               <input
                 value={pickup}
                 onChange={(event) => setPickup(event.target.value)}
-                placeholder="City, hotel, station or address"
+                placeholder="Business, place, hotel, station or address"
                 required
               />
             </label>
             <label>
-              Destination
+              Enter Destination
               <input
                 value={drop}
                 onChange={(event) => setDrop(event.target.value)}
-                placeholder="Where do you want to go?"
+                placeholder="Business, place or city name"
                 required
               />
             </label>
             <div className="form-grid">
               <label>
-                Date and time
+                Pickup date and time
                 <input
                   value={date}
                   onChange={(event) => setDate(event.target.value)}
@@ -183,7 +187,7 @@ export default function Home() {
                 />
               </label>
               <label>
-                Cab type
+                Select Cab
                 <select
                   value={vehicle}
                   onChange={(event) => setVehicle(event.target.value)}
@@ -194,6 +198,16 @@ export default function Home() {
                 </select>
               </label>
             </div>
+            <label>
+              Select Package
+              <select>
+                <option>Fare confirmation on WhatsApp</option>
+                <option>Full day local rental</option>
+                <option>Half day local rental</option>
+                <option>Outstation per km package</option>
+                <option>VIP / corporate package</option>
+              </select>
+            </label>
             <div className="form-grid">
               <label>
                 Your name
@@ -228,7 +242,7 @@ export default function Home() {
               </select>
             </label>
             <button className="submit-button" type="submit">
-              Continue on WhatsApp
+              Continue
             </button>
             <p className="microcopy">
               Fare, driver details and payment link are confirmed by Vishnu
@@ -240,20 +254,20 @@ export default function Home() {
 
       <section className="trust-strip" aria-label="Service highlights">
         <div>
-          <strong>24x7</strong>
-          <span>Booking support</span>
+          <strong>Best Rate Options</strong>
+          <span>Direct fare confirmation</span>
         </div>
         <div>
-          <strong>5+</strong>
-          <span>Cab options</span>
+          <strong>Save Commission</strong>
+          <span>Owner-side booking</span>
         </div>
         <div>
-          <strong>VIP</strong>
-          <span>Luxury service</span>
+          <strong>24x7 Support</strong>
+          <span>Call and WhatsApp help</span>
         </div>
         <div>
-          <strong>Local + Outstation</strong>
-          <span>Flexible trips</span>
+          <strong>Secure Payment</strong>
+          <span>UPI gateway ready</span>
         </div>
       </section>
 
@@ -299,7 +313,7 @@ export default function Home() {
       <section className="payment-band" id="payment">
         <div>
           <p className="eyebrow">Payment gateway ready</p>
-          <h2>Advance payment link can be connected</h2>
+          <h2>Proceed with payment after fare confirmation</h2>
           <p>
             Abhi booking WhatsApp par confirm hoti hai. Razorpay, PhonePe,
             PayU, Cashfree ya UPI QR details milte hi isi section se online
@@ -319,13 +333,16 @@ export default function Home() {
 
       <section className="section split-section">
         <div>
-          <p className="eyebrow">Why Vishnu Tours</p>
-          <h2>Direct booking means better control and better fare</h2>
+          <p className="eyebrow">Traveling in group?</p>
+          <h2>Need multiple cabs or corporate booking?</h2>
           <p>
             Commission khane wale middlemen se bachne ke liye customer direct
             Vishnu Tours se trip details share karta hai. Aap route, cab,
             timing, fare aur payment ko seedha confirm kar sakte hain.
           </p>
+          <a className="primary-action inline-action" href={whatsappUrl} target="_blank">
+            Contact Us Now
+          </a>
         </div>
         <ul className="check-list">
           <li>Outstation, round trip and local packages</li>
