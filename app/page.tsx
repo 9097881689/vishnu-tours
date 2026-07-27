@@ -13,6 +13,16 @@ const fromSuggestions = [
   "Andheri Mumbai",
   "Navi Mumbai",
   "Thane Mumbai",
+  "Bandra Mumbai",
+  "Borivali Mumbai",
+  "Malad Mumbai",
+  "Goregaon Mumbai",
+  "Powai Mumbai",
+  "Ghatkopar Mumbai",
+  "Kurla Mumbai",
+  "Chembur Mumbai",
+  "Mira Road Mumbai",
+  "Vasai Mumbai",
 ];
 
 const destinationDistances: Record<string, number> = {
@@ -206,6 +216,32 @@ function formatInr(amount: number) {
     : "Enter KM";
 }
 
+function isMumbaiPickup(value: string) {
+  const pickup = value.trim().toLowerCase();
+
+  if (!pickup) {
+    return true;
+  }
+
+  return [
+    "mumbai",
+    "andheri",
+    "bandra",
+    "borivali",
+    "dadar",
+    "thane",
+    "navi",
+    "powai",
+    "malad",
+    "goregaon",
+    "ghatkopar",
+    "kurla",
+    "chembur",
+    "mira road",
+    "vasai",
+  ].some((area) => pickup.includes(area));
+}
+
 export default function Home() {
   const [tripType, setTripType] = useState("Outstation Cab");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
@@ -222,6 +258,7 @@ export default function Home() {
   const [isPaying, setIsPaying] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
+  const [showVehicleStep, setShowVehicleStep] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
     bookingId: string;
     estimatedFare: number;
@@ -264,6 +301,7 @@ export default function Home() {
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
   const formattedFare = formatInr(fareTotal);
+  const pickupAllowed = isMumbaiPickup(startPoint);
 
   const bookingText = useMemo(() => {
     return [
@@ -305,6 +343,7 @@ export default function Home() {
 
   function updateDestination(value: string) {
     setDrop(value);
+    setShowVehicleStep(false);
     const distance = getDestinationDistance(value);
 
     if (distance) {
@@ -312,7 +351,40 @@ export default function Home() {
     }
   }
 
+  function updateStartPoint(value: string) {
+    setStartPoint(value);
+    setShowVehicleStep(false);
+    setConfirmedBooking(null);
+    setBookingStatus("");
+  }
+
+  function continueToRates() {
+    setBookingStatus("");
+    setConfirmedBooking(null);
+
+    if (!pickupAllowed) {
+      setBookingStatus(
+        "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
+      );
+      return;
+    }
+
+    if (!startPoint || !drop || !numericDistance || !date || !name || !mobile) {
+      setBookingStatus("Journey detail, date, name aur mobile fill karein.");
+      return;
+    }
+
+    setShowVehicleStep(true);
+  }
+
   async function submitBooking(selectedCab = vehicle) {
+    if (!pickupAllowed) {
+      setBookingStatus(
+        "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
+      );
+      return;
+    }
+
     if (!drop || !numericDistance || !date || !name || !mobile) {
       setBookingStatus("Please From/To, KM, date, name aur mobile fill karein.");
       return;
@@ -552,12 +624,20 @@ export default function Home() {
             id="booking"
             onSubmit={(event) => {
               event.preventDefault();
-              submitBooking(vehicle);
+              if (showVehicleStep) {
+                submitBooking(vehicle);
+              } else {
+                continueToRates();
+              }
             }}
           >
             <div className="panel-head">
               <span>Mumbai se all India booking</span>
               <strong>Book Your Ride</strong>
+            </div>
+            <div className="booking-steps" aria-label="Booking steps">
+              <span className={!showVehicleStep ? "active" : ""}>1 Journey Detail</span>
+              <span className={showVehicleStep ? "active" : ""}>2 Cab & Payment</span>
             </div>
             <datalist id="from-suggestions">
               {fromSuggestions.map((item) => (
@@ -576,7 +656,10 @@ export default function Home() {
                     key={type}
                     type="button"
                     className={tripType === type ? "active" : ""}
-                    onClick={() => setTripType(type)}
+                    onClick={() => {
+                      setTripType(type);
+                      setShowVehicleStep(false);
+                    }}
                   >
                     {type}
                   </button>
@@ -587,11 +670,16 @@ export default function Home() {
               From
               <input
                 value={startPoint}
-                onChange={(event) => setStartPoint(event.target.value)}
+                onChange={(event) => updateStartPoint(event.target.value)}
                 list="from-suggestions"
                 placeholder="Mumbai Head Office"
                 required
               />
+              {!pickupAllowed ? (
+                <small className="field-error">
+                  Hum Mumbai se bahar pickup nahi karte. Mumbai area select karein.
+                </small>
+              ) : null}
             </label>
             <label>
               To
@@ -608,7 +696,10 @@ export default function Home() {
                 Distance from Mumbai (KM)
                 <input
                   value={distanceKm}
-                  onChange={(event) => setDistanceKm(event.target.value)}
+                  onChange={(event) => {
+                    setDistanceKm(event.target.value);
+                    setShowVehicleStep(false);
+                  }}
                   placeholder="Example: 250"
                   inputMode="numeric"
                   required
@@ -618,49 +709,24 @@ export default function Home() {
                 Pickup date and time
                 <input
                   value={date}
-                  onChange={(event) => setDate(event.target.value)}
+                  onChange={(event) => {
+                    setDate(event.target.value);
+                    setShowVehicleStep(false);
+                  }}
                   type="datetime-local"
                   required
                 />
               </label>
-            </div>
-            <div className="package-grid" aria-label="Select package">
-              {packageOptions.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={packageType === item.id ? "package-card active" : "package-card"}
-                  onClick={() => {
-                    setPackageType(item.id);
-                    if (item.id === "vip") {
-                      setTripType("VIP Luxury Cab");
-                    }
-                  }}
-                >
-                  <strong>{item.label}</strong>
-                  <span>{item.description}</span>
-                </button>
-              ))}
-            </div>
-            <div className="fare-box" aria-live="polite">
-              <span>Selected estimate</span>
-              <strong>{formattedFare}</strong>
-              <small>
-                {packageType === "perKm"
-                  ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
-                  : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
-              </small>
-              <small>
-                Distance Mumbai se approximate hai. Unknown city ke liye KM
-                manually edit karein.
-              </small>
             </div>
             <div className="form-grid">
               <label>
                 Your name
                 <input
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setShowVehicleStep(false);
+                  }}
                   placeholder="Guest name"
                   required
                 />
@@ -669,56 +735,111 @@ export default function Home() {
                 Mobile number
                 <input
                   value={mobile}
-                  onChange={(event) => setMobile(event.target.value)}
+                  onChange={(event) => {
+                    setMobile(event.target.value);
+                    setShowVehicleStep(false);
+                  }}
                   placeholder="Your phone number"
                   inputMode="tel"
                   required
                 />
               </label>
             </div>
-            <label>
-              Payment preference
-              <select
-                value={paymentMode}
-                onChange={(event) => setPaymentMode(event.target.value)}
-              >
-                <option>Pay advance after fare confirmation</option>
-                <option>UPI payment link required</option>
-                <option>Cash after trip</option>
-                <option>Corporate billing</option>
-              </select>
-            </label>
-            <div className="vehicle-rate-list" aria-live="polite">
-              {vehicleRates.map((item) => (
-                <article
-                  key={item.name}
-                  className={vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"}
-                >
-                  <div>
-                    <span className="vehicle-tag">{item.tag}</span>
-                    <strong>{item.name}</strong>
-                    <small>{item.seats} | {item.type}</small>
-                  </div>
-                  <div className="vehicle-rate-meta">
-                    <span>{item.fareLabel}</span>
-                    <strong>{formatInr(item.estimatedFare)}</strong>
-                  </div>
-                  <button
-                    className="book-cab-button"
-                    type="button"
-                    onClick={() => submitBooking(item.name)}
-                    disabled={isBooking}
-                  >
-                    {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
-                  </button>
-                </article>
-              ))}
-            </div>
             {bookingStatus ? (
               <p className={confirmedBooking ? "booking-success" : "booking-error"}>
                 {bookingStatus}
               </p>
             ) : null}
+            {!showVehicleStep ? (
+              <button className="submit-button" type="submit">
+                Continue to Cab Options
+              </button>
+            ) : (
+              <div className="cab-step">
+                <div className="journey-summary">
+                  <span>{startPoint} to {drop}</span>
+                  <strong>
+                    {numericDistance} km one side | {tripType}
+                  </strong>
+                  <button type="button" onClick={() => setShowVehicleStep(false)}>
+                    Edit Detail
+                  </button>
+                </div>
+                <div className="package-grid" aria-label="Select package">
+                  {packageOptions.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={
+                        packageType === item.id ? "package-card active" : "package-card"
+                      }
+                      onClick={() => {
+                        setPackageType(item.id);
+                        if (item.id === "vip") {
+                          setTripType("VIP Luxury Cab");
+                        }
+                      }}
+                    >
+                      <strong>{item.label}</strong>
+                      <span>{item.description}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="fare-box" aria-live="polite">
+                  <span>Selected estimate</span>
+                  <strong>{formattedFare}</strong>
+                  <small>
+                    {packageType === "perKm"
+                      ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
+                      : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
+                  </small>
+                  <small>
+                    Distance Mumbai se approximate hai. Unknown city ke liye KM
+                    manually edit karein.
+                  </small>
+                </div>
+                <label>
+                  Payment preference
+                  <select
+                    value={paymentMode}
+                    onChange={(event) => setPaymentMode(event.target.value)}
+                  >
+                    <option>Pay advance after fare confirmation</option>
+                    <option>UPI payment link required</option>
+                    <option>Cash after trip</option>
+                    <option>Corporate billing</option>
+                  </select>
+                </label>
+                <div className="vehicle-rate-list" aria-live="polite">
+                  {vehicleRates.map((item) => (
+                    <article
+                      key={item.name}
+                      className={
+                        vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"
+                      }
+                    >
+                      <div>
+                        <span className="vehicle-tag">{item.tag}</span>
+                        <strong>{item.name}</strong>
+                        <small>{item.seats} | {item.type}</small>
+                      </div>
+                      <div className="vehicle-rate-meta">
+                        <span>{item.fareLabel}</span>
+                        <strong>{formatInr(item.estimatedFare)}</strong>
+                      </div>
+                      <button
+                        className="book-cab-button"
+                        type="button"
+                        onClick={() => submitBooking(item.name)}
+                        disabled={isBooking}
+                      >
+                        {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
             {confirmedBooking ? (
               <div className="booking-confirmation" aria-live="polite">
                 <span>Booking ID</span>
