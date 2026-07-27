@@ -463,6 +463,49 @@ input[readonly] {
   font-size: 20px;
 }
 
+.post-booking-payment {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #e5c557;
+  border-radius: 8px;
+  background: #fffbe8;
+}
+
+.post-booking-payment > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.post-booking-payment span,
+.post-booking-payment small {
+  color: #735700;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.post-booking-payment strong {
+  color: #181818;
+  font-size: 16px;
+}
+
+.payment-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.payment-choice-row button {
+  min-height: 34px;
+  border: 1px solid #e2c456;
+  border-radius: 6px;
+  background: #fff;
+  color: #181818;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .microcopy {
   margin: 0;
   color: var(--muted);

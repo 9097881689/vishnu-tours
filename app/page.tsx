@@ -76,6 +76,7 @@ export default function Home() {
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
   const [advanceAmount, setAdvanceAmount] = useState("500");
   const [paymentStatus, setPaymentStatus] = useState("");
+  const [isPaying, setIsPaying] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
@@ -167,6 +168,7 @@ export default function Home() {
       }
 
       setConfirmedBooking(result.booking);
+      setAdvanceAmount(String(result.booking.estimatedFare));
       setBookingStatus("Booking site par live save ho gayi.");
     } catch {
       setBookingStatus("Network issue ki wajah se booking save nahi ho payi.");
@@ -183,6 +185,14 @@ export default function Home() {
       return;
     }
 
+    if (!confirmedBooking) {
+      setPaymentStatus("Please complete booking first, then pay.");
+      return;
+    }
+
+    setIsPaying(true);
+    setPaymentStatus("");
+
     let order: { keyId?: string; orderId?: string | null; error?: string };
 
     try {
@@ -193,6 +203,7 @@ export default function Home() {
           amount: Math.round(amount * 100),
           receipt: `vishnu-${Date.now()}`,
           notes: {
+            bookingId: confirmedBooking.bookingId,
             name,
             mobile,
             pickup: headOffice,
@@ -214,6 +225,7 @@ export default function Home() {
     }
 
     if (!order.keyId) {
+      setIsPaying(false);
       setPaymentStatus(
         order.error ||
           "Payment gateway is ready. Add Razorpay credentials to activate online payment.",
@@ -241,6 +253,7 @@ export default function Home() {
     }
 
     if (!window.Razorpay) {
+      setIsPaying(false);
       return;
     }
 
@@ -249,12 +262,13 @@ export default function Home() {
       amount: Math.round(amount * 100),
       currency: "INR",
       name: "Vishnu Tours",
-      description: `${tripType} advance booking`,
+      description: `${confirmedBooking.bookingId} ${tripType} booking`,
       prefill: {
         name,
         contact: mobile,
       },
       notes: {
+        bookingId: confirmedBooking.bookingId,
         pickup: headOffice,
         drop,
         vehicle,
@@ -266,10 +280,14 @@ export default function Home() {
         color: "#f6bd16",
       },
       handler: () => {
+        setIsPaying(false);
         setPaymentStatus("Payment received. Please share screenshot on WhatsApp.");
       },
       modal: {
-        ondismiss: () => setPaymentStatus("Payment was closed before completion."),
+        ondismiss: () => {
+          setIsPaying(false);
+          setPaymentStatus("Payment was closed before completion.");
+        },
       },
     };
 
@@ -477,6 +495,50 @@ export default function Home() {
                 </small>
               </div>
             ) : null}
+            {confirmedBooking ? (
+              <div className="post-booking-payment">
+                <div>
+                  <span>Payment option</span>
+                  <strong>Pay after booking</strong>
+                  <small>Use Razorpay for advance or full fare.</small>
+                </div>
+                <div className="payment-choice-row">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAdvanceAmount(
+                        String(Math.max(500, Math.round(confirmedBooking.estimatedFare * 0.2))),
+                      )
+                    }
+                  >
+                    20% Advance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdvanceAmount(String(confirmedBooking.estimatedFare))}
+                  >
+                    Full Fare
+                  </button>
+                </div>
+                <label>
+                  Payment amount
+                  <input
+                    value={advanceAmount}
+                    onChange={(event) => setAdvanceAmount(event.target.value)}
+                    inputMode="numeric"
+                  />
+                </label>
+                <button
+                  className="submit-button"
+                  type="button"
+                  onClick={startPayment}
+                  disabled={isPaying}
+                >
+                  {isPaying ? "Opening Razorpay..." : "Pay with Razorpay"}
+                </button>
+                {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
+              </div>
+            ) : null}
             <p className="microcopy">
               Booking site par live save hoti hai. Fare Rs. 16/km Mumbai start
               point se calculate hota hai.
@@ -546,11 +608,10 @@ export default function Home() {
       <section className="payment-band" id="payment">
         <div>
           <p className="eyebrow">Payment gateway</p>
-          <h2>Proceed with payment after fare confirmation</h2>
+          <h2>Booking ke turant baad Razorpay payment</h2>
           <p>
-            Razorpay checkout integration add hai. Merchant Key ID set karte hi
-            customer card, UPI, netbanking aur wallet se advance pay kar sakta
-            hai. Tab tak WhatsApp payment link request fallback active hai.
+            Customer pehle site par booking save karega. Booking ID milte hi
+            same form me advance ya full fare Razorpay se pay kar sakta hai.
           </p>
         </div>
         <div className="payment-options">
@@ -560,19 +621,10 @@ export default function Home() {
           <span>Wallet</span>
         </div>
         <div className="payment-card">
-          <label>
-            Advance amount
-            <input
-              value={advanceAmount}
-              onChange={(event) => setAdvanceAmount(event.target.value)}
-              inputMode="numeric"
-              placeholder="500"
-            />
-          </label>
-          <button className="primary-action payment-button" type="button" onClick={startPayment}>
-            Pay Advance
-          </button>
-          {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
+          <strong>Step 1</strong>
+          <span>Book cab on site</span>
+          <strong>Step 2</strong>
+          <span>Pay with Razorpay</span>
         </div>
       </section>
 
