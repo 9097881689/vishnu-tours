@@ -1091,14 +1091,7 @@ export default function Home() {
       setIsPaying(false);
       setPaymentStatus(
         order.error ||
-          "Payment Gateway Is Ready. Add Razorpay Credentials To Activate Online Payment.",
-      );
-      window.open(
-        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-          `Hello Vishnu Tours, I Need A Rs. ${advanceAmount} Advance Payment Link.\nBooking: ${name || "Guest"}\nMobile: ${mobile || "Please Confirm"}\nTrip: ${tripType}\nCab: ${vehicle}`,
-        )}`,
-        "_blank",
-        "noopener,noreferrer",
+          "Razorpay Credentials Are Not Configured. Please Add Razorpay Key ID And Key Secret.",
       );
       return;
     }
