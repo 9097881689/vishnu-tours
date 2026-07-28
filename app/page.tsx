@@ -5,9 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai Head Office";
 const perKmRate = 16;
-const googleMapsApiKey =
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-  "AIzaSyD0HdQH5pjAXlli2hc3Lvfb8hMZ5Pvy1Ho";
 const fromSuggestions = [
   "Mumbai Head Office",
   "Mumbai Airport",
@@ -256,18 +253,9 @@ const serviceTypes = [
 ];
 
 type PackageId = (typeof packageOptions)[number]["id"];
-type GooglePlace = {
-  formatted_address?: string;
-  name?: string;
-  address_components?: Array<{
-    long_name: string;
-    short_name: string;
-    types: string[];
-  }>;
-};
-type GoogleAutocomplete = {
-  addListener: (event: string, handler: () => void) => void;
-  getPlace: () => GooglePlace;
+type PlaceSuggestion = {
+  label: string;
+  secondary?: string;
 };
 
 function getDestinationDistance(destination: string) {
@@ -335,53 +323,6 @@ function isMumbaiPickup(value: string) {
   ].some((area) => pickup.includes(area));
 }
 
-function loadGooglePlaces() {
-  if (!googleMapsApiKey) {
-    return Promise.resolve(false);
-  }
-
-  if (window.google?.maps?.places) {
-    return Promise.resolve(true);
-  }
-
-  const existingScript = document.querySelector<HTMLScriptElement>(
-    "script[data-google-places='true']",
-  );
-
-  if (existingScript) {
-    return new Promise<boolean>((resolve) => {
-      existingScript.addEventListener("load", () => resolve(true), { once: true });
-      existingScript.addEventListener("error", () => resolve(false), { once: true });
-    });
-  }
-
-  return new Promise<boolean>((resolve) => {
-    const script = document.createElement("script");
-    script.src = `https://maps.google.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googlePlaces = "true";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
-}
-
-function isMumbaiPlace(place: GooglePlace) {
-  const locationText = [
-    place.name,
-    place.formatted_address,
-    ...(place.address_components || []).flatMap((component) => [
-      component.long_name,
-      component.short_name,
-    ]),
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return isMumbaiPickup(locationText);
-}
-
 export default function Home() {
   const fromInputRef = useRef<HTMLInputElement>(null);
   const toInputRef = useRef<HTMLInputElement>(null);
@@ -405,6 +346,12 @@ export default function Home() {
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
   >(null);
+  const [googleFromSuggestions, setGoogleFromSuggestions] = useState<
+    PlaceSuggestion[]
+  >([]);
+  const [googleDestinationSuggestions, setGoogleDestinationSuggestions] =
+    useState<PlaceSuggestion[]>([]);
+  const [isDistanceLoading, setIsDistanceLoading] = useState(false);
   const [pickupFieldTouched, setPickupFieldTouched] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
     bookingId: string;
@@ -453,72 +400,132 @@ export default function Home() {
     !pickupAllowed &&
     startPoint.trim().length >= 3 &&
     activeSuggestionField !== "from";
-  const visibleFromSuggestions = getPlaceSuggestions(startPoint, fromSuggestions, 7);
-  const visibleDestinationSuggestions = getPlaceSuggestions(
-    drop,
-    destinationSuggestions,
-    8,
-  );
+  const visibleFromSuggestions =
+    googleFromSuggestions.length > 0
+      ? googleFromSuggestions
+      : getPlaceSuggestions(startPoint, fromSuggestions, 7).map((item) => ({
+          label: item,
+          secondary: "Mumbai pickup",
+        }));
+  const visibleDestinationSuggestions =
+    googleDestinationSuggestions.length > 0
+      ? googleDestinationSuggestions
+      : getPlaceSuggestions(drop, destinationSuggestions, 8).map((item) => ({
+          label: item,
+          secondary: "Popular destination",
+        }));
 
   useEffect(() => {
     let mounted = true;
-    let fromAutocomplete: GoogleAutocomplete | undefined;
-    let toAutocomplete: GoogleAutocomplete | undefined;
+    const query = startPoint.trim();
 
-    loadGooglePlaces().then((loaded) => {
-      if (!mounted || !loaded || !window.google?.maps?.places) {
-        return;
-      }
+    if (query.length < 1 || activeSuggestionField !== "from") {
+      return () => {
+        mounted = false;
+      };
+    }
 
-      if (fromInputRef.current) {
-        fromAutocomplete = new window.google.maps.places.Autocomplete(
-          fromInputRef.current,
-          {
-            componentRestrictions: { country: "in" },
-            fields: ["address_components", "formatted_address", "name"],
-            strictBounds: false,
-            bounds: {
-              north: 19.45,
-              south: 18.82,
-              east: 73.25,
-              west: 72.72,
-            },
-          },
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/places?field=from&input=${encodeURIComponent(query)}`,
         );
+        const result = (await response.json()) as {
+          suggestions?: PlaceSuggestion[];
+        };
 
-        fromAutocomplete.addListener("place_changed", () => {
-          const place = fromAutocomplete.getPlace();
-          const label = place.formatted_address || place.name || "";
-
-          updateStartPoint(label);
-
-          if (!isMumbaiPlace(place)) {
-            setBookingStatus(
-              "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
-            );
-          }
-        });
+        if (mounted) {
+          setGoogleFromSuggestions(result.suggestions || []);
+        }
+      } catch {
+        if (mounted) {
+          setGoogleFromSuggestions([]);
+        }
       }
-
-      if (toInputRef.current) {
-        toAutocomplete = new window.google.maps.places.Autocomplete(toInputRef.current, {
-          componentRestrictions: { country: "in" },
-          fields: ["formatted_address", "name"],
-        });
-
-        toAutocomplete.addListener("place_changed", () => {
-          const place = toAutocomplete.getPlace();
-          updateDestination(place.formatted_address || place.name || "");
-        });
-      }
-    });
+    }, 220);
 
     return () => {
       mounted = false;
-      window.google?.maps?.event?.clearInstanceListeners(fromAutocomplete);
-      window.google?.maps?.event?.clearInstanceListeners(toAutocomplete);
+      window.clearTimeout(timeout);
     };
-  }, []);
+  }, [activeSuggestionField, startPoint]);
+
+  useEffect(() => {
+    let mounted = true;
+    const query = drop.trim();
+
+    if (query.length < 1 || activeSuggestionField !== "to") {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/places?field=to&input=${encodeURIComponent(query)}`,
+        );
+        const result = (await response.json()) as {
+          suggestions?: PlaceSuggestion[];
+        };
+
+        if (mounted) {
+          setGoogleDestinationSuggestions(result.suggestions || []);
+        }
+      } catch {
+        if (mounted) {
+          setGoogleDestinationSuggestions([]);
+        }
+      }
+    }, 220);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timeout);
+    };
+  }, [activeSuggestionField, drop]);
+
+  useEffect(() => {
+    let mounted = true;
+    const origin = startPoint.trim();
+    const destination = drop.trim();
+
+    if (!isMumbaiPickup(origin) || destination.length < 2 || origin.length < 2) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const timeout = window.setTimeout(async () => {
+      setIsDistanceLoading(true);
+
+      try {
+        const response = await fetch("/api/distance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin, destination }),
+        });
+        const result = (await response.json()) as {
+          distanceKm?: number;
+        };
+
+        if (mounted && response.ok && result.distanceKm) {
+          setDistanceKm(String(result.distanceKm));
+        }
+      } catch {
+        // Keep the manually editable KM field as the fallback.
+      } finally {
+        if (mounted) {
+          setIsDistanceLoading(false);
+        }
+      }
+    }, 520);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timeout);
+    };
+  }, [drop, startPoint]);
 
   useEffect(() => {
     if (showVehicleStep) {
@@ -915,17 +922,17 @@ export default function Home() {
                 <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
                   {visibleFromSuggestions.map((item) => (
                     <button
-                      key={item}
+                      key={`${item.label}-${item.secondary || "pickup"}`}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setPickupFieldTouched(false);
-                        updateStartPoint(item);
+                        updateStartPoint(item.label);
                         setActiveSuggestionField(null);
                       }}
                     >
-                      <span>Pickup</span>
-                      <strong>{item}</strong>
+                      <span>{item.secondary || "Pickup"}</span>
+                      <strong>{item.label}</strong>
                     </button>
                   ))}
                 </div>
@@ -971,16 +978,16 @@ export default function Home() {
                 <div className="place-suggestions" aria-label="India destination suggestions">
                   {visibleDestinationSuggestions.map((item) => (
                     <button
-                      key={item}
+                      key={`${item.label}-${item.secondary || "destination"}`}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
-                        updateDestination(item);
+                        updateDestination(item.label);
                         setActiveSuggestionField(null);
                       }}
                     >
-                      <span>Destination</span>
-                      <strong>{item}</strong>
+                      <span>{item.secondary || "Destination"}</span>
+                      <strong>{item.label}</strong>
                     </button>
                   ))}
                 </div>
@@ -1013,6 +1020,9 @@ export default function Home() {
                   inputMode="numeric"
                   required
                 />
+                {isDistanceLoading ? (
+                  <small className="field-hint">Google distance checking...</small>
+                ) : null}
               </label>
               <label>
                 Pickup date and time
