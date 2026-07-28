@@ -290,6 +290,22 @@ type DriverProfile = {
   status: "Available" | "Assigned";
 };
 
+type PortalRole = "admin" | "driver" | "customer";
+
+type WorkflowStage = {
+  id: string;
+  label: string;
+};
+
+const workflowStages: WorkflowStage[] = [
+  { id: "booked", label: "Booked" },
+  { id: "payment", label: "Payment Received" },
+  { id: "confirmed", label: "Booking Confirmed" },
+  { id: "assigned", label: "Driver And Vehicle Assigned" },
+  { id: "started", label: "Ride Start" },
+  { id: "complete", label: "Ride Complete" },
+];
+
 function getDestinationDistance(destination: string) {
   const normalizedDestination = destination.trim().toLowerCase();
   const directDistance = destinationDistances[normalizedDestination];
@@ -348,6 +364,67 @@ function formatDisplayDate(value: string) {
     month: "short",
     year: "numeric",
   }).format(parsedDate);
+}
+
+function isPickupDue(booking: DashboardBooking) {
+  const pickupDate = (booking.pickup_datetime || "").slice(0, 10);
+
+  if (!pickupDate) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const rideDate = new Date(`${pickupDate}T00:00:00`);
+
+  return !Number.isNaN(rideDate.getTime()) && rideDate <= today;
+}
+
+function getCompletedWorkflowStages(booking: DashboardBooking) {
+  const completed = new Set<string>(["booked"]);
+  const rideStatus = (booking.ride_status || "").toLowerCase();
+  const paymentStatus = (booking.payment_status || "").toLowerCase();
+  const paymentReceived =
+    paymentStatus === "complete" ||
+    paymentStatus === "received" ||
+    Number(booking.payment_amount || 0) > 0 ||
+    rideStatus.includes("payment");
+
+  if (paymentReceived) {
+    completed.add("payment");
+    completed.add("confirmed");
+  }
+
+  if (
+    booking.driver_name ||
+    booking.driver_mobile ||
+    booking.vehicle_number ||
+    rideStatus.includes("driver")
+  ) {
+    completed.add("assigned");
+  }
+
+  if (
+    rideStatus.includes("started") ||
+    rideStatus.includes("complete") ||
+    (completed.has("assigned") && isPickupDue(booking))
+  ) {
+    completed.add("started");
+  }
+
+  if (rideStatus.includes("complete")) {
+    completed.add("complete");
+  }
+
+  return completed;
+}
+
+function getInvoiceTotals(booking: DashboardBooking) {
+  const baseFare = Number(booking.estimated_fare || 0);
+  const tax = Math.round(baseFare * 0.18);
+  const total = baseFare + tax;
+
+  return { baseFare, tax, total };
 }
 
 function isMumbaiPickup(value: string) {
@@ -428,10 +505,12 @@ export default function Home() {
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginMobile, setLoginMobile] = useState("");
+  const [portalStatus, setPortalStatus] = useState("");
+  const [portalRole, setPortalRole] = useState<PortalRole | null>(null);
+  const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
   const [showCustomerLogin, setShowCustomerLogin] = useState(false);
-  const [adminPin, setAdminPin] = useState("");
-  const [adminStatus, setAdminStatus] = useState("");
   const [customerStatus, setCustomerStatus] = useState("");
   const [customerLookup, setCustomerLookup] = useState({
     bookingId: "",
@@ -939,7 +1018,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: Math.round(amount * 100),
-          receipt: `vishnu-${Date.now()}`,
+          receipt: `vishnu-${activeBooking.bookingId}`,
           notes: {
             bookingId: activeBooking.bookingId,
             name,
@@ -1019,10 +1098,11 @@ export default function Home() {
       theme: {
         color: "#f6bd16",
       },
-      handler: () => {
+      handler: async () => {
         setIsPaying(false);
         setIsPaymentComplete(true);
         setPaymentStatus("Payment Received Successfully.");
+        await updatePaymentReceived(activeBooking, amount);
       },
       modal: {
         ondismiss: () => {
@@ -1042,13 +1122,24 @@ export default function Home() {
   }
 
   async function loadDashboard() {
-    setAdminStatus("Loading Dashboard...");
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+
+    if (!normalizedMobile) {
+      setPortalStatus("Please Enter Mobile Number.");
+      return;
+    }
+
+    setPortalStatus("Loading Portal...");
+    setPortalRole(null);
+    setDashboard(null);
+    setPortalBookings([]);
 
     try {
       const response = await fetch(
-        `/api/bookings?pin=${encodeURIComponent(adminPin)}`,
+        `/api/bookings?loginMobile=${encodeURIComponent(normalizedMobile)}`,
       );
       const result = (await response.json()) as {
+        role?: PortalRole;
         totalBookings?: number;
         totalFare?: number;
         recentBookings?: DashboardBooking[];
@@ -1056,19 +1147,25 @@ export default function Home() {
       };
 
       if (!response.ok) {
-        setAdminStatus(result.error || "Login Failed.");
+        setPortalStatus(result.error || "Login Failed.");
         setDashboard(null);
         return;
       }
 
-      setDashboard({
-        totalBookings: result.totalBookings || 0,
-        totalFare: result.totalFare || 0,
-        recentBookings: result.recentBookings || [],
-      });
-      setAdminStatus("");
+      setPortalRole(result.role || "customer");
+      setPortalBookings(result.recentBookings || []);
+
+      if (result.role === "admin") {
+        setDashboard({
+          totalBookings: result.totalBookings || 0,
+          totalFare: result.totalFare || 0,
+          recentBookings: result.recentBookings || [],
+        });
+      }
+
+      setPortalStatus("");
     } catch {
-      setAdminStatus("Dashboard Could Not Load.");
+      setPortalStatus("Portal Could Not Load.");
       setDashboard(null);
     }
   }
@@ -1086,25 +1183,25 @@ export default function Home() {
       cancelReason?: string;
     },
   ) {
-    setAdminStatus("Updating Booking...");
+    setPortalStatus("Updating Booking...");
 
     try {
       const response = await fetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: adminPin, bookingId, ...updates }),
+        body: JSON.stringify({ mobile: loginMobile.replace(/\D/g, ""), bookingId, ...updates }),
       });
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setAdminStatus(result.error || "Update Failed.");
+        setPortalStatus(result.error || "Update Failed.");
         return;
       }
 
       await loadDashboard();
-      setAdminStatus("Booking Updated.");
+      setPortalStatus("Booking Updated.");
     } catch {
-      setAdminStatus("Update Failed.");
+      setPortalStatus("Update Failed.");
     }
   }
 
@@ -1114,7 +1211,7 @@ export default function Home() {
       !driverForm.mobile.trim() ||
       !driverForm.vehicleNumber.trim()
     ) {
-      setAdminStatus("Please Enter Driver Name, Mobile And Vehicle Number.");
+      setPortalStatus("Please Enter Driver Name, Mobile And Vehicle Number.");
       return;
     }
 
@@ -1133,7 +1230,7 @@ export default function Home() {
       vehicle: "Toyota Innova Crysta",
       vehicleNumber: "",
     });
-    setAdminStatus("Driver Onboarded.");
+    setPortalStatus("Driver Onboarded.");
   }
 
   async function autoAssignDriver(booking: DashboardBooking) {
@@ -1145,7 +1242,7 @@ export default function Home() {
       ) || drivers.find((driver) => driver.status === "Available");
 
     if (!availableDriver) {
-      setAdminStatus("No Available Driver Found.");
+      setPortalStatus("No Available Driver Found.");
       return;
     }
 
@@ -1169,7 +1266,7 @@ export default function Home() {
     const form = assignmentForm[booking.booking_id];
 
     if (!form?.driverName || !form.driverMobile || !form.vehicleNumber) {
-      setAdminStatus("Enter Driver Name, Mobile And Vehicle Number.");
+      setPortalStatus("Enter Driver Name, Mobile And Vehicle Number.");
       return;
     }
 
@@ -1179,6 +1276,24 @@ export default function Home() {
       driverMobile: form.driverMobile,
       vehicleNumber: form.vehicleNumber,
     });
+  }
+
+  async function updatePaymentReceived(
+    activeBooking: {
+      bookingId: string;
+    },
+    amount: number,
+  ) {
+    await fetch("/api/bookings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bookingId: activeBooking.bookingId,
+        customerMobile: mobile,
+        paymentStatus: "Complete",
+        paymentAmount: amount,
+      }),
+    }).catch(() => undefined);
   }
 
   async function loadCustomerBooking() {
@@ -1208,6 +1323,234 @@ export default function Home() {
     }
   }
 
+  function renderBookingTimeline(booking: DashboardBooking) {
+    const completedStages = getCompletedWorkflowStages(booking);
+    const isCancelled = (booking.ride_status || "").toLowerCase().includes("cancel");
+
+    return (
+      <div className="status-timeline" aria-label="Ride status timeline">
+        {workflowStages.map((stage) => (
+          <div
+            className={`status-step ${completedStages.has(stage.id) ? "is-complete" : ""}`}
+            key={`${booking.booking_id}-${stage.id}`}
+          >
+            <span />
+            <strong>{stage.label}</strong>
+          </div>
+        ))}
+        {isCancelled ? <em>Ride Cancelled</em> : null}
+      </div>
+    );
+  }
+
+  function renderInvoice(booking: DashboardBooking) {
+    const invoice = getInvoiceTotals(booking);
+
+    return (
+      <div className="invoice-box">
+        <div>
+          <strong>Tax Invoice</strong>
+          <span>{booking.booking_id}</span>
+        </div>
+        <p>
+          {booking.customer_name} | {booking.customer_mobile}
+        </p>
+        <dl>
+          <dt>Base Fare</dt>
+          <dd>{formatInr(invoice.baseFare)}</dd>
+          <dt>GST 18%</dt>
+          <dd>{formatInr(invoice.tax)}</dd>
+          <dt>Total Payable</dt>
+          <dd>{formatInr(invoice.total)}</dd>
+        </dl>
+      </div>
+    );
+  }
+
+  function renderPortalBookingCard(booking: DashboardBooking, canManage: boolean) {
+    return (
+      <article key={booking.booking_id}>
+        <div className="booking-row-head">
+          <strong>{booking.booking_id}</strong>
+          <span>{booking.ride_status || "Booked"}</span>
+        </div>
+        {renderBookingTimeline(booking)}
+        <div className="booking-detail-grid">
+          <small>Customer</small>
+          <b>
+            {booking.customer_name} | {booking.customer_mobile}
+          </b>
+          <small>Route</small>
+          <b>
+            {booking.start_point} To {booking.destination}
+          </b>
+          <small>Cab</small>
+          <b>{booking.vehicle}</b>
+          <small>Pickup Date</small>
+          <b>
+            {formatDisplayDate((booking.pickup_datetime || booking.created_at).slice(0, 10))}
+          </b>
+          <small>Fare</small>
+          <b>{formatInr(booking.estimated_fare)}</b>
+          <small>Payment</small>
+          <b>
+            {booking.payment_status || "Pending"} |{" "}
+            {formatPaymentAmount(booking.payment_amount || 0)}
+          </b>
+          <small>Refund</small>
+          <b>{booking.refund_status || "None"}</b>
+          <small>Driver</small>
+          <b>
+            {booking.driver_name
+              ? `${booking.driver_name} | ${booking.driver_mobile}`
+              : "Not Assigned"}
+          </b>
+          <small>Vehicle No.</small>
+          <b>{booking.vehicle_number || "Not Assigned"}</b>
+          <small>Cancel Reason</small>
+          <b>{booking.cancel_reason || "None"}</b>
+        </div>
+        {portalRole === "customer" ? renderInvoice(booking) : null}
+        {canManage ? (
+          <>
+            <div className="manual-assign-grid">
+              <input
+                value={assignmentForm[booking.booking_id]?.driverName || ""}
+                onChange={(event) =>
+                  setAssignmentForm((currentForm) => ({
+                    ...currentForm,
+                    [booking.booking_id]: {
+                      driverName: event.target.value,
+                      driverMobile:
+                        currentForm[booking.booking_id]?.driverMobile || "",
+                      vehicleNumber:
+                        currentForm[booking.booking_id]?.vehicleNumber || "",
+                    },
+                  }))
+                }
+                placeholder="Change Driver Name"
+              />
+              <input
+                value={assignmentForm[booking.booking_id]?.driverMobile || ""}
+                onChange={(event) =>
+                  setAssignmentForm((currentForm) => ({
+                    ...currentForm,
+                    [booking.booking_id]: {
+                      driverName:
+                        currentForm[booking.booking_id]?.driverName || "",
+                      driverMobile: event.target.value,
+                      vehicleNumber:
+                        currentForm[booking.booking_id]?.vehicleNumber || "",
+                    },
+                  }))
+                }
+                placeholder="Driver Mobile"
+              />
+              <input
+                value={assignmentForm[booking.booking_id]?.vehicleNumber || ""}
+                onChange={(event) =>
+                  setAssignmentForm((currentForm) => ({
+                    ...currentForm,
+                    [booking.booking_id]: {
+                      driverName:
+                        currentForm[booking.booking_id]?.driverName || "",
+                      driverMobile:
+                        currentForm[booking.booking_id]?.driverMobile || "",
+                      vehicleNumber: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="Vehicle Number"
+              />
+              <button type="button" onClick={() => manualAssignDriver(booking)}>
+                Change Driver
+              </button>
+            </div>
+            <div className="booking-actions">
+              <button type="button" onClick={() => autoAssignDriver(booking)}>
+                Auto Assign Driver
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    rideStatus: "Ride Started",
+                  })
+                }
+              >
+                Ride Started
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    rideStatus: "Ride Complete",
+                  })
+                }
+              >
+                Ride Complete
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    rideStatus: "Ride Cancelled",
+                    cancelReason: "Cancelled From Admin Backend",
+                  })
+                }
+              >
+                Cancel Ride
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    paymentStatus: "Complete",
+                    paymentAmount: booking.estimated_fare,
+                    rideStatus: "Payment Received",
+                  })
+                }
+              >
+                Payment Received
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    paymentStatus: "Failed",
+                    paymentAmount: 0,
+                  })
+                }
+              >
+                Payment Failed
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    refundStatus: "Refund Requested",
+                  })
+                }
+              >
+                Refund Customer
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateBookingOperation(booking.booking_id, {
+                    refundStatus: "Refund Completed",
+                  })
+                }
+              >
+                Refund Complete
+              </button>
+            </div>
+          </>
+        ) : null}
+      </article>
+    );
+  }
+
   return (
     <main>
       <div className="top-strip">
@@ -1231,16 +1574,9 @@ export default function Home() {
           <button
             className="login-button"
             type="button"
-            onClick={() => setShowAdminLogin(true)}
+            onClick={() => setShowLogin(true)}
           >
-            Admin Login
-          </button>
-          <button
-            className="login-button"
-            type="button"
-            onClick={() => setShowCustomerLogin(true)}
-          >
-            Customer Login
+            Login
           </button>
         </div>
       </header>
@@ -1780,34 +2116,42 @@ export default function Home() {
         </div>
       </footer>
 
-      {showAdminLogin ? (
+      {showLogin ? (
         <div className="admin-modal" role="dialog" aria-modal="true">
           <div className="admin-card">
             <button
               className="admin-close"
               type="button"
-              onClick={() => setShowAdminLogin(false)}
+              onClick={() => setShowLogin(false)}
             >
               ×
             </button>
-            <h2>Vishnu Tours Dashboard</h2>
+            <h2>Vishnu Tours Login</h2>
             <p>
-              Login To Manage Bookings, Ride Status, Refunds, Driver Onboarding
-              And Driver Assignment.
+              Enter Mobile Number To Open Admin, Driver Or Customer Portal.
             </p>
             <div className="admin-login-row">
               <input
-                value={adminPin}
-                onChange={(event) => setAdminPin(event.target.value)}
-                placeholder="Enter PIN"
-                type="password"
+                value={loginMobile}
+                onChange={(event) => setLoginMobile(event.target.value)}
+                placeholder="Enter Mobile Number"
+                inputMode="tel"
               />
               <button type="button" onClick={loadDashboard}>
                 View
               </button>
             </div>
-            {adminStatus ? <p className="admin-status">{adminStatus}</p> : null}
-            {dashboard ? (
+            {portalStatus ? <p className="admin-status">{portalStatus}</p> : null}
+            {portalRole ? (
+              <div className="portal-role-chip">
+                {portalRole === "admin"
+                  ? "Admin Panel"
+                  : portalRole === "driver"
+                    ? "Driver Panel"
+                    : "Customer Panel"}
+              </div>
+            ) : null}
+            {portalRole === "admin" && dashboard ? (
               <div className="admin-dashboard">
                 <div className="admin-metric">
                   <span>Total Bookings</span>
@@ -1891,6 +2235,7 @@ export default function Home() {
                           <strong>{booking.booking_id}</strong>
                           <span>{booking.ride_status || "Booked"}</span>
                         </div>
+                        {renderBookingTimeline(booking)}
                         <div className="booking-detail-grid">
                           <small>Customer</small>
                           <b>
@@ -2067,6 +2412,22 @@ export default function Home() {
                     ))
                   ) : (
                     <p>No Bookings Yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            {portalRole && portalRole !== "admin" ? (
+              <div className="admin-dashboard single-column-dashboard">
+                <div className="admin-recent">
+                  <h3>
+                    {portalRole === "driver" ? "Assigned Rides" : "Your Bookings"}
+                  </h3>
+                  {portalBookings.length ? (
+                    portalBookings.map((booking) =>
+                      renderPortalBookingCard(booking, false),
+                    )
+                  ) : (
+                    <p>No Bookings Found.</p>
                   )}
                 </div>
               </div>

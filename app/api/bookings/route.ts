@@ -30,6 +30,8 @@ type BookingPayload = {
 
 type BookingOperationPayload = {
   pin?: string;
+  mobile?: string;
+  customerMobile?: string;
   bookingId?: string;
   rideStatus?: string;
   refundStatus?: string;
@@ -42,6 +44,52 @@ type BookingOperationPayload = {
 };
 
 const adminPin = "710529";
+const adminMobile = "7004291529";
+
+type BookingRow = {
+  booking_id: string;
+  created_at: string;
+  trip_type: string;
+  vehicle: string;
+  start_point: string;
+  destination: string;
+  one_side_km: number;
+  billable_km: number;
+  rate_per_km: number;
+  estimated_fare: number;
+  pickup_datetime: string;
+  customer_name: string;
+  customer_mobile: string;
+  status: string;
+  ride_status: string;
+  refund_status: string;
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_number: string;
+  payment_status: string;
+  payment_amount: number;
+  cancel_reason: string;
+};
+
+const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
+  start_point, destination, one_side_km, billable_km, rate_per_km,
+  estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
+  ride_status, refund_status, driver_name, driver_mobile, vehicle_number,
+  payment_status, payment_amount, cancel_reason
+  FROM bookings`;
+
+async function getRecentBookings(limit = 8) {
+  const recent = await env.DB.prepare(
+    `${bookingSelectSql}
+     WHERE booking_id NOT LIKE 'PENDING-%'
+     ORDER BY id DESC
+     LIMIT ?`,
+  )
+    .bind(limit)
+    .all<BookingRow>();
+
+  return recent.results || [];
+}
 
 async function ensureBookingsTable() {
   const db = env.DB;
@@ -137,10 +185,64 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const pin = url.searchParams.get("pin") || "";
+    const loginMobile = clean(url.searchParams.get("loginMobile"));
     const bookingId = clean(url.searchParams.get("bookingId"));
     const mobile = clean(url.searchParams.get("mobile"));
 
     await ensureBookingsTable();
+
+    if (loginMobile) {
+      if (loginMobile === adminMobile) {
+        const summary = await env.DB.prepare(
+          "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
+        ).first<{ total_bookings: number; total_fare: number }>();
+        const recent = await getRecentBookings();
+
+        return Response.json({
+          role: "admin",
+          totalBookings: Number(summary?.total_bookings || 0),
+          totalFare: Number(summary?.total_fare || 0),
+          recentBookings: recent,
+        });
+      }
+
+      const driverBookings = await env.DB.prepare(
+        `${bookingSelectSql}
+         WHERE booking_id NOT LIKE 'PENDING-%' AND driver_mobile = ?
+         ORDER BY id DESC
+         LIMIT 20`,
+      )
+        .bind(loginMobile)
+        .all<BookingRow>();
+
+      if (driverBookings.results?.length) {
+        return Response.json({
+          role: "driver",
+          recentBookings: driverBookings.results,
+        });
+      }
+
+      const customerBookings = await env.DB.prepare(
+        `${bookingSelectSql}
+         WHERE booking_id NOT LIKE 'PENDING-%' AND customer_mobile = ?
+         ORDER BY id DESC
+         LIMIT 20`,
+      )
+        .bind(loginMobile)
+        .all<BookingRow>();
+
+      if (customerBookings.results?.length) {
+        return Response.json({
+          role: "customer",
+          recentBookings: customerBookings.results,
+        });
+      }
+
+      return Response.json(
+        { error: "No portal found for this mobile number." },
+        { status: 404 },
+      );
+    }
 
     if (bookingId && mobile) {
       const booking = await env.DB.prepare(
@@ -173,40 +275,12 @@ export async function GET(request: Request) {
     const summary = await env.DB.prepare(
       "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
     ).first<{ total_bookings: number; total_fare: number }>();
-    const recent = await env.DB.prepare(
-      `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
-        estimated_fare, customer_name, customer_mobile, status, ride_status,
-        refund_status, driver_name, driver_mobile, vehicle_number,
-        payment_status, payment_amount, cancel_reason
-       FROM bookings
-       WHERE booking_id NOT LIKE 'PENDING-%'
-       ORDER BY id DESC
-       LIMIT 8`,
-    ).all<{
-      booking_id: string;
-      created_at: string;
-      trip_type: string;
-      vehicle: string;
-      start_point: string;
-      destination: string;
-      estimated_fare: number;
-      customer_name: string;
-      customer_mobile: string;
-      status: string;
-      ride_status: string;
-      refund_status: string;
-      driver_name: string;
-      driver_mobile: string;
-      vehicle_number: string;
-      payment_status: string;
-      payment_amount: number;
-      cancel_reason: string;
-    }>();
+    const recent = await getRecentBookings();
 
     return Response.json({
       totalBookings: Number(summary?.total_bookings || 0),
       totalFare: Number(summary?.total_fare || 0),
-      recentBookings: recent.results || [],
+      recentBookings: recent,
     });
   } catch (error) {
     const message =
@@ -219,11 +293,6 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const payload = (await request.json()) as BookingOperationPayload;
-
-    if (clean(payload.pin) !== adminPin) {
-      return Response.json({ error: "Invalid login PIN." }, { status: 401 });
-    }
-
     const bookingId = clean(payload.bookingId);
 
     if (!bookingId) {
@@ -231,6 +300,34 @@ export async function PATCH(request: Request) {
     }
 
     await ensureBookingsTable();
+
+    const isAdmin =
+      clean(payload.pin) === adminPin || clean(payload.mobile) === adminMobile;
+
+    if (!isAdmin) {
+      const customerMobile = clean(payload.customerMobile);
+      const paymentStatus = clean(payload.paymentStatus);
+      const paymentAmount = Number(payload.paymentAmount);
+
+      if (customerMobile && paymentStatus === "Complete" && paymentAmount > 0) {
+        await env.DB.prepare(
+          `UPDATE bookings
+           SET payment_status = ?,
+               payment_amount = ?,
+               ride_status = CASE
+                 WHEN ride_status = 'Booked' THEN 'Payment Received'
+                 ELSE ride_status
+               END
+           WHERE booking_id = ? AND customer_mobile = ?`,
+        )
+          .bind(paymentStatus, paymentAmount, bookingId, customerMobile)
+          .run();
+
+        return Response.json({ success: true });
+      }
+
+      return Response.json({ error: "Invalid login mobile." }, { status: 401 });
+    }
 
     await env.DB.prepare(
       `UPDATE bookings

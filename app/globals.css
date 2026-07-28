@@ -3001,11 +3001,27 @@ h4,
   font-weight: 800;
 }
 
+.portal-role-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .admin-dashboard {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 18px;
+}
+
+.single-column-dashboard {
+  grid-template-columns: 1fr;
 }
 
 .admin-ops-panel {
@@ -3140,6 +3156,90 @@ h4,
   font-size: 13px;
 }
 
+.status-timeline {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.status-step {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.status-step span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.status-step.is-complete {
+  color: #15803d;
+}
+
+.status-step.is-complete span {
+  border-color: #16a34a;
+  background: #16a34a;
+  box-shadow: 0 0 0 4px #dcfce7;
+}
+
+.status-timeline em {
+  grid-column: 1 / -1;
+  color: #dc2626;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: center;
+}
+
+.invoice-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background: #fffdf3;
+}
+
+.invoice-box > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+}
+
+.invoice-box p {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.invoice-box dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 12px;
+  margin: 0;
+}
+
+.invoice-box dt,
+.invoice-box dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .manual-assign-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3220,6 +3320,7 @@ h4,
   .admin-ops-panel,
   .driver-form,
   .booking-detail-grid,
+  .status-timeline,
   .manual-assign-grid {
     grid-template-columns: 1fr;
   }
