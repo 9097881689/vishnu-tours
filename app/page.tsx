@@ -281,6 +281,8 @@ type DashboardBooking = {
   payment_status?: string;
   payment_amount?: number;
   cancel_reason?: string;
+  ride_started_at?: string;
+  ride_completed_at?: string;
 };
 
 type DriverProfile = {
@@ -371,6 +373,26 @@ function formatDisplayDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+  }).format(parsedDate);
+}
+
+function formatDisplayDateTime(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(parsedDate);
 }
 
@@ -518,6 +540,10 @@ export default function Home() {
   const [portalStatus, setPortalStatus] = useState("");
   const [portalRole, setPortalRole] = useState<PortalRole | null>(null);
   const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
+  const [driverEarning, setDriverEarning] = useState({
+    completedRides: 0,
+    totalEarning: 0,
+  });
   const [showCustomerLogin, setShowCustomerLogin] = useState(false);
   const [customerStatus, setCustomerStatus] = useState("");
   const [customerLookup, setCustomerLookup] = useState({
@@ -1168,6 +1194,10 @@ export default function Home() {
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverProfile?: DriverRow | null;
+        driverEarning?: {
+          completedRides: number;
+          totalEarning: number;
+        };
         error?: string;
       };
 
@@ -1206,6 +1236,10 @@ export default function Home() {
           mobile: normalizedMobile,
           vehicle: result.driverProfile?.vehicle_type || "Toyota Innova Crysta",
           vehicleNumber: result.driverProfile?.vehicle_number || "",
+        });
+        setDriverEarning({
+          completedRides: result.driverEarning?.completedRides || 0,
+          totalEarning: result.driverEarning?.totalEarning || 0,
         });
       }
 
@@ -1353,6 +1387,42 @@ export default function Home() {
     }
   }
 
+  async function updateDriverRideStatus(
+    booking: DashboardBooking,
+    rideStatus: "Ride Started" | "Ride Complete",
+  ) {
+    if (booking.driver_mobile !== driverProfileForm.mobile.replace(/\D/g, "")) {
+      setPortalStatus("This Ride Is Not Assigned To This Driver.");
+      return;
+    }
+
+    setPortalStatus("Updating Ride Status...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "driverRideStatus",
+          mobile: driverProfileForm.mobile.replace(/\D/g, ""),
+          bookingId: booking.booking_id,
+          rideStatus,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Ride Status Could Not Be Updated.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus(`${rideStatus} Updated.`);
+    } catch {
+      setPortalStatus("Ride Status Could Not Be Updated.");
+    }
+  }
+
   async function onboardDriver() {
     if (
       !driverForm.name.trim() ||
@@ -1486,6 +1556,10 @@ export default function Home() {
   function renderBookingTimeline(booking: DashboardBooking) {
     const completedStages = getCompletedWorkflowStages(booking);
     const isCancelled = (booking.ride_status || "").toLowerCase().includes("cancel");
+    const stageTimes: Record<string, string> = {
+      started: formatDisplayDateTime(booking.ride_started_at),
+      complete: formatDisplayDateTime(booking.ride_completed_at),
+    };
 
     return (
       <div className="status-timeline" aria-label="Ride status timeline">
@@ -1496,6 +1570,7 @@ export default function Home() {
           >
             <span />
             <strong>{stage.label}</strong>
+            {stageTimes[stage.id] ? <small>{stageTimes[stage.id]}</small> : null}
           </div>
         ))}
         {isCancelled ? <em>Ride Cancelled</em> : null}
@@ -1590,6 +1665,25 @@ export default function Home() {
               onClick={() => acceptRide(booking)}
             >
               Accept Ride
+            </button>
+          </div>
+        ) : null}
+        {portalRole === "driver" &&
+        booking.driver_mobile === driverProfileForm.mobile.replace(/\D/g, "") ? (
+          <div className="booking-actions">
+            <button
+              type="button"
+              disabled={Boolean(booking.ride_started_at)}
+              onClick={() => updateDriverRideStatus(booking, "Ride Started")}
+            >
+              Ride Started
+            </button>
+            <button
+              type="button"
+              disabled={!booking.ride_started_at || Boolean(booking.ride_completed_at)}
+              onClick={() => updateDriverRideStatus(booking, "Ride Complete")}
+            >
+              Ride Complete
             </button>
           </div>
         ) : null}
@@ -2460,6 +2554,17 @@ export default function Home() {
             {portalRole && portalRole !== "admin" ? (
               <div className="admin-dashboard single-column-dashboard">
                 {portalRole === "driver" ? (
+                  <>
+                  <div className="driver-earning-panel">
+                    <div>
+                      <span>Total Earning</span>
+                      <strong>{formatInr(driverEarning.totalEarning)}</strong>
+                    </div>
+                    <div>
+                      <span>Completed Rides</span>
+                      <strong>{driverEarning.completedRides}</strong>
+                    </div>
+                  </div>
                   <div className="admin-ops-panel driver-profile-panel">
                     <div>
                       <h3>Driver Profile</h3>
@@ -2528,6 +2633,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+                  </>
                 ) : null}
                 <div className="admin-recent">
                   <h3>

@@ -78,6 +78,8 @@ type BookingRow = {
   payment_status: string;
   payment_amount: number;
   cancel_reason: string;
+  ride_started_at: string;
+  ride_completed_at: string;
 };
 
 type DriverRow = {
@@ -92,7 +94,8 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
   ride_status, refund_status, driver_name, driver_mobile, vehicle_number,
-  payment_status, payment_amount, cancel_reason
+  payment_status, payment_amount, cancel_reason, ride_started_at,
+  ride_completed_at
   FROM bookings`;
 
 async function getRecentBookings(limit = 8) {
@@ -116,6 +119,24 @@ async function getDrivers() {
   ).all<DriverRow>();
 
   return drivers.results || [];
+}
+
+async function getDriverEarning(driverMobile: string) {
+  const summary = await env.DB.prepare(
+    `SELECT COUNT(*) AS completed_rides,
+      COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_earning
+     FROM bookings
+     WHERE driver_mobile = ?
+       AND ride_status = 'Ride Complete'
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  )
+    .bind(driverMobile)
+    .first<{ completed_rides: number; total_earning: number }>();
+
+  return {
+    completedRides: Number(summary?.completed_rides || 0),
+    totalEarning: Number(summary?.total_earning || 0),
+  };
 }
 
 async function ensureBookingsTable() {
@@ -151,7 +172,9 @@ async function ensureBookingsTable() {
         vehicle_number TEXT NOT NULL DEFAULT '',
         payment_status TEXT NOT NULL DEFAULT 'Pending',
         payment_amount INTEGER NOT NULL DEFAULT 0,
-        cancel_reason TEXT NOT NULL DEFAULT ''
+        cancel_reason TEXT NOT NULL DEFAULT '',
+        ride_started_at TEXT NOT NULL DEFAULT '',
+        ride_completed_at TEXT NOT NULL DEFAULT ''
       )`,
     )
     .run();
@@ -198,6 +221,16 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN cancel_reason TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN ride_started_at TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN ride_completed_at TEXT NOT NULL DEFAULT ''")
     .run()
     .catch(() => undefined);
 
@@ -291,6 +324,7 @@ export async function GET(request: Request) {
             ...(driverBookings.results || []),
             ...(openBookings.results || []),
           ],
+          driverEarning: await getDriverEarning(loginMobile),
         });
       }
 
@@ -314,6 +348,7 @@ export async function GET(request: Request) {
         role: "driver",
         driverProfile: null,
         recentBookings: openBookings.results || [],
+        driverEarning: { completedRides: 0, totalEarning: 0 },
       });
     }
 
@@ -323,7 +358,7 @@ export async function GET(request: Request) {
           one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
           customer_name, customer_mobile, status, ride_status, refund_status,
           driver_name, driver_mobile, vehicle_number, payment_status,
-          payment_amount, cancel_reason
+          payment_amount, cancel_reason, ride_started_at, ride_completed_at
          FROM bookings
          WHERE booking_id = ? AND customer_mobile = ?
          LIMIT 1`,
@@ -492,6 +527,67 @@ export async function PATCH(request: Request) {
         return Response.json({ success: true });
       }
 
+      if (
+        payload.action === "driverRideStatus" &&
+        driverMobile &&
+        (payload.rideStatus === "Ride Started" ||
+          payload.rideStatus === "Ride Complete")
+      ) {
+        const rideStatus = clean(payload.rideStatus);
+        const timestampColumn =
+          rideStatus === "Ride Started" ? "ride_started_at" : "ride_completed_at";
+        const now = new Date().toISOString();
+
+        const assignedBooking = await env.DB.prepare(
+          `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at
+           FROM bookings
+           WHERE booking_id = ? AND driver_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(bookingId, driverMobile)
+          .first<{
+            booking_id: string;
+            driver_mobile: string;
+            ride_started_at: string;
+            ride_completed_at: string;
+          }>();
+
+        if (!assignedBooking) {
+          return Response.json(
+            { error: "This Ride Is Not Assigned To This Driver." },
+            { status: 403 },
+          );
+        }
+
+        if (rideStatus === "Ride Complete" && !assignedBooking.ride_started_at) {
+          return Response.json(
+            { error: "Start The Ride Before Marking It Complete." },
+            { status: 400 },
+          );
+        }
+
+        if (assignedBooking.ride_completed_at) {
+          return Response.json(
+            { error: "This Ride Is Already Complete." },
+            { status: 409 },
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE bookings
+           SET ride_status = ?,
+               ${timestampColumn} = CASE
+                 WHEN ${timestampColumn} = '' THEN ?
+                 ELSE ${timestampColumn}
+               END
+           WHERE booking_id = ? AND driver_mobile = ?`,
+        )
+          .bind(rideStatus, now, bookingId, driverMobile)
+          .run();
+
+        return Response.json({ success: true });
+      }
+
       return Response.json({ error: "Invalid login mobile." }, { status: 401 });
     }
 
@@ -560,6 +656,10 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const now = new Date().toISOString();
+    const rideStartedAt = requestedRideStatus === "Ride Started" ? now : "";
+    const rideCompletedAt = requestedRideStatus === "Ride Complete" ? now : "";
+
     await env.DB.prepare(
       `UPDATE bookings
        SET ride_status = COALESCE(NULLIF(?, ''), ride_status),
@@ -570,7 +670,15 @@ export async function PATCH(request: Request) {
            driver_name = COALESCE(NULLIF(?, ''), driver_name),
            driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile),
            vehicle_number = COALESCE(NULLIF(?, ''), vehicle_number),
-           cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason)
+           cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason),
+           ride_started_at = CASE
+             WHEN NULLIF(?, '') IS NOT NULL AND ride_started_at = '' THEN ?
+             ELSE ride_started_at
+           END,
+           ride_completed_at = CASE
+             WHEN NULLIF(?, '') IS NOT NULL AND ride_completed_at = '' THEN ?
+             ELSE ride_completed_at
+           END
        WHERE booking_id = ?`,
       )
       .bind(
@@ -585,6 +693,10 @@ export async function PATCH(request: Request) {
         requestedDriverMobile,
         requestedVehicleNumber,
         clean(payload.cancelReason),
+        rideStartedAt,
+        rideStartedAt,
+        rideCompletedAt,
+        rideCompletedAt,
         bookingId,
       )
       .run();
@@ -738,8 +850,10 @@ export async function POST(request: Request) {
         vehicle_number,
         payment_status,
         payment_amount,
-        cancel_reason
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        cancel_reason,
+        ride_started_at,
+        ride_completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -765,6 +879,8 @@ export async function POST(request: Request) {
         "",
         "Pending",
         0,
+        "",
+        "",
         "",
       )
       .run();
