@@ -421,7 +421,7 @@ function getCompletedWorkflowStages(booking: DashboardBooking) {
 
 function getInvoiceTotals(booking: DashboardBooking) {
   const baseFare = Number(booking.estimated_fare || 0);
-  const tax = Math.round(baseFare * 0.18);
+  const tax = Math.round(baseFare * 0.05);
   const total = baseFare + tax;
 
   return { baseFare, tax, total };
@@ -520,7 +520,15 @@ export default function Home() {
     null,
   );
   const [assignmentForm, setAssignmentForm] = useState<
-    Record<string, { driverName: string; driverMobile: string; vehicleNumber: string }>
+    Record<
+      string,
+      {
+        driverName: string;
+        driverMobile: string;
+        vehicleName: string;
+        vehicleNumber: string;
+      }
+    >
   >({});
   const [dashboard, setDashboard] = useState<{
     totalBookings: number;
@@ -594,7 +602,7 @@ export default function Home() {
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
-  const chargesAndTaxes = fareTotal ? Math.max(250, Math.round(fareTotal * 0.18)) : 0;
+  const chargesAndTaxes = fareTotal ? Math.round(fareTotal * 0.05) : 0;
   const payableFare = fareTotal + chargesAndTaxes;
   const partPayAmount = Math.max(500, Math.round(payableFare * 0.25));
   const selectedPaymentAmount =
@@ -1177,6 +1185,7 @@ export default function Home() {
       refundStatus?: string;
       paymentStatus?: string;
       paymentAmount?: number;
+      vehicle?: string;
       driverName?: string;
       driverMobile?: string;
       vehicleNumber?: string;
@@ -1202,6 +1211,32 @@ export default function Home() {
       setPortalStatus("Booking Updated.");
     } catch {
       setPortalStatus("Update Failed.");
+    }
+  }
+
+  async function deleteBooking(bookingId: string) {
+    setPortalStatus("Deleting Booking...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile: loginMobile.replace(/\D/g, ""),
+          bookingId,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Delete Failed.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus("Booking Deleted.");
+    } catch {
+      setPortalStatus("Delete Failed.");
     }
   }
 
@@ -1265,16 +1300,30 @@ export default function Home() {
   async function manualAssignDriver(booking: DashboardBooking) {
     const form = assignmentForm[booking.booking_id];
 
-    if (!form?.driverName || !form.driverMobile || !form.vehicleNumber) {
-      setPortalStatus("Enter Driver Name, Mobile And Vehicle Number.");
+    if (!form?.driverMobile || !form.vehicleName || !form.vehicleNumber) {
+      setPortalStatus("Select Driver, Cab And Vehicle Number.");
+      return;
+    }
+
+    const selectedDriver = drivers.find((driver) => driver.mobile === form.driverMobile);
+
+    await updateBookingOperation(booking.booking_id, {
+      rideStatus: "Driver Assigned",
+      vehicle: form.vehicleName,
+      driverName: selectedDriver?.name || form.driverName,
+      driverMobile: form.driverMobile,
+      vehicleNumber: form.vehicleNumber,
+    });
+  }
+
+  async function startRide(booking: DashboardBooking) {
+    if (!booking.driver_mobile) {
+      setPortalStatus("Assign Driver And Vehicle Before Starting The Ride.");
       return;
     }
 
     await updateBookingOperation(booking.booking_id, {
-      rideStatus: "Driver Assigned",
-      driverName: form.driverName,
-      driverMobile: form.driverMobile,
-      vehicleNumber: form.vehicleNumber,
+      rideStatus: "Ride Started",
     });
   }
 
@@ -1358,7 +1407,7 @@ export default function Home() {
         <dl>
           <dt>Base Fare</dt>
           <dd>{formatInr(invoice.baseFare)}</dd>
-          <dt>GST 18%</dt>
+          <dt>GST 5%</dt>
           <dd>{formatInr(invoice.tax)}</dd>
           <dt>Total Payable</dt>
           <dd>{formatInr(invoice.total)}</dd>
@@ -1414,13 +1463,45 @@ export default function Home() {
         {canManage ? (
           <>
             <div className="manual-assign-grid">
-              <input
-                value={assignmentForm[booking.booking_id]?.driverName || ""}
+              <select
+                value={assignmentForm[booking.booking_id]?.driverMobile || ""}
+                onChange={(event) =>
+                  {
+                  const selectedDriver = drivers.find(
+                    (driver) => driver.mobile === event.target.value,
+                  );
+                  const vehicleNumber =
+                    selectedDriver?.vehicle.split("|")[1]?.trim() || "";
+
+                  setAssignmentForm((currentForm) => ({
+                    ...currentForm,
+                    [booking.booking_id]: {
+                      driverName: selectedDriver?.name || "",
+                      driverMobile: selectedDriver?.mobile || "",
+                      vehicleName:
+                        currentForm[booking.booking_id]?.vehicleName || booking.vehicle,
+                      vehicleNumber,
+                    },
+                  }));
+                  }
+                }
+              >
+                <option value="">Select Driver</option>
+                {drivers.map((driver) => (
+                  <option key={`${booking.booking_id}-${driver.mobile}`} value={driver.mobile}>
+                    {driver.name} | {driver.mobile}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={assignmentForm[booking.booking_id]?.vehicleName || ""}
                 onChange={(event) =>
                   setAssignmentForm((currentForm) => ({
                     ...currentForm,
                     [booking.booking_id]: {
-                      driverName: event.target.value,
+                      driverName:
+                        currentForm[booking.booking_id]?.driverName || "",
+                      vehicleName: event.target.value,
                       driverMobile:
                         currentForm[booking.booking_id]?.driverMobile || "",
                       vehicleNumber:
@@ -1428,25 +1509,15 @@ export default function Home() {
                     },
                   }))
                 }
-                placeholder="Change Driver Name"
-              />
-              <input
-                value={assignmentForm[booking.booking_id]?.driverMobile || ""}
-                onChange={(event) =>
-                  setAssignmentForm((currentForm) => ({
-                    ...currentForm,
-                    [booking.booking_id]: {
-                      driverName:
-                        currentForm[booking.booking_id]?.driverName || "",
-                      driverMobile: event.target.value,
-                      vehicleNumber:
-                        currentForm[booking.booking_id]?.vehicleNumber || "",
-                    },
-                  }))
-                }
-                placeholder="Driver Mobile"
-              />
-              <input
+              >
+                <option value="">Select Cab</option>
+                {vehicles.map((item) => (
+                  <option key={`${booking.booking_id}-${item.name}`} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={assignmentForm[booking.booking_id]?.vehicleNumber || ""}
                 onChange={(event) =>
                   setAssignmentForm((currentForm) => ({
@@ -1456,14 +1527,25 @@ export default function Home() {
                         currentForm[booking.booking_id]?.driverName || "",
                       driverMobile:
                         currentForm[booking.booking_id]?.driverMobile || "",
+                      vehicleName:
+                        currentForm[booking.booking_id]?.vehicleName || booking.vehicle,
                       vehicleNumber: event.target.value,
                     },
                   }))
                 }
-                placeholder="Vehicle Number"
-              />
+              >
+                <option value="">Select Vehicle Number</option>
+                {drivers
+                  .map((driver) => driver.vehicle.split("|")[1]?.trim())
+                  .filter(Boolean)
+                  .map((number) => (
+                    <option key={`${booking.booking_id}-${number}`} value={number}>
+                      {number}
+                    </option>
+                  ))}
+              </select>
               <button type="button" onClick={() => manualAssignDriver(booking)}>
-                Change Driver
+                Assign Driver
               </button>
             </div>
             <div className="booking-actions">
@@ -1472,11 +1554,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  updateBookingOperation(booking.booking_id, {
-                    rideStatus: "Ride Started",
-                  })
-                }
+                onClick={() => startRide(booking)}
               >
                 Ride Started
               </button>
@@ -1506,7 +1584,7 @@ export default function Home() {
                 onClick={() =>
                   updateBookingOperation(booking.booking_id, {
                     paymentStatus: "Complete",
-                    paymentAmount: booking.estimated_fare,
+                    paymentAmount: getInvoiceTotals(booking).total,
                     rideStatus: "Payment Received",
                   })
                 }
@@ -1543,6 +1621,13 @@ export default function Home() {
                 }
               >
                 Refund Complete
+              </button>
+              <button
+                className="danger-action"
+                type="button"
+                onClick={() => deleteBooking(booking.booking_id)}
+              >
+                Delete Booking
               </button>
             </div>
           </>
@@ -1869,7 +1954,7 @@ export default function Home() {
           </div>
           <div className="vehicle-card-list" aria-live="polite">
             {vehicleRates.map((item) => {
-              const tax = Math.max(250, Math.round(item.estimatedFare * 0.18));
+              const tax = Math.round(item.estimatedFare * 0.05);
               const total = item.estimatedFare + tax;
 
               return (
@@ -1898,7 +1983,7 @@ export default function Home() {
                   <div className="car-price-block">
                     <span className="discount-line">Direct Owner Rate</span>
                     <strong>{formatInr(total)}</strong>
-                    <small>+ {formatInr(tax)} Charges And Taxes</small>
+                    <small>Including GST 5%: {formatInr(tax)}</small>
                     <button
                       className="book-cab-button select-car-button"
                       type="button"
@@ -2229,187 +2314,9 @@ export default function Home() {
                 <div className="admin-recent">
                   <h3>Booking Details And Operations</h3>
                   {dashboard.recentBookings.length ? (
-                    dashboard.recentBookings.map((booking) => (
-                      <article key={booking.booking_id}>
-                        <div className="booking-row-head">
-                          <strong>{booking.booking_id}</strong>
-                          <span>{booking.ride_status || "Booked"}</span>
-                        </div>
-                        {renderBookingTimeline(booking)}
-                        <div className="booking-detail-grid">
-                          <small>Customer</small>
-                          <b>
-                            {booking.customer_name} | {booking.customer_mobile}
-                          </b>
-                          <small>Route</small>
-                          <b>
-                            {booking.start_point} To {booking.destination}
-                          </b>
-                          <small>Cab</small>
-                          <b>{booking.vehicle}</b>
-                          <small>Booking Date</small>
-                          <b>{formatDisplayDate(booking.created_at.slice(0, 10))}</b>
-                          <small>Fare</small>
-                          <b>{formatInr(booking.estimated_fare)}</b>
-                          <small>Payment</small>
-                          <b>
-                            {booking.payment_status || "Pending"} |{" "}
-                            {formatInr(booking.payment_amount || 0)}
-                          </b>
-                          <small>Refund</small>
-                          <b>{booking.refund_status || "None"}</b>
-                          <small>Ride Status</small>
-                          <b>{booking.ride_status || "Booked"}</b>
-                          <small>Driver</small>
-                          <b>
-                            {booking.driver_name
-                              ? `${booking.driver_name} | ${booking.driver_mobile}`
-                              : "Not Assigned"}
-                          </b>
-                          <small>Vehicle No.</small>
-                          <b>{booking.vehicle_number || "Not Assigned"}</b>
-                          <small>Cancel Reason</small>
-                          <b>{booking.cancel_reason || "None"}</b>
-                        </div>
-                        <div className="manual-assign-grid">
-                          <input
-                            value={assignmentForm[booking.booking_id]?.driverName || ""}
-                            onChange={(event) =>
-                              setAssignmentForm((currentForm) => ({
-                                ...currentForm,
-                                [booking.booking_id]: {
-                                  driverName: event.target.value,
-                                  driverMobile:
-                                    currentForm[booking.booking_id]?.driverMobile || "",
-                                  vehicleNumber:
-                                    currentForm[booking.booking_id]?.vehicleNumber || "",
-                                },
-                              }))
-                            }
-                            placeholder="Change Driver Name"
-                          />
-                          <input
-                            value={assignmentForm[booking.booking_id]?.driverMobile || ""}
-                            onChange={(event) =>
-                              setAssignmentForm((currentForm) => ({
-                                ...currentForm,
-                                [booking.booking_id]: {
-                                  driverName:
-                                    currentForm[booking.booking_id]?.driverName || "",
-                                  driverMobile: event.target.value,
-                                  vehicleNumber:
-                                    currentForm[booking.booking_id]?.vehicleNumber || "",
-                                },
-                              }))
-                            }
-                            placeholder="Driver Mobile"
-                          />
-                          <input
-                            value={assignmentForm[booking.booking_id]?.vehicleNumber || ""}
-                            onChange={(event) =>
-                              setAssignmentForm((currentForm) => ({
-                                ...currentForm,
-                                [booking.booking_id]: {
-                                  driverName:
-                                    currentForm[booking.booking_id]?.driverName || "",
-                                  driverMobile:
-                                    currentForm[booking.booking_id]?.driverMobile || "",
-                                  vehicleNumber: event.target.value,
-                                },
-                              }))
-                            }
-                            placeholder="Vehicle Number"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => manualAssignDriver(booking)}
-                          >
-                            Change Driver
-                          </button>
-                        </div>
-                        <div className="booking-actions">
-                          <button
-                            type="button"
-                            onClick={() => autoAssignDriver(booking)}
-                          >
-                            Auto Assign Driver
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                rideStatus: "Ride Started",
-                              })
-                            }
-                          >
-                            Ride Started
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                rideStatus: "Ride Complete",
-                              })
-                            }
-                          >
-                            Ride Complete
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                rideStatus: "Ride Cancelled",
-                                cancelReason: "Cancelled From Admin Backend",
-                              })
-                            }
-                          >
-                            Cancel Ride
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                paymentStatus: "Complete",
-                                paymentAmount: booking.estimated_fare,
-                              })
-                            }
-                          >
-                            Payment Complete
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                paymentStatus: "Failed",
-                                paymentAmount: 0,
-                              })
-                            }
-                          >
-                            Payment Failed
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                refundStatus: "Refund Requested",
-                              })
-                            }
-                          >
-                            Refund Customer
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateBookingOperation(booking.booking_id, {
-                                refundStatus: "Refund Completed",
-                              })
-                            }
-                          >
-                            Refund Complete
-                          </button>
-                        </div>
-                      </article>
-                    ))
+                    dashboard.recentBookings.map((booking) =>
+                      renderPortalBookingCard(booking, true),
+                    )
                   ) : (
                     <p>No Bookings Yet.</p>
                   )}

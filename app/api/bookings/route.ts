@@ -37,10 +37,16 @@ type BookingOperationPayload = {
   refundStatus?: string;
   paymentStatus?: string;
   paymentAmount?: number;
+  vehicle?: string;
   vehicleNumber?: string;
   cancelReason?: string;
   driverName?: string;
   driverMobile?: string;
+};
+type DeleteBookingPayload = {
+  mobile?: string;
+  pin?: string;
+  bookingId?: string;
 };
 
 const adminPin = "710529";
@@ -329,28 +335,95 @@ export async function PATCH(request: Request) {
       return Response.json({ error: "Invalid login mobile." }, { status: 401 });
     }
 
+    const existingBooking = await env.DB.prepare(
+      `SELECT booking_id, pickup_datetime, driver_mobile, driver_name,
+        vehicle_number, ride_status
+       FROM bookings
+       WHERE booking_id = ?
+       LIMIT 1`,
+    )
+      .bind(bookingId)
+      .first<{
+        booking_id: string;
+        pickup_datetime: string;
+        driver_mobile: string;
+        driver_name: string;
+        vehicle_number: string;
+        ride_status: string;
+      }>();
+
+    if (!existingBooking) {
+      return Response.json({ error: "Booking not found." }, { status: 404 });
+    }
+
+    const requestedRideStatus = clean(payload.rideStatus);
+    const requestedDriverMobile = clean(payload.driverMobile);
+    const requestedDriverName = clean(payload.driverName);
+    const requestedVehicleNumber = clean(payload.vehicleNumber);
+
+    if (
+      requestedRideStatus === "Ride Started" &&
+      !existingBooking.driver_mobile &&
+      !requestedDriverMobile
+    ) {
+      return Response.json(
+        { error: "Assign Driver And Vehicle Before Starting The Ride." },
+        { status: 400 },
+      );
+    }
+
+    if (requestedDriverMobile) {
+      const conflict = await env.DB.prepare(
+        `SELECT booking_id, pickup_datetime, destination
+         FROM bookings
+         WHERE booking_id != ?
+           AND driver_mobile = ?
+           AND pickup_datetime = ?
+           AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+           AND booking_id NOT LIKE 'PENDING-%'
+         LIMIT 1`,
+      )
+        .bind(bookingId, requestedDriverMobile, existingBooking.pickup_datetime)
+        .first<{
+          booking_id: string;
+          pickup_datetime: string;
+          destination: string;
+        }>();
+
+      if (conflict) {
+        return Response.json(
+          {
+            error: `Driver Already Assigned For Booking ${conflict.booking_id} On Date/Time ${conflict.pickup_datetime}.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     await env.DB.prepare(
       `UPDATE bookings
        SET ride_status = COALESCE(NULLIF(?, ''), ride_status),
            refund_status = COALESCE(NULLIF(?, ''), refund_status),
            payment_status = COALESCE(NULLIF(?, ''), payment_status),
            payment_amount = COALESCE(?, payment_amount),
+           vehicle = COALESCE(NULLIF(?, ''), vehicle),
            driver_name = COALESCE(NULLIF(?, ''), driver_name),
            driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile),
            vehicle_number = COALESCE(NULLIF(?, ''), vehicle_number),
            cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason)
        WHERE booking_id = ?`,
-    )
+      )
       .bind(
-        clean(payload.rideStatus),
+        requestedRideStatus,
         clean(payload.refundStatus),
         clean(payload.paymentStatus),
         Number.isFinite(Number(payload.paymentAmount))
           ? Number(payload.paymentAmount)
           : null,
-        clean(payload.driverName),
-        clean(payload.driverMobile),
-        clean(payload.vehicleNumber),
+        clean(payload.vehicle),
+        requestedDriverName,
+        requestedDriverMobile,
+        requestedVehicleNumber,
         clean(payload.cancelReason),
         bookingId,
       )
@@ -360,6 +433,35 @@ export async function PATCH(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Booking operation failed.";
+
+    return Response.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const payload = (await request.json()) as DeleteBookingPayload;
+    const isAdmin =
+      clean(payload.pin) === adminPin || clean(payload.mobile) === adminMobile;
+    const bookingId = clean(payload.bookingId);
+
+    if (!isAdmin) {
+      return Response.json({ error: "Invalid login mobile." }, { status: 401 });
+    }
+
+    if (!bookingId) {
+      return Response.json({ error: "Booking ID is required." }, { status: 400 });
+    }
+
+    await ensureBookingsTable();
+    await env.DB.prepare("DELETE FROM bookings WHERE booking_id = ?")
+      .bind(bookingId)
+      .run();
+
+    return Response.json({ success: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Booking delete failed.";
 
     return Response.json({ error: message }, { status: 500 });
   }

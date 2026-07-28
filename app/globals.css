@@ -3046,11 +3046,13 @@ h4,
 
 .driver-form input,
 .driver-form select,
-.manual-assign-grid input {
+.manual-assign-grid input,
+.manual-assign-grid select {
   min-height: 38px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 0 10px;
+  background: #fff;
 }
 
 .driver-form button,
