@@ -252,45 +252,6 @@ const vehicles = [
   },
 ];
 
-const serviceCards = [
-  {
-    title: "Airport",
-    image: "/services/airport.png",
-    description:
-      "Premium Airport Transfers From Mumbai With Clean Cars And Timely Pickup.",
-  },
-  {
-    title: "In-City",
-    image: "/services/city.png",
-    description:
-      "Reliable Mumbai City Travel For Meetings, Visits And Hourly Duties.",
-  },
-  {
-    title: "Outstation",
-    image: "/services/outstation.png",
-    description:
-      "All India Outstation Trips From Mumbai With Transparent Per KM Fare.",
-  },
-  {
-    title: "Corporate Booking",
-    image: "/services/corporate.png",
-    description:
-      "Direct Owner-Side Cab Coordination For Corporate Guest Movement.",
-  },
-  {
-    title: "Executive Transfers",
-    image: "/services/executive.png",
-    description:
-      "Comfortable Executive Transfers For VIP Guests, Events And Site Visits.",
-  },
-  {
-    title: "All India Trips",
-    image: "/services/all-india.png",
-    description:
-      "Mumbai Pickup With Long-Route Cab Options Across India.",
-  },
-];
-
 type PackageId = (typeof packageOptions)[number]["id"];
 type PlaceSuggestion = {
   label: string;
@@ -510,6 +471,8 @@ export default function Home() {
   >([]);
   const [googleDestinationSuggestions, setGoogleDestinationSuggestions] =
     useState<PlaceSuggestion[]>([]);
+  const [googleFromQuery, setGoogleFromQuery] = useState("");
+  const [googleDestinationQuery, setGoogleDestinationQuery] = useState("");
   const [isDistanceLoading, setIsDistanceLoading] = useState(false);
   const [pickupFieldTouched, setPickupFieldTouched] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
@@ -565,14 +528,17 @@ export default function Home() {
     !pickupAllowed &&
     startPoint.trim().length >= 3 &&
     activeSuggestionField !== "from";
+  const fromQuery = startPoint.trim();
+  const destinationQuery = drop.trim();
   const visibleFromSuggestions =
-    googleFromSuggestions.length > 0
+    googleFromQuery === fromQuery && googleFromSuggestions.length > 0
       ? googleFromSuggestions.slice(0, 5)
       : getPlaceSuggestions(startPoint, fromSuggestions, 5).map((item) => ({
           label: item,
           secondary: "Mumbai Pickup",
         }));
   const visibleDestinationSuggestions =
+    googleDestinationQuery === destinationQuery &&
     googleDestinationSuggestions.length > 0
       ? googleDestinationSuggestions.slice(0, 5)
       : getPlaceSuggestions(drop, destinationSuggestions, 5).map((item) => ({
@@ -600,10 +566,12 @@ export default function Home() {
         };
 
         if (mounted) {
+          setGoogleFromQuery(query);
           setGoogleFromSuggestions(result.suggestions || []);
         }
       } catch {
         if (mounted) {
+          setGoogleFromQuery("");
           setGoogleFromSuggestions([]);
         }
       }
@@ -635,10 +603,12 @@ export default function Home() {
         };
 
         if (mounted) {
+          setGoogleDestinationQuery(query);
           setGoogleDestinationSuggestions(result.suggestions || []);
         }
       } catch {
         if (mounted) {
+          setGoogleDestinationQuery("");
           setGoogleDestinationSuggestions([]);
         }
       }
@@ -748,6 +718,8 @@ export default function Home() {
 
   function updateDestination(value: string) {
     setDrop(value);
+    setGoogleDestinationSuggestions([]);
+    setGoogleDestinationQuery("");
     setShowVehicleStep(false);
     setBookingView("home");
     setConfirmedBooking(null);
@@ -786,6 +758,8 @@ export default function Home() {
 
   function updateStartPoint(value: string) {
     setStartPoint(value);
+    setGoogleFromSuggestions([]);
+    setGoogleFromQuery("");
     setShowVehicleStep(false);
     setBookingView("home");
     setConfirmedBooking(null);
@@ -1332,6 +1306,7 @@ export default function Home() {
                     value={startPoint}
                     onChange={(event) => {
                       setPickupFieldTouched(false);
+                      setActiveSuggestionField("from");
                       updateStartPoint(event.target.value);
                     }}
                     onFocus={() => {
@@ -1364,6 +1339,8 @@ export default function Home() {
                         onClick={() => {
                           setPickupFieldTouched(false);
                           updateStartPoint(item.label);
+                          setGoogleFromSuggestions([]);
+                          setGoogleFromQuery("");
                           setActiveSuggestionField(null);
                         }}
                       >
@@ -1387,7 +1364,10 @@ export default function Home() {
                 <input
                   ref={toInputRef}
                   value={drop}
-                  onChange={(event) => updateDestination(event.target.value)}
+                  onChange={(event) => {
+                    setActiveSuggestionField("to");
+                    updateDestination(event.target.value);
+                  }}
                   onFocus={() => setActiveSuggestionField("to")}
                   onBlur={() =>
                     window.setTimeout(() => setActiveSuggestionField(null), 140)
@@ -1405,6 +1385,8 @@ export default function Home() {
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => {
                           updateDestination(item.label);
+                          setGoogleDestinationSuggestions([]);
+                          setGoogleDestinationQuery("");
                           setActiveSuggestionField(null);
                         }}
                       >
@@ -1779,120 +1761,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section" id="services">
-        <div className="section-heading">
-          <p className="eyebrow">Cab Services</p>
-          <h2>Corporate Travel, Airport Movement And Outstation Trips</h2>
-        </div>
-        <div className="service-grid">
-          {serviceCards.map((service) => (
-            <article key={service.title} className="service-card">
-              <div className="service-photo">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={service.image} alt={`${service.title} cab service`} />
-              </div>
-              <h3>{service.title}</h3>
-              <p>{service.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section fleet-section" id="fleet">
-        <div className="section-heading">
-          <p className="eyebrow">Our Fleet</p>
-          <h2>Owner Fleet For Family, Business And VIP Guests</h2>
-        </div>
-        <div className="fleet-grid">
-          {vehicles.map((item) => (
-            <article className="fleet-card" key={item.name}>
-              <div className="fleet-photo-placeholder">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.photo} alt={`${item.name} fleet car`} />
-              </div>
-              <div>
-                <span>{item.type}</span>
-                <h3>{item.name}</h3>
-                <p>{item.bestFor}</p>
-                <strong>{item.seats}</strong>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="payment-band" id="payment">
-        <div>
-          <p className="eyebrow">Payment Gateway</p>
-          <h2>Razorpay Payment After Booking Confirmation</h2>
-          <p>
-            Customers Can Save A Booking On The Website, Receive A Booking ID
-            And Pay Advance Or Full Fare Securely With Razorpay.
-          </p>
-        </div>
-        <div className="payment-options">
-          <span>UPI</span>
-          <span>Card</span>
-          <span>Netbanking</span>
-          <span>Wallet</span>
-        </div>
-        <div className="payment-card">
-          <strong>Step 1</strong>
-          <span>Book Cab On Site</span>
-          <strong>Step 2</strong>
-          <span>Pay With Razorpay</span>
-        </div>
-      </section>
-
-      <section className="section split-section">
-        <div>
-          <p className="eyebrow">Group Travel</p>
-          <h2>Need Multiple Cabs Or Corporate Booking?</h2>
-          <p>
-            Vishnu Tours Supports Direct Corporate Coordination For Guest
-            Movement, Events, Airport Transfers And Outstation Travel With
-            Transparent Fare Details And Secure Payment.
-          </p>
-          <a className="primary-action inline-action" href={whatsappUrl} target="_blank">
-            Contact Us Now
-          </a>
-        </div>
-        <ul className="check-list">
-          <li>Airport, In-City And Outstation Bookings</li>
-          <li>Luxury Cab Service For VIP And Corporate Guests</li>
-          <li>Innova Crysta, Hycross, Ertiga, Rumion And Etios Available</li>
-          <li>Razorpay Payment Option After Website Booking</li>
-        </ul>
-      </section>
-
-      <section className="section faq-section">
-        <div className="section-heading">
-          <p className="eyebrow">FAQs</p>
-          <h2>Booking Questions</h2>
-        </div>
-        <details>
-          <summary>How Is A Cab Booking Confirmed?</summary>
-          <p>
-            After The Customer Enters Trip Details And Selects A Cab, The
-            Booking Is Saved On The Website And A Booking ID Is Generated.
-          </p>
-        </details>
-        <details>
-          <summary>Is The Online Payment Gateway Live?</summary>
-          <p>
-            Yes. After Booking Confirmation, The Customer Can Choose Advance
-            Payment Or Full Payment Through Razorpay.
-          </p>
-        </details>
-        <details>
-          <summary>Can VIP Luxury Cabs Be Booked?</summary>
-          <p>
-            Yes. Innova Crysta And Hycross Are Available For VIP Guests,
-            Executive Travel, Events And Premium Outstation Trips.
-          </p>
-        </details>
-      </section>
-
       <footer className="site-footer" id="contact">
         <div>
           <strong>Vishnu Tours</strong>
@@ -1900,10 +1768,7 @@ export default function Home() {
         </div>
         <nav className="footer-nav" aria-label="Footer navigation">
           <a href="#home">Home</a>
-          <a href="#services">Services</a>
           <a href="#booking">Book Taxi</a>
-          <a href="#fleet">Fleet</a>
-          <a href="#payment">Payment</a>
         </nav>
         <div>
           <a href={whatsappUrl} target="_blank">
