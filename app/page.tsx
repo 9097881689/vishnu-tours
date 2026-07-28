@@ -298,12 +298,7 @@ function formatInr(amount: number) {
 
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
-
-  if (!pickup) {
-    return true;
-  }
-
-  return [
+  const mumbaiAreas = [
     "mumbai",
     "bkc",
     "andheri",
@@ -320,7 +315,15 @@ function isMumbaiPickup(value: string) {
     "chembur",
     "mira road",
     "vasai",
-  ].some((area) => pickup.includes(area));
+  ];
+
+  if (!pickup) {
+    return true;
+  }
+
+  return mumbaiAreas.some(
+    (area) => pickup.includes(area) || (pickup.length >= 3 && area.startsWith(pickup)),
+  );
 }
 
 export default function Home() {
