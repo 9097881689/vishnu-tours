@@ -264,19 +264,24 @@ export async function GET(request: Request) {
         .bind(loginMobile)
         .all<BookingRow>();
 
-      const openBookings = await env.DB.prepare(
-        `${bookingSelectSql}
-         WHERE booking_id NOT LIKE 'PENDING-%'
-           AND COALESCE(driver_mobile, '') = ''
-           AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
-           AND (
-             payment_status = 'Complete'
-             OR payment_amount > 0
-             OR ride_status IN ('Payment Received', 'Booking Confirmed')
-           )
-         ORDER BY id DESC
-         LIMIT 20`,
-      ).all<BookingRow>();
+      const openBookings = driverProfile
+        ? await env.DB.prepare(
+            `${bookingSelectSql}
+             WHERE booking_id NOT LIKE 'PENDING-%'
+               AND COALESCE(driver_mobile, '') = ''
+               AND vehicle = ?
+               AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+               AND (
+                 payment_status = 'Complete'
+                 OR payment_amount > 0
+                 OR ride_status IN ('Payment Received', 'Booking Confirmed')
+               )
+             ORDER BY id DESC
+             LIMIT 20`,
+          )
+            .bind(driverProfile.vehicle_type)
+            .all<BookingRow>()
+        : { results: [] as BookingRow[] };
 
       if (driverProfile || driverBookings.results?.length) {
         return Response.json({
@@ -413,7 +418,7 @@ export async function PATCH(request: Request) {
         }
 
         const booking = await env.DB.prepare(
-          `SELECT booking_id, pickup_datetime, driver_mobile
+          `SELECT booking_id, pickup_datetime, driver_mobile, vehicle
            FROM bookings
            WHERE booking_id = ?
            LIMIT 1`,
@@ -423,6 +428,7 @@ export async function PATCH(request: Request) {
             booking_id: string;
             pickup_datetime: string;
             driver_mobile: string;
+            vehicle: string;
           }>();
 
         if (!booking) {
@@ -432,6 +438,15 @@ export async function PATCH(request: Request) {
         if (booking.driver_mobile) {
           return Response.json(
             { error: "This Ride Is Already Assigned." },
+            { status: 409 },
+          );
+        }
+
+        if (booking.vehicle !== driver.vehicle_type) {
+          return Response.json(
+            {
+              error: `This Ride Requires ${booking.vehicle}. Your Saved Vehicle Is ${driver.vehicle_type}.`,
+            },
             { status: 409 },
           );
         }
@@ -461,14 +476,12 @@ export async function PATCH(request: Request) {
         await env.DB.prepare(
           `UPDATE bookings
            SET ride_status = 'Driver Assigned',
-               vehicle = ?,
                driver_name = ?,
                driver_mobile = ?,
                vehicle_number = ?
            WHERE booking_id = ? AND COALESCE(driver_mobile, '') = ''`,
         )
           .bind(
-            driver.vehicle_type,
             driver.driver_name,
             driver.driver_mobile,
             driver.vehicle_number,

@@ -1320,6 +1320,13 @@ export default function Home() {
       return;
     }
 
+    if (booking.vehicle !== driverProfileForm.vehicle) {
+      setPortalStatus(
+        `This Ride Requires ${booking.vehicle}. Your Saved Vehicle Is ${driverProfileForm.vehicle}.`,
+      );
+      return;
+    }
+
     setPortalStatus("Accepting Ride...");
 
     try {
@@ -1566,7 +1573,15 @@ export default function Home() {
         {portalRole === "customer" ? renderInvoice(booking) : null}
         {portalRole === "driver" && !booking.driver_mobile ? (
           <div className="booking-actions">
-            <button type="button" onClick={() => acceptRide(booking)}>
+            <button
+              type="button"
+              disabled={
+                !driverProfileForm.name ||
+                !driverProfileForm.vehicleNumber ||
+                booking.vehicle !== driverProfileForm.vehicle
+              }
+              onClick={() => acceptRide(booking)}
+            >
               Accept Ride
             </button>
           </div>
@@ -2441,6 +2456,18 @@ export default function Home() {
                   <div className="admin-ops-panel driver-profile-panel">
                     <div>
                       <h3>Driver Profile</h3>
+                      {driverProfileForm.name && driverProfileForm.vehicleNumber ? (
+                        <div className="driver-profile-summary">
+                          <strong>{driverProfileForm.name}</strong>
+                          <span>Mobile: {driverProfileForm.mobile}</span>
+                          <span>Vehicle: {driverProfileForm.vehicle}</span>
+                          <span>Vehicle No: {driverProfileForm.vehicleNumber}</span>
+                        </div>
+                      ) : (
+                        <p className="driver-profile-note">
+                          Save Your Driver And Vehicle Details Once To Accept Matching Rides.
+                        </p>
+                      )}
                       <div className="driver-form">
                         <input
                           value={driverProfileForm.name}
