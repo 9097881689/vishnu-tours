@@ -248,49 +248,44 @@ const vehicles = [
     type: "Sedan",
     seats: "4 Seats",
     bestFor: "City Rides, Business Visits And One Day Travel",
-    photo: "/fleet/etios.svg",
+    photo: "/fleet/etios.png",
   },
 ];
 
 const serviceCards = [
   {
     title: "Airport",
-    image:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Hycross_Feature_Image_3b1feac7e7.png",
+    image: "/services/airport.png",
     description:
       "Premium Airport Transfers From Mumbai With Clean Cars And Timely Pickup.",
   },
   {
     title: "In-City",
-    image: "/fleet/etios.svg",
+    image: "/services/city.png",
     description:
       "Reliable Mumbai City Travel For Meetings, Visits And Hourly Duties.",
   },
   {
     title: "Outstation",
-    image:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
+    image: "/services/outstation.png",
     description:
       "All India Outstation Trips From Mumbai With Transparent Per KM Fare.",
   },
   {
     title: "Corporate Booking",
-    image:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Ertiga_Feature_Image_de63f22c7b.png",
+    image: "/services/corporate.png",
     description:
       "Direct Owner-Side Cab Coordination For Corporate Guest Movement.",
   },
   {
     title: "Executive Transfers",
-    image:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Rumion_Feature_Image_08ede3a5d9.png",
+    image: "/services/executive.png",
     description:
       "Comfortable Executive Transfers For VIP Guests, Events And Site Visits.",
   },
   {
     title: "All India Trips",
-    image:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
+    image: "/services/all-india.png",
     description:
       "Mumbai Pickup With Long-Route Cab Options Across India.",
   },
@@ -313,6 +308,17 @@ type DashboardBooking = {
   customer_name: string;
   customer_mobile: string;
   status: string;
+  ride_status?: string;
+  refund_status?: string;
+  driver_name?: string;
+  driver_mobile?: string;
+};
+
+type DriverProfile = {
+  name: string;
+  mobile: string;
+  vehicle: string;
+  status: "Available" | "Assigned";
 };
 
 function getDestinationDistance(destination: string) {
@@ -461,6 +467,19 @@ export default function Home() {
     totalFare: number;
     recentBookings: DashboardBooking[];
   } | null>(null);
+  const [drivers, setDrivers] = useState<DriverProfile[]>([
+    {
+      name: "Vishnu Driver 1",
+      mobile: "7004291529",
+      vehicle: "Toyota Innova Crysta",
+      status: "Available",
+    },
+  ]);
+  const [driverForm, setDriverForm] = useState({
+    name: "",
+    mobile: "",
+    vehicle: "Toyota Innova Crysta",
+  });
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -1059,6 +1078,88 @@ export default function Home() {
     }
   }
 
+  async function updateBookingOperation(
+    bookingId: string,
+    updates: {
+      rideStatus?: string;
+      refundStatus?: string;
+      driverName?: string;
+      driverMobile?: string;
+    },
+  ) {
+    setAdminStatus("Updating Booking...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: adminPin, bookingId, ...updates }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setAdminStatus(result.error || "Update Failed.");
+        return;
+      }
+
+      await loadDashboard();
+      setAdminStatus("Booking Updated.");
+    } catch {
+      setAdminStatus("Update Failed.");
+    }
+  }
+
+  function onboardDriver() {
+    if (!driverForm.name.trim() || !driverForm.mobile.trim()) {
+      setAdminStatus("Please Enter Driver Name And Mobile.");
+      return;
+    }
+
+    setDrivers((currentDrivers) => [
+      ...currentDrivers,
+      {
+        name: driverForm.name.trim(),
+        mobile: driverForm.mobile.trim(),
+        vehicle: driverForm.vehicle,
+        status: "Available",
+      },
+    ]);
+    setDriverForm({
+      name: "",
+      mobile: "",
+      vehicle: "Toyota Innova Crysta",
+    });
+    setAdminStatus("Driver Onboarded.");
+  }
+
+  async function autoAssignDriver(booking: DashboardBooking) {
+    const availableDriver =
+      drivers.find(
+        (driver) =>
+          driver.status === "Available" &&
+          (booking.vehicle.includes(driver.vehicle) || driver.vehicle === booking.vehicle),
+      ) || drivers.find((driver) => driver.status === "Available");
+
+    if (!availableDriver) {
+      setAdminStatus("No Available Driver Found.");
+      return;
+    }
+
+    setDrivers((currentDrivers) =>
+      currentDrivers.map((driver) =>
+        driver.mobile === availableDriver.mobile
+          ? { ...driver, status: "Assigned" }
+          : driver,
+      ),
+    );
+
+    await updateBookingOperation(booking.booking_id, {
+      rideStatus: "Driver Assigned",
+      driverName: availableDriver.name,
+      driverMobile: availableDriver.mobile,
+    });
+  }
+
   return (
     <main>
       <div className="top-strip">
@@ -1075,16 +1176,18 @@ export default function Home() {
             <strong>Vishnu Tours</strong>
           </span>
         </a>
-        <a className="call-button" href={whatsappUrl} target="_blank">
-          WhatsApp 7004291529
-        </a>
-        <button
-          className="login-button"
-          type="button"
-          onClick={() => setShowAdminLogin(true)}
-        >
-          Login
-        </button>
+        <div className="header-actions">
+          <a className="call-button" href={whatsappUrl} target="_blank">
+            WhatsApp 7004291529
+          </a>
+          <button
+            className="login-button"
+            type="button"
+            onClick={() => setShowAdminLogin(true)}
+          >
+            Login
+          </button>
+        </div>
       </header>
 
       <section className="hero" id="home">
@@ -1741,8 +1844,11 @@ export default function Home() {
             >
               ×
             </button>
-            <h2>Booking Login</h2>
-            <p>Enter Your PIN To Check Successful Website Bookings.</p>
+            <h2>Vishnu Tours Dashboard</h2>
+            <p>
+              Login To Manage Bookings, Ride Status, Refunds, Driver Onboarding
+              And Driver Assignment.
+            </p>
             <div className="admin-login-row">
               <input
                 value={adminPin}
@@ -1765,19 +1871,142 @@ export default function Home() {
                   <span>Total Fare</span>
                   <strong>{formatInr(dashboard.totalFare)}</strong>
                 </div>
+                <div className="admin-ops-panel">
+                  <div>
+                    <h3>Driver Onboarding</h3>
+                    <div className="driver-form">
+                      <input
+                        value={driverForm.name}
+                        onChange={(event) =>
+                          setDriverForm((currentForm) => ({
+                            ...currentForm,
+                            name: event.target.value,
+                          }))
+                        }
+                        placeholder="Driver Name"
+                      />
+                      <input
+                        value={driverForm.mobile}
+                        onChange={(event) =>
+                          setDriverForm((currentForm) => ({
+                            ...currentForm,
+                            mobile: event.target.value,
+                          }))
+                        }
+                        placeholder="Driver Mobile"
+                      />
+                      <select
+                        value={driverForm.vehicle}
+                        onChange={(event) =>
+                          setDriverForm((currentForm) => ({
+                            ...currentForm,
+                            vehicle: event.target.value,
+                          }))
+                        }
+                      >
+                        {vehicles.map((item) => (
+                          <option key={item.name} value={item.name}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={onboardDriver}>
+                        Add Driver
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <h3>Driver Pool</h3>
+                    <div className="driver-list">
+                      {drivers.map((driver) => (
+                        <span key={`${driver.name}-${driver.mobile}`}>
+                          {driver.name} | {driver.vehicle} | {driver.status}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div className="admin-recent">
-                  <h3>Recent Bookings</h3>
+                  <h3>Booking Details And Operations</h3>
                   {dashboard.recentBookings.length ? (
                     dashboard.recentBookings.map((booking) => (
                       <article key={booking.booking_id}>
-                        <strong>{booking.booking_id}</strong>
-                        <span>
-                          {booking.customer_name} | {booking.customer_mobile}
-                        </span>
-                        <small>
-                          {booking.trip_type} | {booking.vehicle} |{" "}
-                          {formatInr(booking.estimated_fare)}
-                        </small>
+                        <div className="booking-row-head">
+                          <strong>{booking.booking_id}</strong>
+                          <span>{booking.ride_status || "Booked"}</span>
+                        </div>
+                        <div className="booking-detail-grid">
+                          <small>Customer</small>
+                          <b>
+                            {booking.customer_name} | {booking.customer_mobile}
+                          </b>
+                          <small>Route</small>
+                          <b>
+                            {booking.start_point} To {booking.destination}
+                          </b>
+                          <small>Cab</small>
+                          <b>{booking.vehicle}</b>
+                          <small>Booking Date</small>
+                          <b>{formatDisplayDate(booking.created_at.slice(0, 10))}</b>
+                          <small>Fare</small>
+                          <b>{formatInr(booking.estimated_fare)}</b>
+                          <small>Refund</small>
+                          <b>{booking.refund_status || "None"}</b>
+                          <small>Driver</small>
+                          <b>
+                            {booking.driver_name
+                              ? `${booking.driver_name} | ${booking.driver_mobile}`
+                              : "Not Assigned"}
+                          </b>
+                        </div>
+                        <div className="booking-actions">
+                          <button
+                            type="button"
+                            onClick={() => autoAssignDriver(booking)}
+                          >
+                            Auto Assign Driver
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                rideStatus: "Ride Started",
+                              })
+                            }
+                          >
+                            Ride Started
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                rideStatus: "Ride Complete",
+                              })
+                            }
+                          >
+                            Ride Complete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                refundStatus: "Refund Requested",
+                              })
+                            }
+                          >
+                            Refund Customer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                refundStatus: "Refund Completed",
+                              })
+                            }
+                          >
+                            Refund Complete
+                          </button>
+                        </div>
                       </article>
                     ))
                   ) : (

@@ -28,6 +28,15 @@ type BookingPayload = {
   paymentMode?: string;
 };
 
+type BookingOperationPayload = {
+  pin?: string;
+  bookingId?: string;
+  rideStatus?: string;
+  refundStatus?: string;
+  driverName?: string;
+  driverMobile?: string;
+};
+
 const adminPin = "710529";
 
 async function ensureBookingsTable() {
@@ -55,13 +64,37 @@ async function ensureBookingsTable() {
         customer_name TEXT NOT NULL,
         customer_mobile TEXT NOT NULL,
         package_type TEXT NOT NULL DEFAULT 'perKm',
-        payment_mode TEXT NOT NULL
+        payment_mode TEXT NOT NULL,
+        ride_status TEXT NOT NULL DEFAULT 'Booked',
+        refund_status TEXT NOT NULL DEFAULT 'None',
+        driver_name TEXT NOT NULL DEFAULT '',
+        driver_mobile TEXT NOT NULL DEFAULT ''
       )`,
     )
     .run();
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN package_type TEXT NOT NULL DEFAULT 'perKm'")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN ride_status TEXT NOT NULL DEFAULT 'Booked'")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN refund_status TEXT NOT NULL DEFAULT 'None'")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN driver_name TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN driver_mobile TEXT NOT NULL DEFAULT ''")
     .run()
     .catch(() => undefined);
 
@@ -88,7 +121,8 @@ export async function GET(request: Request) {
     ).first<{ total_bookings: number; total_fare: number }>();
     const recent = await env.DB.prepare(
       `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
-        estimated_fare, customer_name, customer_mobile, status
+        estimated_fare, customer_name, customer_mobile, status, ride_status,
+        refund_status, driver_name, driver_mobile
        FROM bookings
        WHERE booking_id NOT LIKE 'PENDING-%'
        ORDER BY id DESC
@@ -104,6 +138,10 @@ export async function GET(request: Request) {
       customer_name: string;
       customer_mobile: string;
       status: string;
+      ride_status: string;
+      refund_status: string;
+      driver_name: string;
+      driver_mobile: string;
     }>();
 
     return Response.json({
@@ -114,6 +152,48 @@ export async function GET(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Booking dashboard could not load.";
+
+    return Response.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const payload = (await request.json()) as BookingOperationPayload;
+
+    if (clean(payload.pin) !== adminPin) {
+      return Response.json({ error: "Invalid login PIN." }, { status: 401 });
+    }
+
+    const bookingId = clean(payload.bookingId);
+
+    if (!bookingId) {
+      return Response.json({ error: "Booking ID is required." }, { status: 400 });
+    }
+
+    await ensureBookingsTable();
+
+    await env.DB.prepare(
+      `UPDATE bookings
+       SET ride_status = COALESCE(NULLIF(?, ''), ride_status),
+           refund_status = COALESCE(NULLIF(?, ''), refund_status),
+           driver_name = COALESCE(NULLIF(?, ''), driver_name),
+           driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile)
+       WHERE booking_id = ?`,
+    )
+      .bind(
+        clean(payload.rideStatus),
+        clean(payload.refundStatus),
+        clean(payload.driverName),
+        clean(payload.driverMobile),
+        bookingId,
+      )
+      .run();
+
+    return Response.json({ success: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Booking operation failed.";
 
     return Response.json({ error: message }, { status: 500 });
   }
@@ -184,8 +264,12 @@ export async function POST(request: Request) {
         customer_name,
         customer_mobile,
         package_type,
-        payment_mode
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        payment_mode,
+        ride_status,
+        refund_status,
+        driver_name,
+        driver_mobile
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -204,6 +288,10 @@ export async function POST(request: Request) {
         mobile,
         packageType,
         paymentMode,
+        "Booked",
+        "None",
+        "",
+        "",
       )
       .run();
     const rowId = Number(insertResult.meta.last_row_id);
