@@ -13,17 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vishnu Tours | Visnu S Tours & Travels",
+  title: "Vishnu Tours | Corporate Cab Service Mumbai",
   description:
-    "Book Innova Crysta, Hycross, Ertiga, Rumion and Etios for outstation, round trip, local and VIP luxury cab service.",
+    "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Hycross, Ertiga, Rumion and Etios. Live fare, booking and Razorpay payment.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
   },
   openGraph: {
-    title: "Vishnu Tours",
+    title: "Vishnu Tours | Corporate Cab Service Mumbai",
     description:
-      "Ready to book local, outstation, round trip and VIP luxury cab service.",
+      "Premium cab booking from Mumbai for corporate travel, VIP guests, airport transfers and all India outstation trips.",
     images: ["/og.png"],
   },
 };

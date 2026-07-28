@@ -120,7 +120,7 @@ const packageOptions = [
   {
     id: "perKm",
     label: "Per KM Outstation",
-    description: "Mumbai se all India per km fare",
+    description: "All India Fare From Mumbai",
   },
   {
     id: "fullDay",
@@ -135,7 +135,7 @@ const packageOptions = [
   {
     id: "vip",
     label: "VIP Luxury Pack",
-    description: "Premium car, priority driver, executive service",
+    description: "Premium Car, Priority Driver And Executive Service",
   },
 ] as const;
 
@@ -372,7 +372,7 @@ export default function Home() {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [packageType] = useState<PackageId>("perKm");
-  const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
+  const [paymentMode, setPaymentMode] = useState("Pay Advance After Fare Confirmation");
   const [paymentChoice, setPaymentChoice] = useState<"zero" | "part" | "full">(
     "part",
   );
@@ -418,7 +418,7 @@ export default function Home() {
             estimatedFare,
             fareLabel:
               packageType === "perKm"
-                ? `Rs. ${rates.perKm}/km`
+                ? `Rs. ${rates.perKm}/KM`
                 : packageType === "fullDay"
                   ? "8 hr / 80 km"
                   : packageType === "halfDay"
@@ -590,14 +590,14 @@ export default function Home() {
 
   const bookingText = useMemo(() => {
     return [
-      "Namaste Vishnu Tours, mujhe cab booking karni hai.",
+      "Hello Vishnu Tours, I Want To Book A Cab.",
       `Trip: ${tripType}`,
       `Cab: ${vehicle}`,
       `Start Point: ${startPoint}`,
       `Destination: ${drop || "Please confirm"}`,
       `Estimated Distance: ${numericDistance || "Please confirm"} km`,
       `Billable Distance: ${billableDistance || "Please confirm"} km`,
-      `Rate: ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`,
+      `Rate: ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/KM`}`,
       `Estimated Fare: ${fareTotal ? formattedFare : "Please confirm"}`,
       `Date/Time: ${pickupDateTime || "Please confirm"}`,
       `Name: ${name || "Guest"}`,
@@ -649,7 +649,7 @@ export default function Home() {
     setBookingStatus("");
 
     if (!navigator.geolocation) {
-      setBookingStatus("Current location browser me available nahi hai.");
+      setBookingStatus("Current Location Is Not Available In This Browser.");
       return;
     }
 
@@ -663,7 +663,7 @@ export default function Home() {
         );
       },
       () => {
-        setBookingStatus("Current location permission allow karein ya pickup type karein.");
+        setBookingStatus("Please Allow Current Location Permission Or Type Your Pickup Location.");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
@@ -676,13 +676,13 @@ export default function Home() {
     if (!pickupAllowed) {
       setPickupFieldTouched(true);
       setBookingStatus(
-        "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
+        "Sorry, Pickup Is Available Only From Mumbai And Nearby Mumbai Areas.",
       );
       return;
     }
 
     if (!startPoint || !drop || !numericDistance || !date || !pickupTime) {
-      setBookingStatus("From, To, date, time aur distance fill karein.");
+      setBookingStatus("Please Fill From, To, Date, Time And Distance.");
       return;
     }
 
@@ -702,13 +702,13 @@ export default function Home() {
     if (!pickupAllowed) {
       setPickupFieldTouched(true);
       setBookingStatus(
-        "Sorry, hum Mumbai se bahar pickup nahi karte. Pickup location Mumbai area me dalein.",
+        "Sorry, Pickup Is Available Only From Mumbai And Nearby Mumbai Areas.",
       );
       return;
     }
 
     if (!drop || !numericDistance || !pickupDateTime || !name || !mobile) {
-      setBookingStatus("Please From/To, KM, date, name aur mobile fill karein.");
+      setBookingStatus("Please Fill From, To, KM, Date, Name And Mobile Number.");
       return null;
     }
 
@@ -745,16 +745,16 @@ export default function Home() {
       };
 
       if (!response.ok || !result.booking) {
-        setBookingStatus(result.error || "Booking save nahi ho payi.");
+        setBookingStatus(result.error || "Booking Could Not Be Saved.");
         return null;
       }
 
       setConfirmedBooking(result.booking);
       setAdvanceAmount(String(selectedPaymentAmount || result.booking.estimatedFare));
-      setBookingStatus(`${selectedCab} booking site par live save ho gayi.`);
+      setBookingStatus(`${selectedCab} Booking Has Been Saved Successfully.`);
       return result.booking;
     } catch {
-      setBookingStatus("Network issue ki wajah se booking save nahi ho payi.");
+      setBookingStatus("Booking Could Not Be Saved Because Of A Network Issue.");
       return null;
     } finally {
       setIsBooking(false);
@@ -830,18 +830,18 @@ export default function Home() {
         error?: string;
       };
     } catch {
-      order = { error: "Payment gateway could not be reached." };
+      order = { error: "Payment Gateway Could Not Be Reached." };
     }
 
     if (!order.keyId) {
       setIsPaying(false);
       setPaymentStatus(
         order.error ||
-          "Payment gateway is ready. Add Razorpay credentials to activate online payment.",
+          "Payment Gateway Is Ready. Add Razorpay Credentials To Activate Online Payment.",
       );
       window.open(
         `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-          `Namaste Vishnu Tours, mujhe Rs. ${advanceAmount} advance payment link chahiye.\nBooking: ${name || "Guest"}\nMobile: ${mobile || "Please confirm"}\nTrip: ${tripType}\nCab: ${vehicle}`,
+          `Hello Vishnu Tours, I Need A Rs. ${advanceAmount} Advance Payment Link.\nBooking: ${name || "Guest"}\nMobile: ${mobile || "Please Confirm"}\nTrip: ${tripType}\nCab: ${vehicle}`,
         )}`,
         "_blank",
         "noopener,noreferrer",
@@ -857,7 +857,7 @@ export default function Home() {
         script.onerror = () => reject(new Error("Razorpay failed to load"));
         document.body.appendChild(script);
       }).catch(() => {
-        setPaymentStatus("Payment gateway could not load. Please try WhatsApp.");
+        setPaymentStatus("Payment Gateway Could Not Load. Please Try Again.");
       });
     }
 
@@ -891,12 +891,12 @@ export default function Home() {
       },
       handler: () => {
         setIsPaying(false);
-        setPaymentStatus("Payment received. Please share screenshot on WhatsApp.");
+        setPaymentStatus("Payment Received Successfully.");
       },
       modal: {
         ondismiss: () => {
           setIsPaying(false);
-          setPaymentStatus("Payment was closed before completion.");
+        setPaymentStatus("Payment Was Closed Before Completion.");
         },
       },
     };
@@ -946,7 +946,7 @@ export default function Home() {
           <div className="vip-visual-card">
             <span>VIP</span>
             <strong>Luxury Cab Service</strong>
-            <small>Mumbai corporate pickup | All India trips</small>
+            <small>Mumbai Corporate Pickup | All India Trips</small>
           </div>
         </div>
         <div className="hero-content">
@@ -954,9 +954,9 @@ export default function Home() {
             <p className="eyebrow">Visnu S Tours & Travels</p>
             <h1>VIP Luxury Cab Service by Vishnu Tours</h1>
               <p>
-                Corporate guests, airport transfers, in-city movement aur
-                outstation trips ke liye Mumbai se premium cab booking. Clean
-                journey detail, cab selection aur payment direct site par.
+                Premium Cab Booking From Mumbai For Corporate Guests, Airport
+                Transfers, In-City Movement And Outstation Trips. Select Your
+                Cab, Review Fare Details And Pay Securely On The Website.
               </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
@@ -1045,7 +1045,7 @@ export default function Home() {
                 ) : null}
                 {showPickupError ? (
                   <small className="field-error">
-                    Hum Mumbai se bahar pickup nahi karte.
+                    Pickup Is Available Only From Mumbai And Nearby Mumbai Areas.
                   </small>
                 ) : null}
               </label>
@@ -1183,7 +1183,7 @@ export default function Home() {
               Explore Cabs
             </button>
             <p className="booking-rating-strip">
-              24x7 support | Free cancellation before assignment | Mumbai pickup only
+              24x7 Support | Free Cancellation Before Assignment | Mumbai Pickup Only
             </p>
           </form>
         </div>
@@ -1215,9 +1215,9 @@ export default function Home() {
             </button>
           </div>
           <div className="result-promise-band">
-            <strong>₹ Book now at zero cost</strong>
-            <strong>Free cancellations up to 1 hour</strong>
-            <strong>24/7 customer support</strong>
+            <strong>₹ Book Now At Zero Cost</strong>
+            <strong>Free Cancellations Up To 1 Hour</strong>
+            <strong>24/7 Customer Support</strong>
           </div>
           <div className="vehicle-card-list" aria-live="polite">
             {vehicleRates.map((item) => {
@@ -1238,8 +1238,8 @@ export default function Home() {
                     <ul>
                       <li>Driver allowance included</li>
                       <li>
-                        {billableDistance || 0} kms included | Post limit: Rs.{" "}
-                        {item.perKm}/km
+                        {billableDistance || 0} KMs Included | Post Limit: Rs.{" "}
+                        {item.perKm}/KM
                       </li>
                       <li>{selectedPackage.label}</li>
                     </ul>
@@ -1260,7 +1260,7 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="promise-line">
-                    New Car Promise - actual owner fleet, clean VIP service
+                    New Car Promise - Actual Owner Fleet, Clean VIP Service
                   </div>
                 </article>
               );
@@ -1284,8 +1284,8 @@ export default function Home() {
                 Package: <strong>{selectedPackage.label}</strong>
               </p>
               <p>
-                Pickup Date: <strong>{formatDisplayDate(date)}, {pickupTime}</strong> · Kms
-                included: <strong>{billableDistance} kms</strong>
+                Pickup Date: <strong>{formatDisplayDate(date)}, {pickupTime}</strong> · KMs
+                Included: <strong>{billableDistance} KMs</strong>
               </p>
             </article>
             <article className="review-card">
@@ -1296,7 +1296,7 @@ export default function Home() {
                   <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Guest name"
+                    placeholder="Guest Name"
                     required
                   />
                 </label>
@@ -1305,7 +1305,7 @@ export default function Home() {
                   <input
                     value={mobile}
                     onChange={(event) => setMobile(event.target.value)}
-                    placeholder="Mobile number"
+                    placeholder="Mobile Number"
                     inputMode="tel"
                     required
                   />
@@ -1315,7 +1315,7 @@ export default function Home() {
                   <input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Email optional"
+                    placeholder="Email Optional"
                     type="email"
                   />
                 </label>
@@ -1334,7 +1334,7 @@ export default function Home() {
                 <span>Booking ID</span>
                 <strong>{confirmedBooking.bookingId}</strong>
                 <small>
-                  {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
+                  {confirmedBooking.billableKm} KM Billable | Fare Rs.{" "}
                   {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
                 </small>
               </div>
@@ -1346,13 +1346,13 @@ export default function Home() {
             ) : null}
           </div>
           <aside className="payment-sidebar">
-            <div className="free-cancel-note">Free cancellation till 1 hr of departure</div>
+            <div className="free-cancel-note">Free Cancellation Till 1 Hr Of Departure</div>
             <div className="payment-options-card">
               <h2>Payment Options</h2>
               {[
-                { id: "zero", label: "Book at zero", note: `Pay ${formatInr(payableFare)} later`, amount: 0 },
-                { id: "part", label: "Part Pay", note: "Pay 25% now and rest to the driver", amount: partPayAmount },
-                { id: "full", label: "Full Pay", note: "Full amount", amount: payableFare },
+                { id: "zero", label: "Book At Zero", note: `Pay ${formatInr(payableFare)} Later`, amount: 0 },
+                { id: "part", label: "Part Pay", note: "Pay 25% Now And Rest To The Driver", amount: partPayAmount },
+                { id: "full", label: "Full Pay", note: "Full Amount", amount: payableFare },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -1375,7 +1375,7 @@ export default function Home() {
                 </button>
               ))}
               <div className="coupon-row">
-                <input placeholder="Enter a coupon" />
+                <input placeholder="Enter A Coupon" />
                 <button type="button">Apply</button>
               </div>
               <button
@@ -1387,7 +1387,7 @@ export default function Home() {
                 {isBooking || isPaying ? "Processing..." : "Proceed"}
               </button>
               <button className="fare-breakup" type="button">
-                View Fare Break up
+                View Fare Breakup
               </button>
               {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
             </div>
@@ -1397,26 +1397,26 @@ export default function Home() {
       <section className="trust-strip" aria-label="Service highlights">
         <div>
           <strong>Best Rate Options</strong>
-          <span>Corporate-friendly pricing</span>
+          <span>Corporate-Friendly Pricing</span>
         </div>
         <div>
           <strong>Direct Owner Fleet</strong>
-          <span>No middle commission</span>
+          <span>No Middle Commission</span>
         </div>
         <div>
           <strong>VIP Coordination</strong>
-          <span>Guest movement support</span>
+          <span>Guest Movement Support</span>
         </div>
         <div>
           <strong>Online Payment</strong>
-          <span>Razorpay after booking</span>
+          <span>Razorpay After Booking</span>
         </div>
       </section>
 
       <section className="section" id="services">
         <div className="section-heading">
-          <p className="eyebrow">Cab services</p>
-          <h2>Corporate travel, airport movement and outstation trips</h2>
+          <p className="eyebrow">Cab Services</p>
+          <h2>Corporate Travel, Airport Movement And Outstation Trips</h2>
         </div>
         <div className="service-grid">
           {serviceTypes.map((service) => (
@@ -1424,8 +1424,8 @@ export default function Home() {
               <span className="service-icon" aria-hidden="true" />
               <h3>{service}</h3>
               <p>
-                Corporate guest pickup, airport movement, in-city duty and
-                outstation travel with direct owner-side booking.
+                Corporate Guest Pickup, Airport Movement, In-City Duty And
+                Outstation Travel With Direct Owner-Side Booking.
               </p>
             </article>
           ))}
@@ -1434,15 +1434,15 @@ export default function Home() {
 
       <section className="section fleet-section" id="fleet">
         <div className="section-heading">
-          <p className="eyebrow">Our fleet</p>
-          <h2>Owner fleet for family, business and VIP guests</h2>
+          <p className="eyebrow">Our Fleet</p>
+          <h2>Owner Fleet For Family, Business And VIP Guests</h2>
         </div>
         <div className="fleet-grid">
           {vehicles.map((item) => (
             <article className="fleet-card" key={item.name}>
-              <div className="fleet-photo-placeholder" aria-hidden="true">
-                <span>VT</span>
-                <strong>Actual Owner Fleet</strong>
+              <div className="fleet-photo-placeholder">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.photo} alt={`${item.name} fleet car`} />
               </div>
               <div>
                 <span>{item.type}</span>
@@ -1457,11 +1457,11 @@ export default function Home() {
 
       <section className="payment-band" id="payment">
         <div>
-          <p className="eyebrow">Payment gateway</p>
-          <h2>Booking ke turant baad Razorpay payment</h2>
+          <p className="eyebrow">Payment Gateway</p>
+          <h2>Razorpay Payment After Booking Confirmation</h2>
           <p>
-            Customer pehle site par booking save karega. Booking ID milte hi
-            same form me advance ya full fare Razorpay se pay kar sakta hai.
+            Customers Can Save A Booking On The Website, Receive A Booking ID
+            And Pay Advance Or Full Fare Securely With Razorpay.
           </p>
         </div>
         <div className="payment-options">
@@ -1472,57 +1472,57 @@ export default function Home() {
         </div>
         <div className="payment-card">
           <strong>Step 1</strong>
-          <span>Book cab on site</span>
+          <span>Book Cab On Site</span>
           <strong>Step 2</strong>
-          <span>Pay with Razorpay</span>
+          <span>Pay With Razorpay</span>
         </div>
       </section>
 
       <section className="section split-section">
         <div>
-          <p className="eyebrow">Traveling in group?</p>
-          <h2>Need multiple cabs or corporate booking?</h2>
+          <p className="eyebrow">Group Travel</p>
+          <h2>Need Multiple Cabs Or Corporate Booking?</h2>
           <p>
-            Commission khane wale middlemen se bachne ke liye customer direct
-            Vishnu Tours se trip details share karta hai. Aap route, cab,
-            timing, fare aur payment ko seedha confirm kar sakte hain.
+            Vishnu Tours Supports Direct Corporate Coordination For Guest
+            Movement, Events, Airport Transfers And Outstation Travel With
+            Transparent Fare Details And Secure Payment.
           </p>
           <a className="primary-action inline-action" href={whatsappUrl} target="_blank">
             Contact Us Now
           </a>
         </div>
         <ul className="check-list">
-          <li>Airport, in-city and outstation bookings</li>
-          <li>Luxury cab service for VIP and corporate guests</li>
-          <li>Innova Crysta, Hycross, Ertiga, Rumion and Etios available</li>
-          <li>Site booking ke baad Razorpay payment option</li>
+          <li>Airport, In-City And Outstation Bookings</li>
+          <li>Luxury Cab Service For VIP And Corporate Guests</li>
+          <li>Innova Crysta, Hycross, Ertiga, Rumion And Etios Available</li>
+          <li>Razorpay Payment Option After Website Booking</li>
         </ul>
       </section>
 
       <section className="section faq-section">
         <div className="section-heading">
           <p className="eyebrow">FAQs</p>
-          <h2>Booking questions</h2>
+          <h2>Booking Questions</h2>
         </div>
         <details>
-          <summary>Cab booking kaise confirm hogi?</summary>
+          <summary>How Is A Cab Booking Confirmed?</summary>
           <p>
-            From/To, package aur cab select karne ke baad Book This Cab dabate
-            hi booking site database me save hoti hai aur Booking ID milti hai.
+            After The Customer Enters Trip Details And Selects A Cab, The
+            Booking Is Saved On The Website And A Booking ID Is Generated.
           </p>
         </details>
         <details>
-          <summary>Online payment gateway live hai?</summary>
+          <summary>Is The Online Payment Gateway Live?</summary>
           <p>
-            Haan, booking save hone ke baad same form me Razorpay advance ya
-            full fare payment button dikhta hai.
+            Yes. After Booking Confirmation, The Customer Can Choose Advance
+            Payment Or Full Payment Through Razorpay.
           </p>
         </details>
         <details>
-          <summary>VIP luxury cab mil sakti hai?</summary>
+          <summary>Can VIP Luxury Cabs Be Booked?</summary>
           <p>
-            Haan, Innova Crysta aur Hycross VIP, executive aur wedding guest
-            travel ke liye priority fleet me rakhi gayi hai.
+            Yes. Innova Crysta And Hycross Are Available For VIP Guests,
+            Executive Travel, Events And Premium Outstation Trips.
           </p>
         </details>
       </section>
