@@ -493,7 +493,7 @@ export default function Home() {
     const origin = startPoint.trim();
     const destination = drop.trim();
 
-    if (!isMumbaiPickup(origin) || destination.length < 2 || origin.length < 2) {
+    if (!isMumbaiPickup(origin) || destination.length < 4 || origin.length < 3) {
       return () => {
         mounted = false;
       };
