@@ -293,6 +293,19 @@ type PlaceSuggestion = {
   secondary?: string;
 };
 
+type DashboardBooking = {
+  booking_id: string;
+  created_at: string;
+  trip_type: string;
+  vehicle: string;
+  start_point: string;
+  destination: string;
+  estimated_fare: number;
+  customer_name: string;
+  customer_mobile: string;
+  status: string;
+};
+
 function getDestinationDistance(destination: string) {
   const normalizedDestination = destination.trim().toLowerCase();
   const directDistance = destinationDistances[normalizedDestination];
@@ -431,6 +444,14 @@ export default function Home() {
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPin, setAdminPin] = useState("");
+  const [adminStatus, setAdminStatus] = useState("");
+  const [dashboard, setDashboard] = useState<{
+    totalBookings: number;
+    totalFare: number;
+    recentBookings: DashboardBooking[];
+  } | null>(null);
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -997,11 +1018,43 @@ export default function Home() {
     checkout.open();
   }
 
+  async function loadDashboard() {
+    setAdminStatus("Loading Dashboard...");
+
+    try {
+      const response = await fetch(
+        `/api/bookings?pin=${encodeURIComponent(adminPin)}`,
+      );
+      const result = (await response.json()) as {
+        totalBookings?: number;
+        totalFare?: number;
+        recentBookings?: DashboardBooking[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setAdminStatus(result.error || "Login Failed.");
+        setDashboard(null);
+        return;
+      }
+
+      setDashboard({
+        totalBookings: result.totalBookings || 0,
+        totalFare: result.totalFare || 0,
+        recentBookings: result.recentBookings || [],
+      });
+      setAdminStatus("");
+    } catch {
+      setAdminStatus("Dashboard Could Not Load.");
+      setDashboard(null);
+    }
+  }
+
   return (
     <main>
       <div className="top-strip">
         <span>Welcome Guest</span>
-        <a href="tel:+917004291529">Call: +91 7004291529</a>
+        <a href={whatsappUrl} target="_blank">WhatsApp: +91 7004291529</a>
         <a href={whatsappUrl} target="_blank">
           Request Help
         </a>
@@ -1013,9 +1066,16 @@ export default function Home() {
             <strong>Vishnu Tours</strong>
           </span>
         </a>
-        <a className="call-button" href="tel:+917004291529">
-          Call 7004291529
+        <a className="call-button" href={whatsappUrl} target="_blank">
+          WhatsApp 7004291529
         </a>
+        <button
+          className="login-button"
+          type="button"
+          onClick={() => setShowAdminLogin(true)}
+        >
+          Login
+        </button>
       </header>
 
       <section className="hero" id="home">
@@ -1653,12 +1713,73 @@ export default function Home() {
           <a href="#payment">Payment</a>
         </nav>
         <div>
-          <a href="tel:+917004291529">Call: 7004291529</a>
+          <a href={whatsappUrl} target="_blank">
+            WhatsApp: 7004291529
+          </a>
           <a href={whatsappUrl} target="_blank">
             WhatsApp Help
           </a>
         </div>
       </footer>
+
+      {showAdminLogin ? (
+        <div className="admin-modal" role="dialog" aria-modal="true">
+          <div className="admin-card">
+            <button
+              className="admin-close"
+              type="button"
+              onClick={() => setShowAdminLogin(false)}
+            >
+              ×
+            </button>
+            <h2>Booking Login</h2>
+            <p>Enter Your PIN To Check Successful Website Bookings.</p>
+            <div className="admin-login-row">
+              <input
+                value={adminPin}
+                onChange={(event) => setAdminPin(event.target.value)}
+                placeholder="Enter PIN"
+                type="password"
+              />
+              <button type="button" onClick={loadDashboard}>
+                View
+              </button>
+            </div>
+            {adminStatus ? <p className="admin-status">{adminStatus}</p> : null}
+            {dashboard ? (
+              <div className="admin-dashboard">
+                <div className="admin-metric">
+                  <span>Total Bookings</span>
+                  <strong>{dashboard.totalBookings}</strong>
+                </div>
+                <div className="admin-metric">
+                  <span>Total Fare</span>
+                  <strong>{formatInr(dashboard.totalFare)}</strong>
+                </div>
+                <div className="admin-recent">
+                  <h3>Recent Bookings</h3>
+                  {dashboard.recentBookings.length ? (
+                    dashboard.recentBookings.map((booking) => (
+                      <article key={booking.booking_id}>
+                        <strong>{booking.booking_id}</strong>
+                        <span>
+                          {booking.customer_name} | {booking.customer_mobile}
+                        </span>
+                        <small>
+                          {booking.trip_type} | {booking.vehicle} |{" "}
+                          {formatInr(booking.estimated_fare)}
+                        </small>
+                      </article>
+                    ))
+                  ) : (
+                    <p>No Bookings Yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

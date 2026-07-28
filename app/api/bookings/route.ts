@@ -28,6 +28,8 @@ type BookingPayload = {
   paymentMode?: string;
 };
 
+const adminPin = "710529";
+
 async function ensureBookingsTable() {
   const db = env.DB;
   if (!db) {
@@ -68,6 +70,53 @@ async function ensureBookingsTable() {
       "CREATE INDEX IF NOT EXISTS bookings_created_at_idx ON bookings (created_at)",
     )
     .run();
+}
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const pin = url.searchParams.get("pin") || "";
+
+    if (pin !== adminPin) {
+      return Response.json({ error: "Invalid login PIN." }, { status: 401 });
+    }
+
+    await ensureBookingsTable();
+
+    const summary = await env.DB.prepare(
+      "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
+    ).first<{ total_bookings: number; total_fare: number }>();
+    const recent = await env.DB.prepare(
+      `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
+        estimated_fare, customer_name, customer_mobile, status
+       FROM bookings
+       WHERE booking_id NOT LIKE 'PENDING-%'
+       ORDER BY id DESC
+       LIMIT 8`,
+    ).all<{
+      booking_id: string;
+      created_at: string;
+      trip_type: string;
+      vehicle: string;
+      start_point: string;
+      destination: string;
+      estimated_fare: number;
+      customer_name: string;
+      customer_mobile: string;
+      status: string;
+    }>();
+
+    return Response.json({
+      totalBookings: Number(summary?.total_bookings || 0),
+      totalFare: Number(summary?.total_fare || 0),
+      recentBookings: recent.results || [],
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Booking dashboard could not load.";
+
+    return Response.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
