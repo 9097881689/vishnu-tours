@@ -2211,6 +2211,98 @@ nav a:hover {
   background: #effaff;
 }
 
+.payment-complete-screen {
+  grid-column: 1 / -1;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 34px;
+  border: 1px solid rgba(187, 247, 208, 0.9);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(240, 253, 244, 0.92), #ffffff 34%),
+    #ffffff;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+}
+
+.payment-complete-screen > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.payment-complete-screen h2 {
+  margin: 16px 0 18px;
+  color: var(--ink);
+  font-size: clamp(30px, 5vw, 54px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.confirmation-number {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 22px;
+  padding: 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #075985, #0ea5e9);
+  color: #fff;
+}
+
+.confirmation-number small,
+.confirmation-grid small {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.confirmation-number strong {
+  color: #fff;
+  font-size: clamp(34px, 6vw, 62px);
+  line-height: 1;
+}
+
+.confirmation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.confirmation-grid div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.confirmation-grid small {
+  color: var(--brand);
+}
+
+.confirmation-grid strong {
+  overflow-wrap: anywhere;
+  color: #172033;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.payment-complete-screen .inline-action {
+  width: fit-content;
+  margin-top: 22px;
+}
+
 .payment-band {
   border-radius: 22px;
   background: linear-gradient(135deg, rgba(7, 89, 133, 0.92), rgba(7, 21, 36, 0.96)), #071524;
@@ -2327,5 +2419,13 @@ nav a:hover {
 
   .review-page {
     width: min(100% - 24px, 1100px);
+  }
+
+  .payment-complete-screen {
+    padding: 22px;
+  }
+
+  .confirmation-grid {
+    grid-template-columns: 1fr;
   }
 }

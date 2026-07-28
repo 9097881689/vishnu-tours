@@ -214,36 +214,36 @@ const vehicles = [
   {
     name: "Toyota Innova Crysta",
     type: "Premium MUV",
-    seats: "6-7 seats",
-    bestFor: "VIP, family, airport and highway travel",
+    seats: "6-7 Seats",
+    bestFor: "VIP, Family, Airport And Highway Travel",
     photo: "/fleet/innova-crysta.svg",
   },
   {
     name: "Toyota Hycross",
     type: "Luxury Hybrid",
-    seats: "6-7 seats",
-    bestFor: "Executive guests, weddings and long routes",
+    seats: "6-7 Seats",
+    bestFor: "Executive Guests, Weddings And Long Routes",
     photo: "/fleet/hycross.svg",
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
-    seats: "6-7 seats",
-    bestFor: "Round trip, family tour and station pickup",
+    seats: "6-7 Seats",
+    bestFor: "Round Trip, Family Tour And Station Pickup",
     photo: "/fleet/ertiga.svg",
   },
   {
     name: "Maruti Rumion",
     type: "Spacious MUV",
-    seats: "6-7 seats",
-    bestFor: "Local booking, outstation and group travel",
+    seats: "6-7 Seats",
+    bestFor: "Local Booking, Outstation And Group Travel",
     photo: "/fleet/rumion.svg",
   },
   {
     name: "Toyota Etios",
     type: "Sedan",
-    seats: "4 seats",
-    bestFor: "City rides, business visits and one day travel",
+    seats: "4 Seats",
+    bestFor: "City Rides, Business Visits And One Day Travel",
     photo: "/fleet/etios.svg",
   },
 ];
@@ -307,7 +307,7 @@ function formatPaymentAmount(amount: number) {
 
 function formatDisplayDate(value: string) {
   if (!value) {
-    return "Please select";
+    return "Please Select";
   }
 
   const parsedDate = new Date(`${value}T00:00:00`);
@@ -381,6 +381,7 @@ export default function Home() {
   const [isPaying, setIsPaying] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
+  const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -420,10 +421,10 @@ export default function Home() {
               packageType === "perKm"
                 ? `Rs. ${rates.perKm}/KM`
                 : packageType === "fullDay"
-                  ? "8 hr / 80 km"
+                  ? "8 Hr / 80 KM"
                   : packageType === "halfDay"
-                    ? "4 hr / 40 km"
-                    : "VIP package",
+                    ? "4 Hr / 40 KM"
+                    : "VIP Package",
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
@@ -450,14 +451,14 @@ export default function Home() {
       ? googleFromSuggestions.slice(0, 5)
       : getPlaceSuggestions(startPoint, fromSuggestions, 5).map((item) => ({
           label: item,
-          secondary: "Mumbai pickup",
+          secondary: "Mumbai Pickup",
         }));
   const visibleDestinationSuggestions =
     googleDestinationSuggestions.length > 0
       ? googleDestinationSuggestions.slice(0, 5)
       : getPlaceSuggestions(drop, destinationSuggestions, 5).map((item) => ({
           label: item,
-          secondary: "Popular destination",
+          secondary: "Popular Destination",
         }));
 
   useEffect(() => {
@@ -630,6 +631,8 @@ export default function Home() {
     setDrop(value);
     setShowVehicleStep(false);
     setBookingView("home");
+    setConfirmedBooking(null);
+    setIsPaymentComplete(false);
     const distance = getDestinationDistance(value);
 
     if (distance) {
@@ -637,11 +640,31 @@ export default function Home() {
     }
   }
 
+  function resetBooking() {
+    setBookingView("home");
+    setVehicle("Toyota Innova Crysta");
+    setDrop("");
+    setDistanceKm("");
+    setDate("");
+    setPickupTime("10:00");
+    setName("");
+    setMobile("");
+    setEmail("");
+    setPaymentMode("Pay Advance After Fare Confirmation");
+    setPaymentChoice("part");
+    setAdvanceAmount("500");
+    setPaymentStatus("");
+    setBookingStatus("");
+    setConfirmedBooking(null);
+    setIsPaymentComplete(false);
+  }
+
   function updateStartPoint(value: string) {
     setStartPoint(value);
     setShowVehicleStep(false);
     setBookingView("home");
     setConfirmedBooking(null);
+    setIsPaymentComplete(false);
     setBookingStatus("");
   }
 
@@ -672,6 +695,7 @@ export default function Home() {
   function continueToRates() {
     setBookingStatus("");
     setConfirmedBooking(null);
+    setIsPaymentComplete(false);
 
     if (!pickupAllowed) {
       setPickupFieldTouched(true);
@@ -695,6 +719,7 @@ export default function Home() {
     setBookingStatus("");
     setPaymentStatus("");
     setConfirmedBooking(null);
+    setIsPaymentComplete(false);
     setBookingView("review");
   }
 
@@ -716,6 +741,7 @@ export default function Home() {
     setIsBooking(true);
     setBookingStatus("");
     setConfirmedBooking(null);
+    setIsPaymentComplete(false);
 
     try {
       const response = await fetch("/api/bookings", {
@@ -772,7 +798,7 @@ export default function Home() {
       setAdvanceAmount(String(selectedPaymentAmount));
       await startPayment(booking, selectedPaymentAmount);
     } else {
-      setPaymentStatus("Booking saved. Customer can pay later after confirmation.");
+      setPaymentStatus("Booking Saved. Customer Can Pay Later After Confirmation.");
     }
   }
 
@@ -891,6 +917,7 @@ export default function Home() {
       },
       handler: () => {
         setIsPaying(false);
+        setIsPaymentComplete(true);
         setPaymentStatus("Payment Received Successfully.");
       },
       modal: {
@@ -952,7 +979,7 @@ export default function Home() {
         <div className="hero-content">
           <div className="hero-copy">
             <p className="eyebrow">Visnu S Tours & Travels</p>
-            <h1>VIP Luxury Cab Service by Vishnu Tours</h1>
+            <h1>VIP Luxury Cab Service By Vishnu Tours</h1>
               <p>
                 Premium Cab Booking From Mumbai For Corporate Guests, Airport
                 Transfers, In-City Movement And Outstation Trips. Select Your
@@ -1203,7 +1230,7 @@ export default function Home() {
               <strong>{tripType}</strong>
             </div>
             <div>
-              <span>Pick up</span>
+              <span>Pick Up</span>
               <strong>{formatDisplayDate(date)}</strong>
             </div>
             <div>
@@ -1236,7 +1263,7 @@ export default function Home() {
                     </h3>
                     <p>{item.type} | {item.seats} AC Cab</p>
                     <ul>
-                      <li>Driver allowance included</li>
+                      <li>Driver Allowance Included</li>
                       <li>
                         {billableDistance || 0} KMs Included | Post Limit: Rs.{" "}
                         {item.perKm}/KM
@@ -1248,9 +1275,9 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="car-price-block">
-                    <span className="discount-line">Direct owner rate</span>
+                    <span className="discount-line">Direct Owner Rate</span>
                     <strong>{formatInr(total)}</strong>
-                    <small>+ {formatInr(tax)} charges and taxes</small>
+                    <small>+ {formatInr(tax)} Charges And Taxes</small>
                     <button
                       className="book-cab-button select-car-button"
                       type="button"
@@ -1271,6 +1298,66 @@ export default function Home() {
 
       {bookingView === "review" ? (
         <section className="review-page" ref={reviewRef}>
+          {isPaymentComplete && confirmedBooking ? (
+            <article className="payment-complete-screen" aria-live="polite">
+              <span>Payment Successful</span>
+              <h2>Booking Confirmed</h2>
+              <div className="confirmation-number">
+                <small>Booking Number</small>
+                <strong>{confirmedBooking.bookingId}</strong>
+              </div>
+              <div className="confirmation-grid">
+                <div>
+                  <small>Trip Type</small>
+                  <strong>{tripType}</strong>
+                </div>
+                <div>
+                  <small>Cab</small>
+                  <strong>{vehicle}</strong>
+                </div>
+                <div>
+                  <small>Pickup</small>
+                  <strong>{startPoint}</strong>
+                </div>
+                <div>
+                  <small>Drop</small>
+                  <strong>{drop}</strong>
+                </div>
+                <div>
+                  <small>Date And Time</small>
+                  <strong>{formatDisplayDate(date)}, {pickupTime}</strong>
+                </div>
+                <div>
+                  <small>Billable Distance</small>
+                  <strong>{confirmedBooking.billableKm} KM</strong>
+                </div>
+                <div>
+                  <small>Customer</small>
+                  <strong>{name}</strong>
+                </div>
+                <div>
+                  <small>Mobile</small>
+                  <strong>{mobile}</strong>
+                </div>
+                <div>
+                  <small>Fare</small>
+                  <strong>{formatInr(confirmedBooking.estimatedFare)}</strong>
+                </div>
+                <div>
+                  <small>Payment</small>
+                  <strong>{formatPaymentAmount(selectedPaymentAmount)}</strong>
+                </div>
+              </div>
+              <button
+                className="primary-action inline-action"
+                type="button"
+                onClick={resetBooking}
+              >
+                Book Another Cab
+              </button>
+            </article>
+          ) : (
+          <>
           <div className="review-main">
             <div className="review-titlebar">Review Your Booking</div>
             <article className="review-card">
@@ -1392,6 +1479,8 @@ export default function Home() {
               {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
             </div>
           </aside>
+          </>
+          )}
         </section>
       ) : null}
       <section className="trust-strip" aria-label="Service highlights">

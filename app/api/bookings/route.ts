@@ -111,10 +111,10 @@ export async function POST(request: Request) {
       packageType === "perKm"
         ? Math.round(billableKm * selectedRate.perKm)
         : selectedRate[packageType];
-    const bookingId = `VT${Date.now().toString(36).toUpperCase()}`;
     const createdAt = new Date().toISOString();
 
     await ensureBookingsTable();
+    const bookingId = await getNextBookingId();
     await env.DB.prepare(
       `INSERT INTO bookings (
         booking_id,
@@ -180,6 +180,15 @@ export async function POST(request: Request) {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+async function getNextBookingId() {
+  const result = await env.DB.prepare(
+    "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM bookings",
+  ).first<{ next_id: number }>();
+  const nextId = Number(result?.next_id || 1);
+
+  return `VTT${String(nextId).padStart(3, "0")}`;
 }
 
 function normalizePackage(value: unknown): PackageType {
