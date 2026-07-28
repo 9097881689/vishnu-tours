@@ -3038,6 +3038,10 @@ h4,
   background: #fff;
 }
 
+.driver-profile-panel {
+  grid-template-columns: 1fr;
+}
+
 .driver-form {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

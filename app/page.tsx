@@ -287,7 +287,15 @@ type DriverProfile = {
   name: string;
   mobile: string;
   vehicle: string;
+  vehicleNumber: string;
   status: "Available" | "Assigned";
+};
+
+type DriverRow = {
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_type: string;
+  vehicle_number: string;
 };
 
 type PortalRole = "admin" | "driver" | "customer";
@@ -540,9 +548,16 @@ export default function Home() {
       name: "Vishnu Driver 1",
       mobile: "7004291529",
       vehicle: "Toyota Innova Crysta",
+      vehicleNumber: "",
       status: "Available",
     },
   ]);
+  const [driverProfileForm, setDriverProfileForm] = useState({
+    name: "",
+    mobile: "",
+    vehicle: "Toyota Innova Crysta",
+    vehicleNumber: "",
+  });
   const [driverForm, setDriverForm] = useState({
     name: "",
     mobile: "",
@@ -1151,6 +1166,8 @@ export default function Home() {
         totalBookings?: number;
         totalFare?: number;
         recentBookings?: DashboardBooking[];
+        drivers?: DriverRow[];
+        driverProfile?: DriverRow | null;
         error?: string;
       };
 
@@ -1163,11 +1180,32 @@ export default function Home() {
       setPortalRole(result.role || "customer");
       setPortalBookings(result.recentBookings || []);
 
+      if (result.drivers) {
+        setDrivers(
+          result.drivers.map((driver) => ({
+            name: driver.driver_name,
+            mobile: driver.driver_mobile,
+            vehicle: driver.vehicle_type,
+            vehicleNumber: driver.vehicle_number,
+            status: "Available",
+          })),
+        );
+      }
+
       if (result.role === "admin") {
         setDashboard({
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
           recentBookings: result.recentBookings || [],
+        });
+      }
+
+      if (result.role === "driver") {
+        setDriverProfileForm({
+          name: result.driverProfile?.driver_name || "",
+          mobile: normalizedMobile,
+          vehicle: result.driverProfile?.vehicle_type || "Toyota Innova Crysta",
+          vehicleNumber: result.driverProfile?.vehicle_number || "",
         });
       }
 
@@ -1240,7 +1278,75 @@ export default function Home() {
     }
   }
 
-  function onboardDriver() {
+  async function saveDriverProfile(form = driverProfileForm) {
+    if (!form.name.trim() || !form.mobile.trim() || !form.vehicleNumber.trim()) {
+      setPortalStatus("Enter Driver Name, Mobile, Vehicle Type And Vehicle Number.");
+      return false;
+    }
+
+    setPortalStatus("Saving Driver Profile...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "saveDriver",
+          name: form.name,
+          mobile: form.mobile.replace(/\D/g, ""),
+          vehicle: form.vehicle,
+          vehicleNumber: form.vehicleNumber,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Driver Profile Could Not Be Saved.");
+        return false;
+      }
+
+      setPortalStatus("Driver Profile Saved.");
+      await loadDashboard();
+      return true;
+    } catch {
+      setPortalStatus("Driver Profile Could Not Be Saved.");
+      return false;
+    }
+  }
+
+  async function acceptRide(booking: DashboardBooking) {
+    if (!driverProfileForm.name || !driverProfileForm.vehicleNumber) {
+      setPortalStatus("Please Save Driver Profile Before Accepting Ride.");
+      return;
+    }
+
+    setPortalStatus("Accepting Ride...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "acceptRide",
+          mobile: driverProfileForm.mobile.replace(/\D/g, ""),
+          bookingId: booking.booking_id,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Ride Could Not Be Accepted.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus("Ride Accepted And Assigned To You.");
+    } catch {
+      setPortalStatus("Ride Could Not Be Accepted.");
+    }
+  }
+
+  async function onboardDriver() {
     if (
       !driverForm.name.trim() ||
       !driverForm.mobile.trim() ||
@@ -1250,15 +1356,12 @@ export default function Home() {
       return;
     }
 
-    setDrivers((currentDrivers) => [
-      ...currentDrivers,
-      {
-        name: driverForm.name.trim(),
-        mobile: driverForm.mobile.trim(),
-        vehicle: `${driverForm.vehicle} | ${driverForm.vehicleNumber.trim()}`,
-        status: "Available",
-      },
-    ]);
+    const saved = await saveDriverProfile(driverForm);
+
+    if (!saved) {
+      return;
+    }
+
     setDriverForm({
       name: "",
       mobile: "",
@@ -1273,7 +1376,7 @@ export default function Home() {
       drivers.find(
         (driver) =>
           driver.status === "Available" &&
-          (driver.vehicle.includes(booking.vehicle) || driver.vehicle === booking.vehicle),
+          driver.vehicle === booking.vehicle,
       ) || drivers.find((driver) => driver.status === "Available");
 
     if (!availableDriver) {
@@ -1291,9 +1394,10 @@ export default function Home() {
 
     await updateBookingOperation(booking.booking_id, {
       rideStatus: "Driver Assigned",
+      vehicle: availableDriver.vehicle,
       driverName: availableDriver.name,
       driverMobile: availableDriver.mobile,
-      vehicleNumber: availableDriver.vehicle.split("|")[1]?.trim() || "",
+      vehicleNumber: availableDriver.vehicleNumber,
     });
   }
 
@@ -1460,6 +1564,13 @@ export default function Home() {
           <b>{booking.cancel_reason || "None"}</b>
         </div>
         {portalRole === "customer" ? renderInvoice(booking) : null}
+        {portalRole === "driver" && !booking.driver_mobile ? (
+          <div className="booking-actions">
+            <button type="button" onClick={() => acceptRide(booking)}>
+              Accept Ride
+            </button>
+          </div>
+        ) : null}
         {canManage ? (
           <>
             <div className="manual-assign-grid">
@@ -1470,8 +1581,6 @@ export default function Home() {
                   const selectedDriver = drivers.find(
                     (driver) => driver.mobile === event.target.value,
                   );
-                  const vehicleNumber =
-                    selectedDriver?.vehicle.split("|")[1]?.trim() || "";
 
                   setAssignmentForm((currentForm) => ({
                     ...currentForm,
@@ -1479,8 +1588,10 @@ export default function Home() {
                       driverName: selectedDriver?.name || "",
                       driverMobile: selectedDriver?.mobile || "",
                       vehicleName:
-                        currentForm[booking.booking_id]?.vehicleName || booking.vehicle,
-                      vehicleNumber,
+                        selectedDriver?.vehicle ||
+                        currentForm[booking.booking_id]?.vehicleName ||
+                        booking.vehicle,
+                      vehicleNumber: selectedDriver?.vehicleNumber || "",
                     },
                   }));
                   }
@@ -1536,7 +1647,7 @@ export default function Home() {
               >
                 <option value="">Select Vehicle Number</option>
                 {drivers
-                  .map((driver) => driver.vehicle.split("|")[1]?.trim())
+                  .map((driver) => driver.vehicleNumber)
                   .filter(Boolean)
                   .map((number) => (
                     <option key={`${booking.booking_id}-${number}`} value={number}>
@@ -2305,7 +2416,8 @@ export default function Home() {
                     <div className="driver-list">
                       {drivers.map((driver) => (
                         <span key={`${driver.name}-${driver.mobile}`}>
-                          {driver.name} | {driver.vehicle} | {driver.status}
+                          {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
+                          {driver.vehicleNumber || "Vehicle No. Pending"}
                         </span>
                       ))}
                     </div>
@@ -2325,9 +2437,67 @@ export default function Home() {
             ) : null}
             {portalRole && portalRole !== "admin" ? (
               <div className="admin-dashboard single-column-dashboard">
+                {portalRole === "driver" ? (
+                  <div className="admin-ops-panel driver-profile-panel">
+                    <div>
+                      <h3>Driver Profile</h3>
+                      <div className="driver-form">
+                        <input
+                          value={driverProfileForm.name}
+                          onChange={(event) =>
+                            setDriverProfileForm((currentForm) => ({
+                              ...currentForm,
+                              name: event.target.value,
+                            }))
+                          }
+                          placeholder="Driver Name"
+                        />
+                        <input
+                          value={driverProfileForm.mobile}
+                          onChange={(event) =>
+                            setDriverProfileForm((currentForm) => ({
+                              ...currentForm,
+                              mobile: event.target.value,
+                            }))
+                          }
+                          placeholder="Driver Mobile"
+                          inputMode="tel"
+                        />
+                        <select
+                          value={driverProfileForm.vehicle}
+                          onChange={(event) =>
+                            setDriverProfileForm((currentForm) => ({
+                              ...currentForm,
+                              vehicle: event.target.value,
+                            }))
+                          }
+                        >
+                          {vehicles.map((item) => (
+                            <option key={`driver-${item.name}`} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={driverProfileForm.vehicleNumber}
+                          onChange={(event) =>
+                            setDriverProfileForm((currentForm) => ({
+                              ...currentForm,
+                              vehicleNumber: event.target.value,
+                            }))
+                          }
+                          placeholder="Vehicle Number"
+                        />
+                        <button type="button" onClick={() => saveDriverProfile()}>
+                          Save Profile
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="admin-recent">
                   <h3>
-                    {portalRole === "driver" ? "Assigned Rides" : "Your Bookings"}
+                    {portalRole === "driver" ? "Available And Assigned Rides" : "Your Bookings"}
                   </h3>
                   {portalBookings.length ? (
                     portalBookings.map((booking) =>

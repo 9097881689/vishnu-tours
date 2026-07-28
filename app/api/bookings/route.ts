@@ -16,8 +16,10 @@ const rateTable: Record<
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
 
 type BookingPayload = {
+  action?: string;
   tripType?: string;
   vehicle?: string;
+  vehicleNumber?: string;
   startPoint?: string;
   destination?: string;
   distanceKm?: number;
@@ -29,6 +31,7 @@ type BookingPayload = {
 };
 
 type BookingOperationPayload = {
+  action?: string;
   pin?: string;
   mobile?: string;
   customerMobile?: string;
@@ -77,6 +80,14 @@ type BookingRow = {
   cancel_reason: string;
 };
 
+type DriverRow = {
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_type: string;
+  vehicle_number: string;
+  updated_at: string;
+};
+
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
@@ -95,6 +106,16 @@ async function getRecentBookings(limit = 8) {
     .all<BookingRow>();
 
   return recent.results || [];
+}
+
+async function getDrivers() {
+  const drivers = await env.DB.prepare(
+    `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
+     FROM drivers
+     ORDER BY updated_at DESC`,
+  ).all<DriverRow>();
+
+  return drivers.results || [];
 }
 
 async function ensureBookingsTable() {
@@ -185,6 +206,18 @@ async function ensureBookingsTable() {
       "CREATE INDEX IF NOT EXISTS bookings_created_at_idx ON bookings (created_at)",
     )
     .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS drivers (
+        driver_mobile TEXT PRIMARY KEY,
+        driver_name TEXT NOT NULL,
+        vehicle_type TEXT NOT NULL,
+        vehicle_number TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+    )
+    .run();
 }
 
 export async function GET(request: Request) {
@@ -203,15 +236,25 @@ export async function GET(request: Request) {
           "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
         ).first<{ total_bookings: number; total_fare: number }>();
         const recent = await getRecentBookings();
+        const drivers = await getDrivers();
 
         return Response.json({
           role: "admin",
           totalBookings: Number(summary?.total_bookings || 0),
           totalFare: Number(summary?.total_fare || 0),
           recentBookings: recent,
+          drivers,
         });
       }
 
+      const driverProfile = await env.DB.prepare(
+        `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
+         FROM drivers
+         WHERE driver_mobile = ?
+         LIMIT 1`,
+      )
+        .bind(loginMobile)
+        .first<DriverRow>();
       const driverBookings = await env.DB.prepare(
         `${bookingSelectSql}
          WHERE booking_id NOT LIKE 'PENDING-%' AND driver_mobile = ?
@@ -221,10 +264,28 @@ export async function GET(request: Request) {
         .bind(loginMobile)
         .all<BookingRow>();
 
-      if (driverBookings.results?.length) {
+      const openBookings = await env.DB.prepare(
+        `${bookingSelectSql}
+         WHERE booking_id NOT LIKE 'PENDING-%'
+           AND COALESCE(driver_mobile, '') = ''
+           AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+           AND (
+             payment_status = 'Complete'
+             OR payment_amount > 0
+             OR ride_status IN ('Payment Received', 'Booking Confirmed')
+           )
+         ORDER BY id DESC
+         LIMIT 20`,
+      ).all<BookingRow>();
+
+      if (driverProfile || driverBookings.results?.length) {
         return Response.json({
           role: "driver",
-          recentBookings: driverBookings.results,
+          driverProfile,
+          recentBookings: [
+            ...(driverBookings.results || []),
+            ...(openBookings.results || []),
+          ],
         });
       }
 
@@ -244,10 +305,11 @@ export async function GET(request: Request) {
         });
       }
 
-      return Response.json(
-        { error: "No portal found for this mobile number." },
-        { status: 404 },
-      );
+      return Response.json({
+        role: "driver",
+        driverProfile: null,
+        recentBookings: openBookings.results || [],
+      });
     }
 
     if (bookingId && mobile) {
@@ -314,6 +376,7 @@ export async function PATCH(request: Request) {
       const customerMobile = clean(payload.customerMobile);
       const paymentStatus = clean(payload.paymentStatus);
       const paymentAmount = Number(payload.paymentAmount);
+      const driverMobile = clean(payload.mobile);
 
       if (customerMobile && paymentStatus === "Complete" && paymentAmount > 0) {
         await env.DB.prepare(
@@ -327,6 +390,90 @@ export async function PATCH(request: Request) {
            WHERE booking_id = ? AND customer_mobile = ?`,
         )
           .bind(paymentStatus, paymentAmount, bookingId, customerMobile)
+          .run();
+
+        return Response.json({ success: true });
+      }
+
+      if (payload.action === "acceptRide" && driverMobile) {
+        const driver = await env.DB.prepare(
+          `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number
+           FROM drivers
+           WHERE driver_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(driverMobile)
+          .first<DriverRow>();
+
+        if (!driver) {
+          return Response.json(
+            { error: "Please Add Driver Profile Before Accepting Ride." },
+            { status: 400 },
+          );
+        }
+
+        const booking = await env.DB.prepare(
+          `SELECT booking_id, pickup_datetime, driver_mobile
+           FROM bookings
+           WHERE booking_id = ?
+           LIMIT 1`,
+        )
+          .bind(bookingId)
+          .first<{
+            booking_id: string;
+            pickup_datetime: string;
+            driver_mobile: string;
+          }>();
+
+        if (!booking) {
+          return Response.json({ error: "Booking not found." }, { status: 404 });
+        }
+
+        if (booking.driver_mobile) {
+          return Response.json(
+            { error: "This Ride Is Already Assigned." },
+            { status: 409 },
+          );
+        }
+
+        const conflict = await env.DB.prepare(
+          `SELECT booking_id, pickup_datetime
+           FROM bookings
+           WHERE booking_id != ?
+             AND driver_mobile = ?
+             AND pickup_datetime = ?
+             AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+             AND booking_id NOT LIKE 'PENDING-%'
+           LIMIT 1`,
+        )
+          .bind(bookingId, driverMobile, booking.pickup_datetime)
+          .first<{ booking_id: string; pickup_datetime: string }>();
+
+        if (conflict) {
+          return Response.json(
+            {
+              error: `Driver Already Assigned For Booking ${conflict.booking_id} On Date/Time ${conflict.pickup_datetime}.`,
+            },
+            { status: 409 },
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE bookings
+           SET ride_status = 'Driver Assigned',
+               vehicle = ?,
+               driver_name = ?,
+               driver_mobile = ?,
+               vehicle_number = ?
+           WHERE booking_id = ? AND COALESCE(driver_mobile, '') = ''`,
+        )
+          .bind(
+            driver.vehicle_type,
+            driver.driver_name,
+            driver.driver_mobile,
+            driver.vehicle_number,
+            bookingId,
+          )
           .run();
 
         return Response.json({ success: true });
@@ -470,6 +617,45 @@ export async function DELETE(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as BookingPayload;
+    const action = clean(payload.action);
+
+    await ensureBookingsTable();
+
+    if (action === "saveDriver") {
+      const driverName = clean(payload.name);
+      const driverMobile = clean(payload.mobile);
+      const vehicleType = clean(payload.vehicle);
+      const vehicleNumber = clean(payload.vehicleNumber);
+
+      if (!driverName || !driverMobile || !vehicleType || !vehicleNumber) {
+        return Response.json(
+          { error: "Driver Name, Mobile, Vehicle Type And Vehicle Number Are Required." },
+          { status: 400 },
+        );
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO drivers (
+          driver_mobile, driver_name, vehicle_type, vehicle_number, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(driver_mobile) DO UPDATE SET
+          driver_name = excluded.driver_name,
+          vehicle_type = excluded.vehicle_type,
+          vehicle_number = excluded.vehicle_number,
+          updated_at = excluded.updated_at`,
+      )
+        .bind(
+          driverMobile,
+          driverName,
+          vehicleType,
+          vehicleNumber,
+          new Date().toISOString(),
+        )
+        .run();
+
+      return Response.json({ success: true });
+    }
+
     const tripType = clean(payload.tripType);
     const vehicle = clean(payload.vehicle);
     const startPoint = clean(payload.startPoint) || headOffice;
@@ -510,7 +696,6 @@ export async function POST(request: Request) {
         : selectedRate[packageType];
     const createdAt = new Date().toISOString();
 
-    await ensureBookingsTable();
     const temporaryBookingId =
       typeof crypto.randomUUID === "function"
         ? `PENDING-${crypto.randomUUID()}`
