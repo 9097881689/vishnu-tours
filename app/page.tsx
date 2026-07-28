@@ -1359,22 +1359,6 @@ export default function Home() {
           ) : (
           <>
           <div className="review-main">
-            <div className="review-titlebar">Review Your Booking</div>
-            <article className="review-card">
-              <h2>
-                {startPoint} → {drop} <span>({tripType})</span>
-              </h2>
-              <p>
-                Car Type: <strong>{vehicle}</strong>
-              </p>
-              <p>
-                Package: <strong>{selectedPackage.label}</strong>
-              </p>
-              <p>
-                Pickup Date: <strong>{formatDisplayDate(date)}, {pickupTime}</strong> · KMs
-                Included: <strong>{billableDistance} KMs</strong>
-              </p>
-            </article>
             <article className="review-card">
               <h3>Contact & Pickup Details</h3>
               <div className="review-form-grid">
@@ -1416,16 +1400,6 @@ export default function Home() {
                 </label>
               </div>
             </article>
-            {confirmedBooking ? (
-              <div className="booking-confirmation" aria-live="polite">
-                <span>Booking ID</span>
-                <strong>{confirmedBooking.bookingId}</strong>
-                <small>
-                  {confirmedBooking.billableKm} KM Billable | Fare Rs.{" "}
-                  {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
-                </small>
-              </div>
-            ) : null}
             {bookingStatus ? (
               <p className={confirmedBooking ? "booking-success" : "booking-error"}>
                 {bookingStatus}

@@ -2429,3 +2429,268 @@ nav a:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Booking Flow Polish: SMK-Style Typography, Compact Hero Form And Ticket Receipt */
+:root {
+  --smk-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--smk-font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand strong,
+.booking-title,
+.car-detail-block h3,
+.car-price-block strong {
+  font-family: var(--smk-font);
+  letter-spacing: 0;
+}
+
+.hero {
+  min-height: 560px;
+}
+
+.hero-content {
+  min-height: 560px;
+  gap: 18px;
+  padding-top: 24px;
+  padding-bottom: 58px;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-copy {
+  order: 1;
+  max-width: 900px;
+}
+
+.hero-content:has(.savaari-booking-panel) h1 {
+  margin: 8px 0 8px;
+  font-size: clamp(32px, 4.2vw, 54px);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-copy p:not(.eyebrow) {
+  max-width: 780px;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-actions {
+  display: none;
+}
+
+.savaari-booking-panel {
+  order: 2;
+  padding: 18px 26px 0;
+  gap: 12px;
+  border-radius: 16px;
+}
+
+.booking-title {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.savaari-booking-panel .trip-tabs button {
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-form-row {
+  gap: 12px;
+}
+
+.booking-field {
+  gap: 6px;
+}
+
+.booking-field > span {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.booking-field input,
+.booking-field select {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+.current-location-button {
+  min-height: 28px;
+  margin-bottom: 3px;
+}
+
+.route-swap {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+}
+
+.quick-suggestions {
+  gap: 6px;
+}
+
+.quick-suggestions button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.explore-cabs-button {
+  min-height: 48px;
+  margin-bottom: -27px;
+  font-size: 19px;
+}
+
+.booking-rating-strip {
+  margin-top: 12px;
+  margin-bottom: -58px;
+  padding: 12px 24px;
+  font-size: 12px;
+}
+
+.review-page {
+  align-items: start;
+  padding-top: 28px;
+}
+
+.review-main {
+  display: grid;
+  gap: 14px;
+}
+
+.review-main .review-card {
+  padding-top: 22px;
+}
+
+.payment-complete-screen {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 22px 24px;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at left center, var(--soft) 0 10px, transparent 11px),
+    radial-gradient(circle at right center, var(--soft) 0 10px, transparent 11px),
+    linear-gradient(180deg, #ffffff, #f8fbff);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+}
+
+.payment-complete-screen::before {
+  content: "";
+  position: absolute;
+  right: 24px;
+  left: 24px;
+  top: 110px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.payment-complete-screen > span {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.payment-complete-screen h2 {
+  margin: 10px 0 14px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.confirmation-number {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #075985;
+}
+
+.confirmation-number strong {
+  font-size: 38px;
+}
+
+.confirmation-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+  border-top: 1px solid #e5edf5;
+}
+
+.confirmation-grid div {
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #e5edf5;
+  border-radius: 0;
+  background: transparent;
+}
+
+.confirmation-grid small {
+  font-size: 11px;
+}
+
+.confirmation-grid strong {
+  font-size: 14px;
+}
+
+.payment-complete-screen .inline-action {
+  min-height: 42px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: 0;
+  }
+
+  .hero-content {
+    gap: 14px;
+    padding-top: 18px;
+    padding-bottom: 42px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) h1 {
+    font-size: 28px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy p:not(.eyebrow) {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .savaari-booking-panel {
+    padding: 14px 14px 0;
+  }
+
+  .booking-title {
+    font-size: 18px;
+  }
+
+  .booking-rating-strip {
+    margin-bottom: -32px;
+  }
+
+  .payment-complete-screen {
+    padding: 18px;
+  }
+
+  .confirmation-grid div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
