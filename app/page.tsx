@@ -248,13 +248,43 @@ const vehicles = [
   },
 ];
 
-const serviceTypes = [
-  "Airport",
-  "In-City",
-  "Outstation",
-  "Corporate Booking",
-  "Executive Transfers",
-  "All India Trips",
+const serviceCards = [
+  {
+    title: "Airport",
+    image: "/fleet/hycross.svg",
+    description:
+      "Premium Airport Transfers From Mumbai With Clean Cars And Timely Pickup.",
+  },
+  {
+    title: "In-City",
+    image: "/fleet/etios.svg",
+    description:
+      "Reliable Mumbai City Travel For Meetings, Visits And Hourly Duties.",
+  },
+  {
+    title: "Outstation",
+    image: "/fleet/innova-crysta.svg",
+    description:
+      "All India Outstation Trips From Mumbai With Transparent Per KM Fare.",
+  },
+  {
+    title: "Corporate Booking",
+    image: "/fleet/ertiga.svg",
+    description:
+      "Direct Owner-Side Cab Coordination For Corporate Guest Movement.",
+  },
+  {
+    title: "Executive Transfers",
+    image: "/fleet/rumion.svg",
+    description:
+      "Comfortable Executive Transfers For VIP Guests, Events And Site Visits.",
+  },
+  {
+    title: "All India Trips",
+    image: "/fleet/innova-crysta.svg",
+    description:
+      "Mumbai Pickup With Long-Route Cab Options Across India.",
+  },
 ];
 
 type PackageId = (typeof packageOptions)[number]["id"];
@@ -351,6 +381,25 @@ function isMumbaiPickup(value: string) {
   return mumbaiAreas.some(
     (area) => pickup.includes(area) || (pickup.length >= 3 && area.startsWith(pickup)),
   );
+}
+
+function getLocationTripType(origin: string, destination: string) {
+  const pickup = origin.trim().toLowerCase();
+  const dropLocation = destination.trim().toLowerCase();
+
+  if (pickup.includes("airport") || dropLocation.includes("airport")) {
+    return "Airport";
+  }
+
+  if (dropLocation && isMumbaiPickup(origin) && isMumbaiPickup(destination)) {
+    return "In-City";
+  }
+
+  if (dropLocation) {
+    return "Outstation";
+  }
+
+  return null;
 }
 
 export default function Home() {
@@ -633,6 +682,12 @@ export default function Home() {
     setBookingView("home");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    const detectedTripType = getLocationTripType(startPoint, value);
+
+    if (detectedTripType && detectedTripType !== tripType) {
+      setTripType(detectedTripType);
+    }
+
     const distance = getDestinationDistance(value);
 
     if (distance) {
@@ -666,6 +721,11 @@ export default function Home() {
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
     setBookingStatus("");
+    const detectedTripType = getLocationTripType(value, drop);
+
+    if (detectedTripType && detectedTripType !== tripType) {
+      setTripType(detectedTripType);
+    }
   }
 
   function useCurrentLocation() {
@@ -951,17 +1011,8 @@ export default function Home() {
           <span className="brand-mark">VT</span>
           <span>
             <strong>Vishnu Tours</strong>
-            <small>Visnu S Tours & Travels</small>
           </span>
         </a>
-        <nav aria-label="Primary navigation">
-          <a href="#home">Home</a>
-          <a href="#services">Services</a>
-          <a href="#booking">Book Taxi</a>
-          <a href="#fleet">Fleet</a>
-          <a href="#payment">Payment</a>
-          <a href="#contact">Contact</a>
-        </nav>
         <a className="call-button" href="tel:+917004291529">
           Call 7004291529
         </a>
@@ -978,8 +1029,7 @@ export default function Home() {
         </div>
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="eyebrow">Visnu S Tours & Travels</p>
-            <h1>VIP Luxury Cab Service By Vishnu Tours</h1>
+            <h1>VIP Luxury Cab Service</h1>
               <p>
                 Premium Cab Booking From Mumbai For Corporate Guests, Airport
                 Transfers, In-City Movement And Outstation Trips. Select Your
@@ -1482,14 +1532,14 @@ export default function Home() {
           <h2>Corporate Travel, Airport Movement And Outstation Trips</h2>
         </div>
         <div className="service-grid">
-          {serviceTypes.map((service) => (
-            <article key={service} className="service-card">
-              <span className="service-icon" aria-hidden="true" />
-              <h3>{service}</h3>
-              <p>
-                Corporate Guest Pickup, Airport Movement, In-City Duty And
-                Outstation Travel With Direct Owner-Side Booking.
-              </p>
+          {serviceCards.map((service) => (
+            <article key={service.title} className="service-card">
+              <div className="service-photo">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={service.image} alt={`${service.title} cab service`} />
+              </div>
+              <h3>{service.title}</h3>
+              <p>{service.description}</p>
             </article>
           ))}
         </div>
@@ -1595,6 +1645,13 @@ export default function Home() {
           <strong>Vishnu Tours</strong>
           <span>Visnu S Tours & Travels</span>
         </div>
+        <nav className="footer-nav" aria-label="Footer navigation">
+          <a href="#home">Home</a>
+          <a href="#services">Services</a>
+          <a href="#booking">Book Taxi</a>
+          <a href="#fleet">Fleet</a>
+          <a href="#payment">Payment</a>
+        </nav>
         <div>
           <a href="tel:+917004291529">Call: 7004291529</a>
           <a href={whatsappUrl} target="_blank">
