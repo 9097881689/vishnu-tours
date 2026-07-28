@@ -296,6 +296,28 @@ function formatInr(amount: number) {
     : "Enter KM";
 }
 
+function formatPaymentAmount(amount: number) {
+  return amount === 0 ? "₹0" : formatInr(amount);
+}
+
+function formatDisplayDate(value: string) {
+  if (!value) {
+    return "Please select";
+  }
+
+  const parsedDate = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
   const mumbaiAreas = [
@@ -330,22 +352,31 @@ export default function Home() {
   const fromInputRef = useRef<HTMLInputElement>(null);
   const toInputRef = useRef<HTMLInputElement>(null);
   const carResultsRef = useRef<HTMLElement>(null);
+  const reviewRef = useRef<HTMLElement>(null);
+  const [bookingView, setBookingView] = useState<"home" | "cars" | "review">(
+    "home",
+  );
   const [tripType, setTripType] = useState("Outstation");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
   const [startPoint, setStartPoint] = useState(headOffice);
   const [drop, setDrop] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [date, setDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("10:00");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [packageType, setPackageType] = useState<PackageId>("perKm");
+  const [email, setEmail] = useState("");
+  const [packageType] = useState<PackageId>("perKm");
   const [paymentMode, setPaymentMode] = useState("Pay advance after fare confirmation");
+  const [paymentChoice, setPaymentChoice] = useState<"zero" | "part" | "full">(
+    "part",
+  );
   const [advanceAmount, setAdvanceAmount] = useState("500");
   const [paymentStatus, setPaymentStatus] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
-  const [showVehicleStep, setShowVehicleStep] = useState(false);
+  const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
   >(null);
@@ -396,7 +427,13 @@ export default function Home() {
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
+  const chargesAndTaxes = fareTotal ? Math.max(250, Math.round(fareTotal * 0.18)) : 0;
+  const payableFare = fareTotal + chargesAndTaxes;
+  const partPayAmount = Math.max(500, Math.round(payableFare * 0.25));
+  const selectedPaymentAmount =
+    paymentChoice === "zero" ? 0 : paymentChoice === "part" ? partPayAmount : payableFare;
   const formattedFare = formatInr(fareTotal);
+  const pickupDateTime = date && pickupTime ? `${date}T${pickupTime}` : "";
   const pickupAllowed = isMumbaiPickup(startPoint);
   const showPickupError =
     pickupFieldTouched &&
@@ -531,12 +568,20 @@ export default function Home() {
   }, [drop, startPoint]);
 
   useEffect(() => {
-    if (showVehicleStep) {
+    if (bookingView === "cars") {
       window.setTimeout(() => {
         carResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
     }
-  }, [showVehicleStep]);
+  }, [bookingView]);
+
+  useEffect(() => {
+    if (bookingView === "review") {
+      window.setTimeout(() => {
+        reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  }, [bookingView]);
 
   const bookingText = useMemo(() => {
     return [
@@ -549,7 +594,7 @@ export default function Home() {
       `Billable Distance: ${billableDistance || "Please confirm"} km`,
       `Rate: ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`,
       `Estimated Fare: ${fareTotal ? formattedFare : "Please confirm"}`,
-      `Date/Time: ${date || "Please confirm"}`,
+      `Date/Time: ${pickupDateTime || "Please confirm"}`,
       `Name: ${name || "Guest"}`,
       `Mobile: ${mobile || "Please confirm"}`,
       `Package: ${selectedPackage.label}`,
@@ -564,7 +609,7 @@ export default function Home() {
     billableDistance,
     fareTotal,
     formattedFare,
-    date,
+    pickupDateTime,
     name,
     mobile,
     selectedPackage.label,
@@ -579,6 +624,7 @@ export default function Home() {
   function updateDestination(value: string) {
     setDrop(value);
     setShowVehicleStep(false);
+    setBookingView("home");
     const distance = getDestinationDistance(value);
 
     if (distance) {
@@ -589,6 +635,7 @@ export default function Home() {
   function updateStartPoint(value: string) {
     setStartPoint(value);
     setShowVehicleStep(false);
+    setBookingView("home");
     setConfirmedBooking(null);
     setBookingStatus("");
   }
@@ -605,12 +652,21 @@ export default function Home() {
       return;
     }
 
-    if (!startPoint || !drop || !numericDistance || !date || !name || !mobile) {
-      setBookingStatus("Journey detail, date, name aur mobile fill karein.");
+    if (!startPoint || !drop || !numericDistance || !date || !pickupTime) {
+      setBookingStatus("From, To, date, time aur distance fill karein.");
       return;
     }
 
     setShowVehicleStep(true);
+    setBookingView("cars");
+  }
+
+  function reviewSelectedCab(selectedCab: string) {
+    setVehicle(selectedCab);
+    setBookingStatus("");
+    setPaymentStatus("");
+    setConfirmedBooking(null);
+    setBookingView("review");
   }
 
   async function submitBooking(selectedCab = vehicle) {
@@ -622,9 +678,9 @@ export default function Home() {
       return;
     }
 
-    if (!drop || !numericDistance || !date || !name || !mobile) {
+    if (!drop || !numericDistance || !pickupDateTime || !name || !mobile) {
       setBookingStatus("Please From/To, KM, date, name aur mobile fill karein.");
-      return;
+      return null;
     }
 
     setVehicle(selectedCab);
@@ -642,7 +698,7 @@ export default function Home() {
           startPoint,
           destination: drop,
           distanceKm: numericDistance,
-          date,
+          date: pickupDateTime,
           name,
           mobile,
           packageType,
@@ -661,28 +717,54 @@ export default function Home() {
 
       if (!response.ok || !result.booking) {
         setBookingStatus(result.error || "Booking save nahi ho payi.");
-        return;
+        return null;
       }
 
       setConfirmedBooking(result.booking);
-      setAdvanceAmount(String(result.booking.estimatedFare));
+      setAdvanceAmount(String(selectedPaymentAmount || result.booking.estimatedFare));
       setBookingStatus(`${selectedCab} booking site par live save ho gayi.`);
+      return result.booking;
     } catch {
       setBookingStatus("Network issue ki wajah se booking save nahi ho payi.");
+      return null;
     } finally {
       setIsBooking(false);
     }
   }
 
-  async function startPayment() {
-    const amount = Number(advanceAmount);
+  async function proceedReviewBooking() {
+    const booking = await submitBooking(vehicle);
+
+    if (!booking) {
+      return;
+    }
+
+    if (selectedPaymentAmount > 0) {
+      setAdvanceAmount(String(selectedPaymentAmount));
+      await startPayment(booking, selectedPaymentAmount);
+    } else {
+      setPaymentStatus("Booking saved. Customer can pay later after confirmation.");
+    }
+  }
+
+  async function startPayment(
+    bookingOverride?: {
+      bookingId: string;
+      estimatedFare: number;
+      billableKm: number;
+      ratePerKm: number;
+    },
+    amountOverride?: number,
+  ) {
+    const activeBooking = bookingOverride || confirmedBooking;
+    const amount = Number(amountOverride || advanceAmount);
 
     if (!amount || amount < 1) {
       setPaymentStatus("Please enter a valid advance amount.");
       return;
     }
 
-    if (!confirmedBooking) {
+    if (!activeBooking) {
       setPaymentStatus("Please complete booking first, then pay.");
       return;
     }
@@ -700,7 +782,7 @@ export default function Home() {
           amount: Math.round(amount * 100),
           receipt: `vishnu-${Date.now()}`,
           notes: {
-            bookingId: confirmedBooking.bookingId,
+            bookingId: activeBooking.bookingId,
             name,
             mobile,
             pickup: startPoint,
@@ -709,7 +791,7 @@ export default function Home() {
             tripType,
             distanceKm: String(numericDistance),
             packageType,
-            estimatedFare: String(confirmedBooking.estimatedFare),
+            estimatedFare: String(activeBooking.estimatedFare),
           },
         }),
       });
@@ -760,20 +842,20 @@ export default function Home() {
       amount: Math.round(amount * 100),
       currency: "INR",
       name: "Vishnu Tours",
-      description: `${confirmedBooking.bookingId} ${tripType} booking`,
+      description: `${activeBooking.bookingId} ${tripType} booking`,
       prefill: {
         name,
         contact: mobile,
       },
       notes: {
-        bookingId: confirmedBooking.bookingId,
+        bookingId: activeBooking.bookingId,
         pickup: startPoint,
         drop,
         vehicle,
         tripType,
         distanceKm: String(numericDistance),
         packageType,
-        estimatedFare: String(confirmedBooking.estimatedFare),
+        estimatedFare: String(activeBooking.estimatedFare),
       },
       theme: {
         color: "#f6bd16",
@@ -858,21 +940,14 @@ export default function Home() {
           </div>
 
           <form
-            className="booking-panel"
+            className="booking-panel savaari-booking-panel"
             id="booking"
             onSubmit={(event) => {
               event.preventDefault();
-              if (showVehicleStep) {
-                submitBooking(vehicle);
-              } else {
-                continueToRates();
-              }
+              continueToRates();
             }}
           >
-            <div className="panel-head">
-              <span>Corporate cab booking</span>
-              <strong>Book Your Ride</strong>
-            </div>
+            <h2 className="booking-title">Corporate Cab Booking Across India</h2>
             <datalist id="from-suggestions">
               {fromSuggestions.map((item) => (
                 <option key={item} value={item} />
@@ -884,72 +959,173 @@ export default function Home() {
               ))}
             </datalist>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
-              {bookingTypes.map(
-                (type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={tripType === type ? "active" : ""}
-                    onClick={() => {
-                      setTripType(type);
-                      setShowVehicleStep(false);
-                    }}
-                  >
-                    {type}
-                  </button>
-                ),
-              )}
+              {bookingTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={tripType === type ? "active" : ""}
+                  onClick={() => {
+                    setTripType(type);
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
-            <label className="place-field">
-              From - Mumbai pickup only
-              <input
-                ref={fromInputRef}
-                value={startPoint}
-                onChange={(event) => {
-                  setPickupFieldTouched(false);
-                  updateStartPoint(event.target.value);
-                }}
-                onFocus={() => {
-                  setPickupFieldTouched(false);
-                  setActiveSuggestionField("from");
-                }}
-                onBlur={() => {
-                  setPickupFieldTouched(true);
-                  window.setTimeout(() => setActiveSuggestionField(null), 140);
-                }}
-                list="from-suggestions"
-                placeholder="Search Mumbai pickup location"
-                required
-              />
-              {activeSuggestionField === "from" && visibleFromSuggestions.length ? (
-                <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
-                  {visibleFromSuggestions.map((item) => (
-                    <button
-                      key={`${item.label}-${item.secondary || "pickup"}`}
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        setPickupFieldTouched(false);
-                        updateStartPoint(item.label);
-                        setActiveSuggestionField(null);
-                      }}
-                    >
-                      <span>{item.secondary || "Pickup"}</span>
-                      <strong>{item.label}</strong>
-                    </button>
+            <div className="route-form-row">
+              <label className="place-field booking-field">
+                <span>From</span>
+                <input
+                  ref={fromInputRef}
+                  value={startPoint}
+                  onChange={(event) => {
+                    setPickupFieldTouched(false);
+                    updateStartPoint(event.target.value);
+                  }}
+                  onFocus={() => {
+                    setPickupFieldTouched(false);
+                    setActiveSuggestionField("from");
+                  }}
+                  onBlur={() => {
+                    setPickupFieldTouched(true);
+                    window.setTimeout(() => setActiveSuggestionField(null), 140);
+                  }}
+                  list="from-suggestions"
+                  placeholder="Enter Pickup Location"
+                  required
+                />
+                {activeSuggestionField === "from" && visibleFromSuggestions.length ? (
+                  <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
+                    {visibleFromSuggestions.map((item) => (
+                      <button
+                        key={`${item.label}-${item.secondary || "pickup"}`}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setPickupFieldTouched(false);
+                          updateStartPoint(item.label);
+                          setActiveSuggestionField(null);
+                        }}
+                      >
+                        <span>{item.secondary || "Pickup"}</span>
+                        <strong>{item.label}</strong>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {showPickupError ? (
+                  <small className="field-error">
+                    Hum Mumbai se bahar pickup nahi karte.
+                  </small>
+                ) : null}
+              </label>
+              <button className="route-swap" type="button" aria-label="Mumbai pickup only">
+                ⇄
+              </button>
+              <label className="place-field booking-field">
+                <span>To</span>
+                <input
+                  ref={toInputRef}
+                  value={drop}
+                  onChange={(event) => updateDestination(event.target.value)}
+                  onFocus={() => setActiveSuggestionField("to")}
+                  onBlur={() =>
+                    window.setTimeout(() => setActiveSuggestionField(null), 140)
+                  }
+                  list="destination-suggestions"
+                  placeholder="Enter Drop Location"
+                  required
+                />
+                {activeSuggestionField === "to" && visibleDestinationSuggestions.length ? (
+                  <div className="place-suggestions" aria-label="India destination suggestions">
+                    {visibleDestinationSuggestions.map((item) => (
+                      <button
+                        key={`${item.label}-${item.secondary || "destination"}`}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          updateDestination(item.label);
+                          setActiveSuggestionField(null);
+                        }}
+                      >
+                        <span>{item.secondary || "Destination"}</span>
+                        <strong>{item.label}</strong>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </label>
+              <label className="booking-field">
+                <span>Pick Up Date</span>
+                <input
+                  value={date}
+                  onChange={(event) => {
+                    setDate(event.target.value);
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                  placeholder="29-07-2026"
+                  required
+                />
+              </label>
+              <label className="booking-field">
+                <span>Pick Up Time</span>
+                <select
+                  value={pickupTime}
+                  onChange={(event) => {
+                    setPickupTime(event.target.value);
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                >
+                  {[
+                    "06:00",
+                    "07:00",
+                    "08:00",
+                    "09:00",
+                    "10:00",
+                    "11:00",
+                    "12:00",
+                    "13:00",
+                    "14:00",
+                    "15:00",
+                    "16:00",
+                    "17:00",
+                    "18:00",
+                    "19:00",
+                    "20:00",
+                    "21:00",
+                  ].map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
                   ))}
-                </div>
-              ) : null}
-              {showPickupError ? (
-                <small className="field-error">
-                  Hum Mumbai se bahar pickup nahi karte. Mumbai area select karein.
-                </small>
-              ) : null}
-            </label>
-            <div className="quick-suggestions" aria-label="Popular Mumbai pickup">
-              <span>Popular pickup</span>
+                </select>
+              </label>
+              <label className="booking-field km-field">
+                <span>KM</span>
+                <input
+                  value={distanceKm}
+                  onChange={(event) => {
+                    setDistanceKm(event.target.value);
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                  placeholder="Auto"
+                  inputMode="numeric"
+                  required
+                />
+                {isDistanceLoading ? (
+                  <small className="field-hint">Google distance checking...</small>
+                ) : null}
+              </label>
+            </div>
+            <div className="quick-suggestions compact-suggestions" aria-label="Popular route">
+              <span>Popular</span>
               <div>
-                {popularPickupSuggestions.map((item) => (
+                {popularPickupSuggestions.slice(0, 3).map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -961,45 +1137,7 @@ export default function Home() {
                     {item}
                   </button>
                 ))}
-              </div>
-            </div>
-            <label className="place-field">
-              To - All India destination
-              <input
-                ref={toInputRef}
-                value={drop}
-                onChange={(event) => updateDestination(event.target.value)}
-                onFocus={() => setActiveSuggestionField("to")}
-                onBlur={() =>
-                  window.setTimeout(() => setActiveSuggestionField(null), 140)
-                }
-                list="destination-suggestions"
-                placeholder="Search any India destination"
-                required
-              />
-              {activeSuggestionField === "to" && visibleDestinationSuggestions.length ? (
-                <div className="place-suggestions" aria-label="India destination suggestions">
-                  {visibleDestinationSuggestions.map((item) => (
-                    <button
-                      key={`${item.label}-${item.secondary || "destination"}`}
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        updateDestination(item.label);
-                        setActiveSuggestionField(null);
-                      }}
-                    >
-                      <span>{item.secondary || "Destination"}</span>
-                      <strong>{item.label}</strong>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </label>
-            <div className="quick-suggestions" aria-label="Popular destinations">
-              <span>Popular destination</span>
-              <div>
-                {popularDestinationSuggestions.map((item) => (
+                {popularDestinationSuggestions.slice(0, 4).map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -1010,228 +1148,223 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            <div className="form-grid">
-              <label>
-                Distance from Mumbai (KM)
-                <input
-                  value={distanceKm}
-                  onChange={(event) => {
-                    setDistanceKm(event.target.value);
-                    setShowVehicleStep(false);
-                  }}
-                  placeholder="Example: 250"
-                  inputMode="numeric"
-                  required
-                />
-                {isDistanceLoading ? (
-                  <small className="field-hint">Google distance checking...</small>
-                ) : null}
-              </label>
-              <label>
-                Pickup date and time
-                <input
-                  value={date}
-                  onChange={(event) => {
-                    setDate(event.target.value);
-                    setShowVehicleStep(false);
-                  }}
-                  type="datetime-local"
-                  required
-                />
-              </label>
-            </div>
-            <div className="form-grid">
-              <label>
-                Your name
-                <input
-                  value={name}
-                  onChange={(event) => {
-                    setName(event.target.value);
-                    setShowVehicleStep(false);
-                  }}
-                  placeholder="Guest name"
-                  required
-                />
-              </label>
-              <label>
-                Mobile number
-                <input
-                  value={mobile}
-                  onChange={(event) => {
-                    setMobile(event.target.value);
-                    setShowVehicleStep(false);
-                  }}
-                  placeholder="Your phone number"
-                  inputMode="tel"
-                  required
-                />
-              </label>
-            </div>
-            {bookingStatus ? (
-              <p className={confirmedBooking ? "booking-success" : "booking-error"}>
-                {bookingStatus}
-              </p>
+            {bookingStatus && bookingView === "home" ? (
+              <p className="booking-error">{bookingStatus}</p>
             ) : null}
-            {!showVehicleStep ? (
-              <button className="submit-button" type="submit">
-                Continue to Cab Options
-              </button>
-            ) : (
-              <p className="step-ready">Cab options neeche full page par khul gaye hain.</p>
-            )}
-            <p className="microcopy">
-              Mumbai ke andar se service start hoti hai. Airport, in-city aur
-              outstation corporate trips ke liye direct booking.
+            <button className="submit-button explore-cabs-button" type="submit">
+              Explore Cabs
+            </button>
+            <p className="booking-rating-strip">
+              24x7 support | Free cancellation before assignment | Mumbai pickup only
             </p>
           </form>
         </div>
       </section>
 
-      {showVehicleStep ? (
-        <section className="car-results-section" ref={carResultsRef}>
-          <div className="car-results-head">
+      {bookingView === "cars" ? (
+        <section className="car-results-section savaari-results" ref={carResultsRef}>
+          <div className="select-car-topbar">
             <div>
-              <p className="eyebrow">Choose your cab</p>
-              <h2>VIP fleet options for your journey</h2>
-            </div>
-            <div className="journey-summary wide">
-              <span>{startPoint} to {drop}</span>
+              <span>Home &gt; Select Car</span>
               <strong>
-                {numericDistance} km estimate | {tripType}
+                {startPoint} - {drop}
               </strong>
-              <button type="button" onClick={() => setShowVehicleStep(false)}>
-                Change Journey
-              </button>
             </div>
+            <div>
+              <span>Trip Type</span>
+              <strong>{tripType}</strong>
+            </div>
+            <div>
+              <span>Pick up</span>
+              <strong>{formatDisplayDate(date)}</strong>
+            </div>
+            <div>
+              <span>Time</span>
+              <strong>{pickupTime}</strong>
+            </div>
+            <button type="button" onClick={() => setBookingView("home")}>
+              Modify Booking
+            </button>
           </div>
-          <div className="car-results-controls">
-            <div className="package-grid wide" aria-label="Select package">
-              {packageOptions.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={packageType === item.id ? "package-card active" : "package-card"}
-                  onClick={() => {
-                    setPackageType(item.id);
-                    if (item.id === "vip") {
-                          setTripType("Outstation");
-                    }
-                  }}
-                >
-                  <strong>{item.label}</strong>
-                  <span>{item.description}</span>
-                </button>
-              ))}
-            </div>
-            <div className="fare-box wide" aria-live="polite">
-              <span>Selected estimate</span>
-              <strong>{formattedFare}</strong>
-              <small>
-                {packageType === "perKm"
-                  ? `${billableDistance || 0} km x ${selectedVehicleRate?.fareLabel || `Rs. ${perKmRate}/km`}`
-                  : `${selectedPackage.label} | ${selectedVehicleRate?.name}`}
-              </small>
-              <small>
-                Distance Mumbai se approximate hai. Unknown city ke liye KM
-                manually edit karein.
-              </small>
-            </div>
+          <div className="result-promise-band">
+            <strong>₹ Book now at zero cost</strong>
+            <strong>Free cancellations up to 1 hour</strong>
+            <strong>24/7 customer support</strong>
           </div>
-          <label className="payment-preference-wide">
-            Payment preference
-            <select
-              value={paymentMode}
-              onChange={(event) => setPaymentMode(event.target.value)}
-            >
-              <option>Pay advance after fare confirmation</option>
-              <option>UPI payment link required</option>
-              <option>Cash after trip</option>
-              <option>Corporate billing</option>
-            </select>
-          </label>
-          <div className="vehicle-rate-list horizontal" aria-live="polite">
-            {vehicleRates.map((item) => (
-              <article
-                key={item.name}
-                className={vehicle === item.name ? "vehicle-rate-card active" : "vehicle-rate-card"}
-              >
-                <div>
-                  <span className="vehicle-tag">{item.tag}</span>
-                  <strong>{item.name}</strong>
-                  <small>{item.seats} | {item.type}</small>
-                </div>
-                <div className="vehicle-rate-meta">
-                  <span>{item.fareLabel}</span>
-                  <strong>{formatInr(item.estimatedFare)}</strong>
-                </div>
-                <button
-                  className="book-cab-button"
-                  type="button"
-                  onClick={() => submitBooking(item.name)}
-                  disabled={isBooking}
-                >
-                  {isBooking && vehicle === item.name ? "Saving..." : "Book This Cab"}
-                </button>
-              </article>
-            ))}
+          <div className="vehicle-card-list" aria-live="polite">
+            {vehicleRates.map((item) => {
+              const tax = Math.max(250, Math.round(item.estimatedFare * 0.18));
+              const total = item.estimatedFare + tax;
+
+              return (
+                <article className="select-car-card" key={item.name}>
+                  <div className="car-art" aria-hidden="true">
+                    <span>{item.name.split(" ").at(-1)}</span>
+                  </div>
+                  <div className="car-detail-block">
+                    <h3>
+                      {item.name} <span>4.8 ★</span>
+                    </h3>
+                    <p>{item.type} | {item.seats} AC Cab</p>
+                    <ul>
+                      <li>Driver allowance included</li>
+                      <li>
+                        {billableDistance || 0} kms included | Post limit: Rs.{" "}
+                        {item.perKm}/km
+                      </li>
+                      <li>{selectedPackage.label}</li>
+                    </ul>
+                    <button type="button" className="link-button">
+                      Inclusions and Exclusions
+                    </button>
+                  </div>
+                  <div className="car-price-block">
+                    <span className="discount-line">Direct owner rate</span>
+                    <strong>{formatInr(total)}</strong>
+                    <small>+ {formatInr(tax)} charges and taxes</small>
+                    <button
+                      className="book-cab-button select-car-button"
+                      type="button"
+                      onClick={() => reviewSelectedCab(item.name)}
+                    >
+                      Select Car
+                    </button>
+                  </div>
+                  <div className="promise-line">
+                    New Car Promise - actual owner fleet, clean VIP service
+                  </div>
+                </article>
+              );
+            })}
           </div>
-          {confirmedBooking ? (
-            <div className="booking-confirmation results-confirmation" aria-live="polite">
-              <span>Booking ID</span>
-              <strong>{confirmedBooking.bookingId}</strong>
-              <small>
-                {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
-                {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
-              </small>
-            </div>
-          ) : null}
-          {confirmedBooking ? (
-            <div className="post-booking-payment results-payment">
-              <div>
-                <span>Payment option</span>
-                <strong>Pay after booking</strong>
-                <small>Use Razorpay for advance or full fare.</small>
-              </div>
-              <div className="payment-choice-row">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAdvanceAmount(
-                      String(Math.max(500, Math.round(confirmedBooking.estimatedFare * 0.2))),
-                    )
-                  }
-                >
-                  20% Advance
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdvanceAmount(String(confirmedBooking.estimatedFare))}
-                >
-                  Full Fare
-                </button>
-              </div>
-              <label>
-                Payment amount
-                <input
-                  value={advanceAmount}
-                  onChange={(event) => setAdvanceAmount(event.target.value)}
-                  inputMode="numeric"
-                />
-              </label>
-              <button
-                className="submit-button"
-                type="button"
-                onClick={startPayment}
-                disabled={isPaying}
-              >
-                {isPaying ? "Opening Razorpay..." : "Pay with Razorpay"}
-              </button>
-              {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
-            </div>
-          ) : null}
         </section>
       ) : null}
 
+      {bookingView === "review" ? (
+        <section className="review-page" ref={reviewRef}>
+          <div className="review-main">
+            <div className="review-titlebar">Review Your Booking</div>
+            <article className="review-card">
+              <h2>
+                {startPoint} → {drop} <span>({tripType})</span>
+              </h2>
+              <p>
+                Car Type: <strong>{vehicle}</strong>
+              </p>
+              <p>
+                Package: <strong>{selectedPackage.label}</strong>
+              </p>
+              <p>
+                Pickup Date: <strong>{formatDisplayDate(date)}, {pickupTime}</strong> · Kms
+                included: <strong>{billableDistance} kms</strong>
+              </p>
+            </article>
+            <article className="review-card">
+              <h3>Contact & Pickup Details</h3>
+              <div className="review-form-grid">
+                <label>
+                  Full Name
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Guest name"
+                    required
+                  />
+                </label>
+                <label>
+                  Mobile No.
+                  <input
+                    value={mobile}
+                    onChange={(event) => setMobile(event.target.value)}
+                    placeholder="Mobile number"
+                    inputMode="tel"
+                    required
+                  />
+                </label>
+                <label className="wide-field">
+                  Email ID
+                  <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="Email optional"
+                    type="email"
+                  />
+                </label>
+                <label className="wide-field">
+                  Pickup Location
+                  <input value={startPoint} readOnly />
+                </label>
+                <label className="wide-field">
+                  Drop Location
+                  <input value={drop} readOnly />
+                </label>
+              </div>
+            </article>
+            {confirmedBooking ? (
+              <div className="booking-confirmation" aria-live="polite">
+                <span>Booking ID</span>
+                <strong>{confirmedBooking.bookingId}</strong>
+                <small>
+                  {confirmedBooking.billableKm} km billable | Fare Rs.{" "}
+                  {confirmedBooking.estimatedFare.toLocaleString("en-IN")}
+                </small>
+              </div>
+            ) : null}
+            {bookingStatus ? (
+              <p className={confirmedBooking ? "booking-success" : "booking-error"}>
+                {bookingStatus}
+              </p>
+            ) : null}
+          </div>
+          <aside className="payment-sidebar">
+            <div className="free-cancel-note">Free cancellation till 1 hr of departure</div>
+            <div className="payment-options-card">
+              <h2>Payment Options</h2>
+              {[
+                { id: "zero", label: "Book at zero", note: `Pay ${formatInr(payableFare)} later`, amount: 0 },
+                { id: "part", label: "Part Pay", note: "Pay 25% now and rest to the driver", amount: partPayAmount },
+                { id: "full", label: "Full Pay", note: "Full amount", amount: payableFare },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={
+                    paymentChoice === option.id
+                      ? "payment-option active"
+                      : "payment-option"
+                  }
+                  onClick={() => {
+                    setPaymentChoice(option.id as "zero" | "part" | "full");
+                    setPaymentMode(option.label);
+                    setAdvanceAmount(String(option.amount));
+                  }}
+                >
+                  <span />
+                  <strong>{option.label}</strong>
+                  <small>{option.note}</small>
+                  <b>{formatPaymentAmount(option.amount)}</b>
+                </button>
+              ))}
+              <div className="coupon-row">
+                <input placeholder="Enter a coupon" />
+                <button type="button">Apply</button>
+              </div>
+              <button
+                className="submit-button proceed-button"
+                type="button"
+                onClick={proceedReviewBooking}
+                disabled={isBooking || isPaying}
+              >
+                {isBooking || isPaying ? "Processing..." : "Proceed"}
+              </button>
+              <button className="fare-breakup" type="button">
+                View Fare Break up
+              </button>
+              {paymentStatus ? <p className="payment-status">{paymentStatus}</p> : null}
+            </div>
+          </aside>
+        </section>
+      ) : null}
       <section className="trust-strip" aria-label="Service highlights">
         <div>
           <strong>Best Rate Options</strong>
