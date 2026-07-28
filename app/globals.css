@@ -2577,8 +2577,8 @@ h4,
 
 .payment-complete-screen {
   position: relative;
-  width: min(560px, 100%);
-  padding: 22px 24px;
+  width: min(640px, 100%);
+  padding: 18px 20px;
   border: 1px solid #dbe4ee;
   border-radius: 14px;
   background:
@@ -2591,9 +2591,9 @@ h4,
 .payment-complete-screen::before {
   content: "";
   position: absolute;
-  right: 24px;
-  left: 24px;
-  top: 110px;
+  right: 20px;
+  left: 20px;
+  top: 96px;
   border-top: 1px dashed #cbd5e1;
 }
 
@@ -2605,33 +2605,33 @@ h4,
 }
 
 .payment-complete-screen h2 {
-  margin: 10px 0 14px;
-  font-size: 28px;
+  margin: 8px 0 12px;
+  font-size: 24px;
   font-weight: 700;
 }
 
 .confirmation-number {
-  margin-bottom: 18px;
-  padding: 16px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
   border-radius: 10px;
   background: #075985;
 }
 
 .confirmation-number strong {
-  font-size: 38px;
+  font-size: 34px;
 }
 
 .confirmation-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
   border-top: 1px solid #e5edf5;
 }
 
 .confirmation-grid div {
-  grid-template-columns: 132px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
+  grid-template-columns: 98px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 7px 0;
   border: 0;
   border-bottom: 1px solid #e5edf5;
   border-radius: 0;
@@ -2639,16 +2639,16 @@ h4,
 }
 
 .confirmation-grid small {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .confirmation-grid strong {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .payment-complete-screen .inline-action {
   min-height: 42px;
-  margin-top: 16px;
+  margin-top: 14px;
   padding: 0 16px;
   border-radius: 8px;
 }
