@@ -216,32 +216,28 @@ const vehicles = [
     type: "Premium MUV",
     seats: "6-7 Seats",
     bestFor: "VIP, Family, Airport And Highway Travel",
-    photo:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
+    photo: "/fleet/innova-crysta.png",
   },
   {
     name: "Toyota Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 Seats",
     bestFor: "Executive Guests, Weddings And Long Routes",
-    photo:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Hycross_Feature_Image_3b1feac7e7.png",
+    photo: "/fleet/hycross.png",
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
     seats: "6-7 Seats",
     bestFor: "Round Trip, Family Tour And Station Pickup",
-    photo:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Ertiga_Feature_Image_de63f22c7b.png",
+    photo: "/fleet/ertiga.png",
   },
   {
     name: "Maruti Rumion",
     type: "Spacious MUV",
     seats: "6-7 Seats",
     bestFor: "Local Booking, Outstation And Group Travel",
-    photo:
-      "https://static-cdn.cars24.com/prod/new-car-cms/Rumion_Feature_Image_08ede3a5d9.png",
+    photo: "/fleet/rumion.png",
   },
   {
     name: "Toyota Etios",
