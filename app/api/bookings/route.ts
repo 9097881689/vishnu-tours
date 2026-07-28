@@ -33,6 +33,10 @@ type BookingOperationPayload = {
   bookingId?: string;
   rideStatus?: string;
   refundStatus?: string;
+  paymentStatus?: string;
+  paymentAmount?: number;
+  vehicleNumber?: string;
+  cancelReason?: string;
   driverName?: string;
   driverMobile?: string;
 };
@@ -68,7 +72,11 @@ async function ensureBookingsTable() {
         ride_status TEXT NOT NULL DEFAULT 'Booked',
         refund_status TEXT NOT NULL DEFAULT 'None',
         driver_name TEXT NOT NULL DEFAULT '',
-        driver_mobile TEXT NOT NULL DEFAULT ''
+        driver_mobile TEXT NOT NULL DEFAULT '',
+        vehicle_number TEXT NOT NULL DEFAULT '',
+        payment_status TEXT NOT NULL DEFAULT 'Pending',
+        payment_amount INTEGER NOT NULL DEFAULT 0,
+        cancel_reason TEXT NOT NULL DEFAULT ''
       )`,
     )
     .run();
@@ -99,6 +107,26 @@ async function ensureBookingsTable() {
     .catch(() => undefined);
 
   await db
+    .prepare("ALTER TABLE bookings ADD COLUMN vehicle_number TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'Pending'")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN payment_amount INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN cancel_reason TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
     .prepare(
       "CREATE INDEX IF NOT EXISTS bookings_created_at_idx ON bookings (created_at)",
     )
@@ -109,12 +137,38 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const pin = url.searchParams.get("pin") || "";
+    const bookingId = clean(url.searchParams.get("bookingId"));
+    const mobile = clean(url.searchParams.get("mobile"));
+
+    await ensureBookingsTable();
+
+    if (bookingId && mobile) {
+      const booking = await env.DB.prepare(
+        `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
+          one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
+          customer_name, customer_mobile, status, ride_status, refund_status,
+          driver_name, driver_mobile, vehicle_number, payment_status,
+          payment_amount, cancel_reason
+         FROM bookings
+         WHERE booking_id = ? AND customer_mobile = ?
+         LIMIT 1`,
+      )
+        .bind(bookingId, mobile)
+        .first();
+
+      if (!booking) {
+        return Response.json(
+          { error: "Booking not found for this mobile number." },
+          { status: 404 },
+        );
+      }
+
+      return Response.json({ booking });
+    }
 
     if (pin !== adminPin) {
       return Response.json({ error: "Invalid login PIN." }, { status: 401 });
     }
-
-    await ensureBookingsTable();
 
     const summary = await env.DB.prepare(
       "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
@@ -122,7 +176,8 @@ export async function GET(request: Request) {
     const recent = await env.DB.prepare(
       `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
         estimated_fare, customer_name, customer_mobile, status, ride_status,
-        refund_status, driver_name, driver_mobile
+        refund_status, driver_name, driver_mobile, vehicle_number,
+        payment_status, payment_amount, cancel_reason
        FROM bookings
        WHERE booking_id NOT LIKE 'PENDING-%'
        ORDER BY id DESC
@@ -142,6 +197,10 @@ export async function GET(request: Request) {
       refund_status: string;
       driver_name: string;
       driver_mobile: string;
+      vehicle_number: string;
+      payment_status: string;
+      payment_amount: number;
+      cancel_reason: string;
     }>();
 
     return Response.json({
@@ -177,15 +236,25 @@ export async function PATCH(request: Request) {
       `UPDATE bookings
        SET ride_status = COALESCE(NULLIF(?, ''), ride_status),
            refund_status = COALESCE(NULLIF(?, ''), refund_status),
+           payment_status = COALESCE(NULLIF(?, ''), payment_status),
+           payment_amount = COALESCE(?, payment_amount),
            driver_name = COALESCE(NULLIF(?, ''), driver_name),
-           driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile)
+           driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile),
+           vehicle_number = COALESCE(NULLIF(?, ''), vehicle_number),
+           cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason)
        WHERE booking_id = ?`,
     )
       .bind(
         clean(payload.rideStatus),
         clean(payload.refundStatus),
+        clean(payload.paymentStatus),
+        Number.isFinite(Number(payload.paymentAmount))
+          ? Number(payload.paymentAmount)
+          : null,
         clean(payload.driverName),
         clean(payload.driverMobile),
+        clean(payload.vehicleNumber),
+        clean(payload.cancelReason),
         bookingId,
       )
       .run();
@@ -268,8 +337,12 @@ export async function POST(request: Request) {
         ride_status,
         refund_status,
         driver_name,
-        driver_mobile
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        driver_mobile,
+        vehicle_number,
+        payment_status,
+        payment_amount,
+        cancel_reason
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -291,6 +364,10 @@ export async function POST(request: Request) {
         "Booked",
         "None",
         "",
+        "",
+        "",
+        "Pending",
+        0,
         "",
       )
       .run();

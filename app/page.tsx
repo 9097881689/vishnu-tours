@@ -304,6 +304,10 @@ type DashboardBooking = {
   vehicle: string;
   start_point: string;
   destination: string;
+  one_side_km?: number;
+  billable_km?: number;
+  rate_per_km?: number;
+  pickup_datetime?: string;
   estimated_fare: number;
   customer_name: string;
   customer_mobile: string;
@@ -312,6 +316,10 @@ type DashboardBooking = {
   refund_status?: string;
   driver_name?: string;
   driver_mobile?: string;
+  vehicle_number?: string;
+  payment_status?: string;
+  payment_amount?: number;
+  cancel_reason?: string;
 };
 
 type DriverProfile = {
@@ -460,8 +468,20 @@ export default function Home() {
   const [isBooking, setIsBooking] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showCustomerLogin, setShowCustomerLogin] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [adminStatus, setAdminStatus] = useState("");
+  const [customerStatus, setCustomerStatus] = useState("");
+  const [customerLookup, setCustomerLookup] = useState({
+    bookingId: "",
+    mobile: "",
+  });
+  const [customerBooking, setCustomerBooking] = useState<DashboardBooking | null>(
+    null,
+  );
+  const [assignmentForm, setAssignmentForm] = useState<
+    Record<string, { driverName: string; driverMobile: string; vehicleNumber: string }>
+  >({});
   const [dashboard, setDashboard] = useState<{
     totalBookings: number;
     totalFare: number;
@@ -479,6 +499,7 @@ export default function Home() {
     name: "",
     mobile: "",
     vehicle: "Toyota Innova Crysta",
+    vehicleNumber: "",
   });
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
@@ -1083,8 +1104,12 @@ export default function Home() {
     updates: {
       rideStatus?: string;
       refundStatus?: string;
+      paymentStatus?: string;
+      paymentAmount?: number;
       driverName?: string;
       driverMobile?: string;
+      vehicleNumber?: string;
+      cancelReason?: string;
     },
   ) {
     setAdminStatus("Updating Booking...");
@@ -1110,8 +1135,12 @@ export default function Home() {
   }
 
   function onboardDriver() {
-    if (!driverForm.name.trim() || !driverForm.mobile.trim()) {
-      setAdminStatus("Please Enter Driver Name And Mobile.");
+    if (
+      !driverForm.name.trim() ||
+      !driverForm.mobile.trim() ||
+      !driverForm.vehicleNumber.trim()
+    ) {
+      setAdminStatus("Please Enter Driver Name, Mobile And Vehicle Number.");
       return;
     }
 
@@ -1120,7 +1149,7 @@ export default function Home() {
       {
         name: driverForm.name.trim(),
         mobile: driverForm.mobile.trim(),
-        vehicle: driverForm.vehicle,
+        vehicle: `${driverForm.vehicle} | ${driverForm.vehicleNumber.trim()}`,
         status: "Available",
       },
     ]);
@@ -1128,6 +1157,7 @@ export default function Home() {
       name: "",
       mobile: "",
       vehicle: "Toyota Innova Crysta",
+      vehicleNumber: "",
     });
     setAdminStatus("Driver Onboarded.");
   }
@@ -1137,7 +1167,7 @@ export default function Home() {
       drivers.find(
         (driver) =>
           driver.status === "Available" &&
-          (booking.vehicle.includes(driver.vehicle) || driver.vehicle === booking.vehicle),
+          (driver.vehicle.includes(booking.vehicle) || driver.vehicle === booking.vehicle),
       ) || drivers.find((driver) => driver.status === "Available");
 
     if (!availableDriver) {
@@ -1157,7 +1187,51 @@ export default function Home() {
       rideStatus: "Driver Assigned",
       driverName: availableDriver.name,
       driverMobile: availableDriver.mobile,
+      vehicleNumber: availableDriver.vehicle.split("|")[1]?.trim() || "",
     });
+  }
+
+  async function manualAssignDriver(booking: DashboardBooking) {
+    const form = assignmentForm[booking.booking_id];
+
+    if (!form?.driverName || !form.driverMobile || !form.vehicleNumber) {
+      setAdminStatus("Enter Driver Name, Mobile And Vehicle Number.");
+      return;
+    }
+
+    await updateBookingOperation(booking.booking_id, {
+      rideStatus: "Driver Assigned",
+      driverName: form.driverName,
+      driverMobile: form.driverMobile,
+      vehicleNumber: form.vehicleNumber,
+    });
+  }
+
+  async function loadCustomerBooking() {
+    setCustomerStatus("Loading Booking...");
+    setCustomerBooking(null);
+
+    try {
+      const response = await fetch(
+        `/api/bookings?bookingId=${encodeURIComponent(
+          customerLookup.bookingId,
+        )}&mobile=${encodeURIComponent(customerLookup.mobile)}`,
+      );
+      const result = (await response.json()) as {
+        booking?: DashboardBooking;
+        error?: string;
+      };
+
+      if (!response.ok || !result.booking) {
+        setCustomerStatus(result.error || "Booking Not Found.");
+        return;
+      }
+
+      setCustomerBooking(result.booking);
+      setCustomerStatus("");
+    } catch {
+      setCustomerStatus("Customer Booking Could Not Load.");
+    }
   }
 
   return (
@@ -1185,7 +1259,14 @@ export default function Home() {
             type="button"
             onClick={() => setShowAdminLogin(true)}
           >
-            Login
+            Admin Login
+          </button>
+          <button
+            className="login-button"
+            type="button"
+            onClick={() => setShowCustomerLogin(true)}
+          >
+            Customer Login
           </button>
         </div>
       </header>
@@ -1895,6 +1976,16 @@ export default function Home() {
                         }
                         placeholder="Driver Mobile"
                       />
+                      <input
+                        value={driverForm.vehicleNumber}
+                        onChange={(event) =>
+                          setDriverForm((currentForm) => ({
+                            ...currentForm,
+                            vehicleNumber: event.target.value,
+                          }))
+                        }
+                        placeholder="Vehicle Number"
+                      />
                       <select
                         value={driverForm.vehicle}
                         onChange={(event) =>
@@ -1950,14 +2041,81 @@ export default function Home() {
                           <b>{formatDisplayDate(booking.created_at.slice(0, 10))}</b>
                           <small>Fare</small>
                           <b>{formatInr(booking.estimated_fare)}</b>
+                          <small>Payment</small>
+                          <b>
+                            {booking.payment_status || "Pending"} |{" "}
+                            {formatInr(booking.payment_amount || 0)}
+                          </b>
                           <small>Refund</small>
                           <b>{booking.refund_status || "None"}</b>
+                          <small>Ride Status</small>
+                          <b>{booking.ride_status || "Booked"}</b>
                           <small>Driver</small>
                           <b>
                             {booking.driver_name
                               ? `${booking.driver_name} | ${booking.driver_mobile}`
                               : "Not Assigned"}
                           </b>
+                          <small>Vehicle No.</small>
+                          <b>{booking.vehicle_number || "Not Assigned"}</b>
+                          <small>Cancel Reason</small>
+                          <b>{booking.cancel_reason || "None"}</b>
+                        </div>
+                        <div className="manual-assign-grid">
+                          <input
+                            value={assignmentForm[booking.booking_id]?.driverName || ""}
+                            onChange={(event) =>
+                              setAssignmentForm((currentForm) => ({
+                                ...currentForm,
+                                [booking.booking_id]: {
+                                  driverName: event.target.value,
+                                  driverMobile:
+                                    currentForm[booking.booking_id]?.driverMobile || "",
+                                  vehicleNumber:
+                                    currentForm[booking.booking_id]?.vehicleNumber || "",
+                                },
+                              }))
+                            }
+                            placeholder="Change Driver Name"
+                          />
+                          <input
+                            value={assignmentForm[booking.booking_id]?.driverMobile || ""}
+                            onChange={(event) =>
+                              setAssignmentForm((currentForm) => ({
+                                ...currentForm,
+                                [booking.booking_id]: {
+                                  driverName:
+                                    currentForm[booking.booking_id]?.driverName || "",
+                                  driverMobile: event.target.value,
+                                  vehicleNumber:
+                                    currentForm[booking.booking_id]?.vehicleNumber || "",
+                                },
+                              }))
+                            }
+                            placeholder="Driver Mobile"
+                          />
+                          <input
+                            value={assignmentForm[booking.booking_id]?.vehicleNumber || ""}
+                            onChange={(event) =>
+                              setAssignmentForm((currentForm) => ({
+                                ...currentForm,
+                                [booking.booking_id]: {
+                                  driverName:
+                                    currentForm[booking.booking_id]?.driverName || "",
+                                  driverMobile:
+                                    currentForm[booking.booking_id]?.driverMobile || "",
+                                  vehicleNumber: event.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Vehicle Number"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => manualAssignDriver(booking)}
+                          >
+                            Change Driver
+                          </button>
                         </div>
                         <div className="booking-actions">
                           <button
@@ -1990,6 +2148,39 @@ export default function Home() {
                             type="button"
                             onClick={() =>
                               updateBookingOperation(booking.booking_id, {
+                                rideStatus: "Ride Cancelled",
+                                cancelReason: "Cancelled From Admin Backend",
+                              })
+                            }
+                          >
+                            Cancel Ride
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                paymentStatus: "Complete",
+                                paymentAmount: booking.estimated_fare,
+                              })
+                            }
+                          >
+                            Payment Complete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
+                                paymentStatus: "Failed",
+                                paymentAmount: 0,
+                              })
+                            }
+                          >
+                            Payment Failed
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBookingOperation(booking.booking_id, {
                                 refundStatus: "Refund Requested",
                               })
                             }
@@ -2014,6 +2205,100 @@ export default function Home() {
                   )}
                 </div>
               </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showCustomerLogin ? (
+        <div className="admin-modal" role="dialog" aria-modal="true">
+          <div className="admin-card customer-card">
+            <button
+              className="admin-close"
+              type="button"
+              onClick={() => setShowCustomerLogin(false)}
+            >
+              ×
+            </button>
+            <h2>Customer Booking Portal</h2>
+            <p>Enter Booking Number And Mobile Number To View Ride Details.</p>
+            <div className="admin-login-row">
+              <input
+                value={customerLookup.bookingId}
+                onChange={(event) =>
+                  setCustomerLookup((currentLookup) => ({
+                    ...currentLookup,
+                    bookingId: event.target.value,
+                  }))
+                }
+                placeholder="Booking Number"
+              />
+              <input
+                value={customerLookup.mobile}
+                onChange={(event) =>
+                  setCustomerLookup((currentLookup) => ({
+                    ...currentLookup,
+                    mobile: event.target.value,
+                  }))
+                }
+                placeholder="Mobile Number"
+              />
+              <button type="button" onClick={loadCustomerBooking}>
+                View Booking
+              </button>
+            </div>
+            {customerStatus ? (
+              <p className="admin-status">{customerStatus}</p>
+            ) : null}
+            {customerBooking ? (
+              <article className="customer-booking-ticket">
+                <div className="booking-row-head">
+                  <strong>{customerBooking.booking_id}</strong>
+                  <span>{customerBooking.ride_status || "Booked"}</span>
+                </div>
+                <div className="booking-detail-grid">
+                  <small>Customer</small>
+                  <b>
+                    {customerBooking.customer_name} |{" "}
+                    {customerBooking.customer_mobile}
+                  </b>
+                  <small>Route</small>
+                  <b>
+                    {customerBooking.start_point} To{" "}
+                    {customerBooking.destination}
+                  </b>
+                  <small>Cab</small>
+                  <b>{customerBooking.vehicle}</b>
+                  <small>Date</small>
+                  <b>
+                    {formatDisplayDate(
+                      (customerBooking.pickup_datetime || customerBooking.created_at).slice(
+                        0,
+                        10,
+                      ),
+                    )}
+                  </b>
+                  <small>Fare</small>
+                  <b>{formatInr(customerBooking.estimated_fare)}</b>
+                  <small>Payment</small>
+                  <b>
+                    {customerBooking.payment_status || "Pending"} |{" "}
+                    {formatInr(customerBooking.payment_amount || 0)}
+                  </b>
+                  <small>Driver</small>
+                  <b>
+                    {customerBooking.driver_name
+                      ? `${customerBooking.driver_name} | ${customerBooking.driver_mobile}`
+                      : "Not Assigned"}
+                  </b>
+                  <small>Vehicle No.</small>
+                  <b>{customerBooking.vehicle_number || "Not Assigned"}</b>
+                  <small>Refund</small>
+                  <b>{customerBooking.refund_status || "None"}</b>
+                  <small>Cancel Reason</small>
+                  <b>{customerBooking.cancel_reason || "None"}</b>
+                </div>
+              </article>
             ) : null}
           </div>
         </div>

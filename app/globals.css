@@ -3024,12 +3024,13 @@ h4,
 
 .driver-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
 .driver-form input,
-.driver-form select {
+.driver-form select,
+.manual-assign-grid input {
   min-height: 38px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -3037,7 +3038,8 @@ h4,
 }
 
 .driver-form button,
-.booking-actions button {
+.booking-actions button,
+.manual-assign-grid button {
   min-height: 38px;
   border: 0;
   border-radius: 8px;
@@ -3138,10 +3140,46 @@ h4,
   font-size: 13px;
 }
 
+.manual-assign-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
 .booking-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.booking-actions button:nth-child(4),
+.booking-actions button:nth-child(7) {
+  background: #dc2626;
+}
+
+.booking-actions button:nth-child(5) {
+  background: #16a34a;
+}
+
+.booking-actions button:nth-child(6) {
+  background: #b91c1c;
+}
+
+.customer-card {
+  width: min(860px, 100%);
+}
+
+.customer-booking-ticket {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: #fff;
 }
 
 .admin-recent span,
@@ -3181,7 +3219,8 @@ h4,
   .admin-login-row,
   .admin-ops-panel,
   .driver-form,
-  .booking-detail-grid {
+  .booking-detail-grid,
+  .manual-assign-grid {
     grid-template-columns: 1fr;
   }
 }
