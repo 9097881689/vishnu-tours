@@ -1528,8 +1528,15 @@ export default function Home() {
   }
 
   function renderPortalBookingCard(booking: DashboardBooking, canManage: boolean) {
+    const normalizedStatus = (booking.ride_status || "").toLowerCase();
+    const cardStatusClass = normalizedStatus.includes("cancel")
+      ? "booking-card-cancelled"
+      : normalizedStatus.includes("complete")
+        ? "booking-card-complete"
+        : "booking-card-progress";
+
     return (
-      <article key={booking.booking_id}>
+      <article className={cardStatusClass} key={booking.booking_id}>
         <div className="booking-row-head">
           <strong>{booking.booking_id}</strong>
           <span>{booking.ride_status || "Booked"}</span>
