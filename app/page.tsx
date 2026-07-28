@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
-const headOffice = "Mumbai Head Office";
+const headOffice = "Mumbai, Maharashtra";
 const perKmRate = 16;
 const fromSuggestions = [
   "Mumbai Head Office",
@@ -216,30 +216,35 @@ const vehicles = [
     type: "Premium MUV",
     seats: "6-7 seats",
     bestFor: "VIP, family, airport and highway travel",
+    photo: "/fleet/innova-crysta.svg",
   },
   {
     name: "Toyota Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 seats",
     bestFor: "Executive guests, weddings and long routes",
+    photo: "/fleet/hycross.svg",
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
     seats: "6-7 seats",
     bestFor: "Round trip, family tour and station pickup",
+    photo: "/fleet/ertiga.svg",
   },
   {
     name: "Maruti Rumion",
     type: "Spacious MUV",
     seats: "6-7 seats",
     bestFor: "Local booking, outstation and group travel",
+    photo: "/fleet/rumion.svg",
   },
   {
     name: "Toyota Etios",
     type: "Sedan",
     seats: "4 seats",
     bestFor: "City rides, business visits and one day travel",
+    photo: "/fleet/etios.svg",
   },
 ];
 
@@ -442,15 +447,15 @@ export default function Home() {
     activeSuggestionField !== "from";
   const visibleFromSuggestions =
     googleFromSuggestions.length > 0
-      ? googleFromSuggestions
-      : getPlaceSuggestions(startPoint, fromSuggestions, 7).map((item) => ({
+      ? googleFromSuggestions.slice(0, 5)
+      : getPlaceSuggestions(startPoint, fromSuggestions, 5).map((item) => ({
           label: item,
           secondary: "Mumbai pickup",
         }));
   const visibleDestinationSuggestions =
     googleDestinationSuggestions.length > 0
-      ? googleDestinationSuggestions
-      : getPlaceSuggestions(drop, destinationSuggestions, 8).map((item) => ({
+      ? googleDestinationSuggestions.slice(0, 5)
+      : getPlaceSuggestions(drop, destinationSuggestions, 5).map((item) => ({
           label: item,
           secondary: "Popular destination",
         }));
@@ -638,6 +643,30 @@ export default function Home() {
     setBookingView("home");
     setConfirmedBooking(null);
     setBookingStatus("");
+  }
+
+  function useCurrentLocation() {
+    setBookingStatus("");
+
+    if (!navigator.geolocation) {
+      setBookingStatus("Current location browser me available nahi hai.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateStartPoint(
+          `Current Location (${latitude.toFixed(5)}, ${longitude.toFixed(
+            5,
+          )}), Mumbai, Maharashtra`,
+        );
+      },
+      () => {
+        setBookingStatus("Current location permission allow karein ya pickup type karein.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
   }
 
   function continueToRates() {
@@ -947,17 +976,7 @@ export default function Home() {
               continueToRates();
             }}
           >
-            <h2 className="booking-title">Corporate Cab Booking Across India</h2>
-            <datalist id="from-suggestions">
-              {fromSuggestions.map((item) => (
-                <option key={item} value={item} />
-              ))}
-            </datalist>
-            <datalist id="destination-suggestions">
-              {destinationSuggestions.map((item) => (
-                <option key={item} value={item} />
-              ))}
-            </datalist>
+            <h2 className="booking-title">Corporate Cab Booking In Mumbai</h2>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
               {bookingTypes.map((type) => (
                 <button
@@ -977,25 +996,34 @@ export default function Home() {
             <div className="route-form-row">
               <label className="place-field booking-field">
                 <span>From</span>
-                <input
-                  ref={fromInputRef}
-                  value={startPoint}
-                  onChange={(event) => {
-                    setPickupFieldTouched(false);
-                    updateStartPoint(event.target.value);
-                  }}
-                  onFocus={() => {
-                    setPickupFieldTouched(false);
-                    setActiveSuggestionField("from");
-                  }}
-                  onBlur={() => {
-                    setPickupFieldTouched(true);
-                    window.setTimeout(() => setActiveSuggestionField(null), 140);
-                  }}
-                  list="from-suggestions"
-                  placeholder="Enter Pickup Location"
-                  required
-                />
+                <div className="location-input-wrap">
+                  <input
+                    ref={fromInputRef}
+                    value={startPoint}
+                    onChange={(event) => {
+                      setPickupFieldTouched(false);
+                      updateStartPoint(event.target.value);
+                    }}
+                    onFocus={() => {
+                      setPickupFieldTouched(false);
+                      setActiveSuggestionField("from");
+                    }}
+                    onBlur={() => {
+                      setPickupFieldTouched(true);
+                      window.setTimeout(() => setActiveSuggestionField(null), 140);
+                    }}
+                    placeholder="Enter Pickup Location"
+                    autoComplete="off"
+                    required
+                  />
+                  <button
+                    className="current-location-button"
+                    type="button"
+                    onClick={useCurrentLocation}
+                  >
+                    Current
+                  </button>
+                </div>
                 {activeSuggestionField === "from" && visibleFromSuggestions.length ? (
                   <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
                     {visibleFromSuggestions.map((item) => (
@@ -1034,8 +1062,8 @@ export default function Home() {
                   onBlur={() =>
                     window.setTimeout(() => setActiveSuggestionField(null), 140)
                   }
-                  list="destination-suggestions"
                   placeholder="Enter Drop Location"
+                  autoComplete="off"
                   required
                 />
                 {activeSuggestionField === "to" && visibleDestinationSuggestions.length ? (
@@ -1066,7 +1094,7 @@ export default function Home() {
                     setShowVehicleStep(false);
                     setBookingView("home");
                   }}
-                  placeholder="29-07-2026"
+                  type="date"
                   required
                 />
               </label>
@@ -1198,8 +1226,9 @@ export default function Home() {
 
               return (
                 <article className="select-car-card" key={item.name}>
-                  <div className="car-art" aria-hidden="true">
-                    <span>{item.name.split(" ").at(-1)}</span>
+                  <div className="car-art">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.photo} alt={`${item.name} cab`} />
                   </div>
                   <div className="car-detail-block">
                     <h3>
