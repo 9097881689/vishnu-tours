@@ -114,8 +114,11 @@ export async function POST(request: Request) {
     const createdAt = new Date().toISOString();
 
     await ensureBookingsTable();
-    const bookingId = await getNextBookingId();
-    await env.DB.prepare(
+    const temporaryBookingId =
+      typeof crypto.randomUUID === "function"
+        ? `PENDING-${crypto.randomUUID()}`
+        : `PENDING-${Date.now()}`;
+    const insertResult = await env.DB.prepare(
       `INSERT INTO bookings (
         booking_id,
         created_at,
@@ -136,7 +139,7 @@ export async function POST(request: Request) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
-        bookingId,
+        temporaryBookingId,
         createdAt,
         "pending",
         tripType,
@@ -153,6 +156,12 @@ export async function POST(request: Request) {
         packageType,
         paymentMode,
       )
+      .run();
+    const rowId = Number(insertResult.meta.last_row_id);
+    const bookingId = formatBookingId(rowId);
+
+    await env.DB.prepare("UPDATE bookings SET booking_id = ? WHERE id = ?")
+      .bind(bookingId, rowId)
       .run();
 
     return Response.json(
@@ -178,17 +187,14 @@ export async function POST(request: Request) {
   }
 }
 
-function clean(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+function formatBookingId(rowId: number) {
+  const serial = Number.isFinite(rowId) && rowId > 0 ? rowId : Date.now();
+
+  return `VTT${String(serial).padStart(3, "0")}`;
 }
 
-async function getNextBookingId() {
-  const result = await env.DB.prepare(
-    "SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM bookings",
-  ).first<{ next_id: number }>();
-  const nextId = Number(result?.next_id || 1);
-
-  return `VTT${String(nextId).padStart(3, "0")}`;
+function clean(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function normalizePackage(value: unknown): PackageType {
