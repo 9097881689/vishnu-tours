@@ -216,28 +216,32 @@ const vehicles = [
     type: "Premium MUV",
     seats: "6-7 Seats",
     bestFor: "VIP, Family, Airport And Highway Travel",
-    photo: "/fleet/innova-crysta.svg",
+    photo:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
   },
   {
     name: "Toyota Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 Seats",
     bestFor: "Executive Guests, Weddings And Long Routes",
-    photo: "/fleet/hycross.svg",
+    photo:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Hycross_Feature_Image_3b1feac7e7.png",
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
     seats: "6-7 Seats",
     bestFor: "Round Trip, Family Tour And Station Pickup",
-    photo: "/fleet/ertiga.svg",
+    photo:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Ertiga_Feature_Image_de63f22c7b.png",
   },
   {
     name: "Maruti Rumion",
     type: "Spacious MUV",
     seats: "6-7 Seats",
     bestFor: "Local Booking, Outstation And Group Travel",
-    photo: "/fleet/rumion.svg",
+    photo:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Rumion_Feature_Image_08ede3a5d9.png",
   },
   {
     name: "Toyota Etios",
@@ -251,7 +255,8 @@ const vehicles = [
 const serviceCards = [
   {
     title: "Airport",
-    image: "/fleet/hycross.svg",
+    image:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Hycross_Feature_Image_3b1feac7e7.png",
     description:
       "Premium Airport Transfers From Mumbai With Clean Cars And Timely Pickup.",
   },
@@ -263,25 +268,29 @@ const serviceCards = [
   },
   {
     title: "Outstation",
-    image: "/fleet/innova-crysta.svg",
+    image:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
     description:
       "All India Outstation Trips From Mumbai With Transparent Per KM Fare.",
   },
   {
     title: "Corporate Booking",
-    image: "/fleet/ertiga.svg",
+    image:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Ertiga_Feature_Image_de63f22c7b.png",
     description:
       "Direct Owner-Side Cab Coordination For Corporate Guest Movement.",
   },
   {
     title: "Executive Transfers",
-    image: "/fleet/rumion.svg",
+    image:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Rumion_Feature_Image_08ede3a5d9.png",
     description:
       "Comfortable Executive Transfers For VIP Guests, Events And Site Visits.",
   },
   {
     title: "All India Trips",
-    image: "/fleet/innova-crysta.svg",
+    image:
+      "https://static-cdn.cars24.com/prod/new-car-cms/Innova_Crysta_Feature_Image_234390a7bc.png",
     description:
       "Mumbai Pickup With Long-Route Cab Options Across India.",
   },
