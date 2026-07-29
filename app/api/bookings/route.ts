@@ -629,17 +629,10 @@ export async function GET(request: Request) {
         });
       }
 
-      return Response.json({
-        role: "driver",
-        driverProfile: null,
-        driverVehicles: [],
-        nextRide: null,
-        recentBookings: matchingOpenBookings,
-        driverEarning: { completedRides: 0, totalEarning: 0 },
-        driverCashInHand: 0,
-        driverLedger: [],
-        withdrawalRequests: [],
-      });
+      return Response.json(
+        { error: "No User Found. Please Check Mobile Number." },
+        { status: 404 },
+      );
     }
 
     if (bookingId && mobile) {

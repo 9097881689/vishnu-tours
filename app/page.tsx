@@ -320,19 +320,8 @@ type DriverWithdrawal = {
   admin_note?: string;
 };
 
-const permanentWorkflowRules = [
-  "Any Registered Driver Can Take Any Registered Vehicle Assigned By Admin.",
-  "Vehicle Registration Is Admin Only.",
-  "Admin Gets A Conflict Message If A Driver Is Already Engaged On The Same Date And Time.",
-  "Driver Can Accept Only Booking Matching Their Registered Vehicle Type.",
-  "Admin Can Assign Any Registered Vehicle To Any Driver.",
-  "Postpaid Bookings Can Be Assigned And Started Before Payment Received.",
-  "Driver Can Start And Complete Assigned Rides.",
-  "Ride Completion Requires Balance Collection If Any Amount Is Pending.",
-  "Prepaid Payment Amount Shows In Green And Postpaid Pending Amount Shows In Red.",
-];
-
 type PortalRole = "admin" | "driver" | "customer";
+type AdminPanelTab = "bookings" | "vehicles" | "ledger" | "withdrawals";
 
 type AdminBreakupType =
   | "bookings"
@@ -617,6 +606,7 @@ export default function Home() {
   });
   const [activeAdminBreakup, setActiveAdminBreakup] =
     useState<AdminBreakupType>("bookings");
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminPanelTab>("bookings");
   const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
@@ -1348,7 +1338,9 @@ export default function Home() {
       };
 
       if (!response.ok) {
-        setPortalStatus(result.error || "Login Failed.");
+        const loginError = result.error || "No User Found. Please Check Mobile Number.";
+        setPortalStatus(loginError);
+        window.alert(loginError);
         setDashboard(null);
         return;
       }
@@ -1403,7 +1395,9 @@ export default function Home() {
 
       setPortalStatus("");
     } catch {
-      setPortalStatus("Portal Could Not Load.");
+      const loginError = "Portal Could Not Load. Please Try Again.";
+      setPortalStatus(loginError);
+      window.alert(loginError);
       setDashboard(null);
     }
   }
@@ -2205,6 +2199,42 @@ export default function Home() {
         </dl>
       </div>
     );
+  }
+
+  function getAdminTaskCounts(activeDashboard: NonNullable<typeof dashboard>) {
+    const activeBookings = activeDashboard.recentBookings.filter((booking) => {
+      const status = (booking.ride_status || booking.status || "").toLowerCase();
+      return !status.includes("cancel") && !status.includes("complete");
+    });
+    const assignmentPending = activeBookings.filter(
+      (booking) => !booking.driver_mobile || !booking.vehicle_number,
+    ).length;
+    const paymentPending = activeBookings.filter((booking) => {
+      const totalFare = getInvoiceTotals(booking).total;
+      return Number(booking.payment_amount || 0) < totalFare;
+    }).length;
+    const ridePending = activeBookings.filter((booking) => {
+      const status = (booking.ride_status || "").toLowerCase();
+      return !status.includes("started");
+    }).length;
+    const rideInProgress = activeBookings.filter((booking) =>
+      (booking.ride_status || "").toLowerCase().includes("started"),
+    ).length;
+    const withdrawalPending = activeDashboard.withdrawalRequests.filter(
+      (withdrawal) => withdrawal.status === "Pending",
+    ).length;
+
+    return {
+      assignmentPending,
+      paymentPending,
+      ridePending,
+      rideInProgress,
+      withdrawalPending,
+      bookings: activeDashboard.recentBookings.length,
+      vehicles: drivers.length,
+      ledger: activeDashboard.driverLedger.length,
+      withdrawals: activeDashboard.withdrawalRequests.length,
+    };
   }
 
   function renderPortalBookingCard(booking: DashboardBooking, canManage: boolean) {
@@ -3255,123 +3285,189 @@ export default function Home() {
                         </button>
                       ))}
                       {renderAdminMetricBreakup(dashboard)}
+                      <div className="admin-task-strip">
+                        {(() => {
+                          const taskCounts = getAdminTaskCounts(dashboard);
+                          return (
+                            <>
+                              <span>
+                                <b>{taskCounts.assignmentPending}</b>
+                                Driver Assign Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.paymentPending}</b>
+                                Payment Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.ridePending}</b>
+                                Ride Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.rideInProgress}</b>
+                                In Progress
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className="admin-tabs">
+                        {(() => {
+                          const taskCounts = getAdminTaskCounts(dashboard);
+                          const tabs: Array<{
+                            id: AdminPanelTab;
+                            label: string;
+                            count: number;
+                          }> = [
+                            {
+                              id: "bookings",
+                              label: "Booking",
+                              count: taskCounts.bookings,
+                            },
+                            {
+                              id: "vehicles",
+                              label: "Registered Driver Vehicles",
+                              count: taskCounts.vehicles,
+                            },
+                            {
+                              id: "ledger",
+                              label: "Driver Ledger",
+                              count: taskCounts.ledger,
+                            },
+                            {
+                              id: "withdrawals",
+                              label: "Cash Withdrawal Requests",
+                              count: taskCounts.withdrawalPending,
+                            },
+                          ];
+
+                          return tabs.map((tab) => (
+                            <button
+                              className={activeAdminTab === tab.id ? "is-active" : ""}
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setActiveAdminTab(tab.id)}
+                            >
+                              <span>{tab.label}</span>
+                              <b>{tab.count}</b>
+                            </button>
+                          ));
+                        })()}
+                      </div>
                     </>
                   );
                 })()}
-                <div className="admin-ops-panel cash-summary-panel">
-                  <div>
-                    <h3>Driver Cash Collection</h3>
-                    <div className="driver-list">
-                      {dashboard.driverCashSummary.length ? (
-                        dashboard.driverCashSummary.map((driver) => (
-                          <span key={`${driver.driver_mobile}-${driver.cash_amount}`}>
-                            {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
-                            {formatInr(Number(driver.cash_amount || 0))} Cash |{" "}
-                            {driver.cash_rides} Ride
+                {activeAdminTab === "bookings" ? (
+                  <div className="admin-recent admin-tab-panel">
+                    <h3>Booking Details And Operations</h3>
+                    {dashboard.recentBookings.length ? (
+                      dashboard.recentBookings.map((booking) =>
+                        renderPortalBookingCard(booking, true),
+                      )
+                    ) : (
+                      <p>No Bookings Yet.</p>
+                    )}
+                  </div>
+                ) : null}
+                {activeAdminTab === "vehicles" ? (
+                  <div className="admin-ops-panel admin-tab-panel">
+                    <div>
+                      <h3>Admin Driver And Vehicle Registration</h3>
+                      <div className="driver-form">
+                        <input
+                          value={driverForm.name}
+                          onChange={(event) =>
+                            setDriverForm((currentForm) => ({
+                              ...currentForm,
+                              name: event.target.value,
+                            }))
+                          }
+                          placeholder="Driver Name"
+                        />
+                        <input
+                          value={driverForm.mobile}
+                          onChange={(event) =>
+                            setDriverForm((currentForm) => ({
+                              ...currentForm,
+                              mobile: event.target.value,
+                            }))
+                          }
+                          placeholder="Driver Mobile"
+                        />
+                        <input
+                          value={driverForm.vehicleNumber}
+                          onChange={(event) =>
+                            setDriverForm((currentForm) => ({
+                              ...currentForm,
+                              vehicleNumber: event.target.value,
+                            }))
+                          }
+                          placeholder="Vehicle Number"
+                        />
+                        <select
+                          value={driverForm.vehicle}
+                          onChange={(event) =>
+                            setDriverForm((currentForm) => ({
+                              ...currentForm,
+                              vehicle: event.target.value,
+                            }))
+                          }
+                        >
+                          {vehicles.map((item) => (
+                            <option key={item.name} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={onboardDriver}>
+                          Register Driver Vehicle
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h3>Registered Driver Vehicles</h3>
+                      <div className="driver-list">
+                        {drivers.map((driver) => (
+                          <span key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}>
+                            Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
+                            {driver.vehicleNumber || "Vehicle No. Pending"}
                           </span>
-                        ))
-                      ) : (
-                        <span>No Driver Cash Collection Yet.</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="admin-ops-panel ledger-panel">
-                  <div>
-                    <h3>Driver Ledger</h3>
-                    {renderDriverLedger(dashboard.driverLedger)}
-                  </div>
-                </div>
-                <div className="admin-ops-panel ledger-panel">
-                  <div>
-                    <h3>Cash Withdrawal Requests</h3>
-                    {renderWithdrawalList(dashboard.withdrawalRequests, true)}
-                  </div>
-                </div>
-                <div className="workflow-rules-panel">
-                  <h3>Permanent Workflow Rules</h3>
-                  <div>
-                    {permanentWorkflowRules.map((rule) => (
-                      <span key={rule}>{rule}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="admin-ops-panel">
-                  <div>
-                    <h3>Admin Driver And Vehicle Registration</h3>
-                    <div className="driver-form">
-                      <input
-                        value={driverForm.name}
-                        onChange={(event) =>
-                          setDriverForm((currentForm) => ({
-                            ...currentForm,
-                            name: event.target.value,
-                          }))
-                        }
-                        placeholder="Driver Name"
-                      />
-                      <input
-                        value={driverForm.mobile}
-                        onChange={(event) =>
-                          setDriverForm((currentForm) => ({
-                            ...currentForm,
-                            mobile: event.target.value,
-                          }))
-                        }
-                        placeholder="Driver Mobile"
-                      />
-                      <input
-                        value={driverForm.vehicleNumber}
-                        onChange={(event) =>
-                          setDriverForm((currentForm) => ({
-                            ...currentForm,
-                            vehicleNumber: event.target.value,
-                          }))
-                        }
-                        placeholder="Vehicle Number"
-                      />
-                      <select
-                        value={driverForm.vehicle}
-                        onChange={(event) =>
-                          setDriverForm((currentForm) => ({
-                            ...currentForm,
-                            vehicle: event.target.value,
-                          }))
-                        }
-                      >
-                        {vehicles.map((item) => (
-                          <option key={item.name} value={item.name}>
-                            {item.name}
-                          </option>
                         ))}
-                      </select>
-                      <button type="button" onClick={onboardDriver}>
-                        Register Driver Vehicle
-                      </button>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h3>Registered Driver Vehicles</h3>
-                    <div className="driver-list">
-                      {drivers.map((driver) => (
-                        <span key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}>
-                          Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
-                          {driver.vehicleNumber || "Vehicle No. Pending"}
-                        </span>
-                      ))}
+                ) : null}
+                {activeAdminTab === "ledger" ? (
+                  <div className="admin-ops-panel ledger-panel admin-tab-panel">
+                    <div>
+                      <h3>Driver Cash Collection</h3>
+                      <div className="driver-list">
+                        {dashboard.driverCashSummary.length ? (
+                          dashboard.driverCashSummary.map((driver) => (
+                            <span key={`${driver.driver_mobile}-${driver.cash_amount}`}>
+                              {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
+                              {formatInr(Number(driver.cash_amount || 0))} Cash |{" "}
+                              {driver.cash_rides} Ride
+                            </span>
+                          ))
+                        ) : (
+                          <span>No Driver Cash Collection Yet.</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h3>Driver Ledger</h3>
+                      {renderDriverLedger(dashboard.driverLedger)}
                     </div>
                   </div>
-                </div>
-                <div className="admin-recent">
-                  <h3>Booking Details And Operations</h3>
-                  {dashboard.recentBookings.length ? (
-                    dashboard.recentBookings.map((booking) =>
-                      renderPortalBookingCard(booking, true),
-                    )
-                  ) : (
-                    <p>No Bookings Yet.</p>
-                  )}
-                </div>
+                ) : null}
+                {activeAdminTab === "withdrawals" ? (
+                  <div className="admin-ops-panel ledger-panel admin-tab-panel">
+                    <div>
+                      <h3>Cash Withdrawal Requests</h3>
+                      {renderWithdrawalList(dashboard.withdrawalRequests, true)}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {portalRole && portalRole !== "admin" ? (
