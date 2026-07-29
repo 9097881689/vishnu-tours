@@ -309,6 +309,8 @@ const permanentWorkflowRules = [
   "Any Registered Driver Can Take Any Registered Vehicle Assigned By Admin.",
   "Vehicle Registration Is Admin Only.",
   "Admin Gets A Conflict Message If A Driver Is Already Engaged On The Same Date And Time.",
+  "Driver Can Accept Only Booking Matching Their Registered Vehicle Type.",
+  "Admin Can Assign Any Registered Vehicle To Any Driver.",
   "Postpaid Bookings Can Be Assigned And Started Before Payment Received.",
   "Driver Can Start And Complete Assigned Rides.",
   "Ride Completion Requires Balance Collection If Any Amount Is Pending.",
@@ -1870,10 +1872,19 @@ export default function Home() {
       (driver, index, driverList) =>
         driverList.findIndex((item) => item.mobile === driver.mobile) === index,
     );
-    const selectedAssignmentDriver = assignmentForm[booking.booking_id]?.driverMobile;
-    const assignmentVehicleRows = selectedAssignmentDriver
-      ? drivers.filter((driver) => driver.mobile === selectedAssignmentDriver)
-      : drivers;
+    const selectedVehicleName =
+      assignmentForm[booking.booking_id]?.vehicleName || booking.vehicle;
+    const assignmentVehicleRows = drivers.filter(
+      (driver) => driver.vehicle === selectedVehicleName,
+    );
+    const driverVehicleTypes = new Set(
+      driverVehicles.map((driverVehicle) => driverVehicle.vehicle_type),
+    );
+    const canDriverAcceptBooking =
+      portalRole !== "driver" ||
+      Boolean(driverVehicleTypes.size
+        ? driverVehicleTypes.has(booking.vehicle)
+        : driverProfileForm.vehicle === booking.vehicle);
 
     return (
       <article className={cardStatusClass} key={booking.booking_id}>
@@ -1941,7 +1952,8 @@ export default function Home() {
               type="button"
               disabled={
                 !driverProfileForm.name ||
-                !driverProfileForm.vehicleNumber
+                !driverProfileForm.vehicleNumber ||
+                !canDriverAcceptBooking
               }
               onClick={() => acceptRide(booking)}
             >
@@ -1978,9 +1990,6 @@ export default function Home() {
                   const selectedDriver = drivers.find(
                     (driver) => driver.mobile === event.target.value,
                   );
-                  const firstVehicleForDriver = drivers.find(
-                    (driver) => driver.mobile === event.target.value && driver.vehicleNumber,
-                  );
 
                   setAssignmentForm((currentForm) => ({
                     ...currentForm,
@@ -1988,10 +1997,10 @@ export default function Home() {
                       driverName: selectedDriver?.name || "",
                       driverMobile: selectedDriver?.mobile || "",
                       vehicleName:
-                        firstVehicleForDriver?.vehicle ||
                         currentForm[booking.booking_id]?.vehicleName ||
                         booking.vehicle,
-                      vehicleNumber: firstVehicleForDriver?.vehicleNumber || "",
+                      vehicleNumber:
+                        currentForm[booking.booking_id]?.vehicleNumber || "",
                     },
                   }));
                   }
@@ -2015,8 +2024,7 @@ export default function Home() {
                       vehicleName: event.target.value,
                       driverMobile:
                         currentForm[booking.booking_id]?.driverMobile || "",
-                      vehicleNumber:
-                        currentForm[booking.booking_id]?.vehicleNumber || "",
+                      vehicleNumber: "",
                     },
                   }))
                 }
@@ -2040,7 +2048,9 @@ export default function Home() {
                     ...currentForm,
                     [booking.booking_id]: {
                       driverName:
-                        currentForm[booking.booking_id]?.driverName || "",
+                        currentForm[booking.booking_id]?.driverName ||
+                        selectedVehicle?.name ||
+                        "",
                       driverMobile:
                         currentForm[booking.booking_id]?.driverMobile || "",
                       vehicleName:

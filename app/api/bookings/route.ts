@@ -402,6 +402,14 @@ export async function GET(request: Request) {
       )
         .bind(loginMobile)
         .first<DriverRow>();
+      const driverVehicles = driverProfile
+        ? await getDriverVehicles(loginMobile)
+        : [];
+      const driverVehicleTypes = new Set(
+        (driverVehicles.length ? driverVehicles : driverProfile ? [driverProfile] : [])
+          .map((vehicle) => vehicle.vehicle_type)
+          .filter(Boolean),
+      );
       const driverBookings = await env.DB.prepare(
         `${bookingSelectSql}
          WHERE booking_id NOT LIKE 'PENDING-%' AND driver_mobile = ?
@@ -422,17 +430,18 @@ export async function GET(request: Request) {
           )
             .all<BookingRow>()
         : { results: [] as BookingRow[] };
+      const matchingOpenBookings = (openBookings.results || []).filter((booking) =>
+        driverVehicleTypes.has(booking.vehicle),
+      );
 
       if (driverProfile || driverBookings.results?.length) {
-        const driverVehicles = await getDriverVehicles(loginMobile);
-
         return Response.json({
           role: "driver",
           driverProfile,
           driverVehicles,
           nextRide: await getDriverNextRide(loginMobile),
           recentBookings: [
-            ...(openBookings.results || []),
+            ...matchingOpenBookings,
             ...(driverBookings.results || []),
           ],
           driverEarning: await getDriverEarning(loginMobile),
@@ -461,7 +470,7 @@ export async function GET(request: Request) {
         driverProfile: null,
         driverVehicles: [],
         nextRide: null,
-        recentBookings: openBookings.results || [],
+        recentBookings: matchingOpenBookings,
         driverEarning: { completedRides: 0, totalEarning: 0 },
         driverCashInHand: 0,
       });
@@ -596,8 +605,18 @@ export async function PATCH(request: Request) {
         const driverVehicles = await getDriverVehicles(driverMobile);
         const assignedVehicle =
           driverVehicles.find((vehicle) => vehicle.vehicle_type === booking.vehicle) ||
-          driverVehicles[0] ||
-          driver;
+          (driver.vehicle_type === booking.vehicle ? driver : null);
+
+        if (!assignedVehicle) {
+          return Response.json(
+            {
+              error: `Driver Can Accept Only ${driverVehicles
+                .map((vehicle) => vehicle.vehicle_type)
+                .join(", ") || driver.vehicle_type} Booking.`,
+            },
+            { status: 409 },
+          );
+        }
 
         const conflict = await env.DB.prepare(
           `SELECT booking_id, pickup_datetime
