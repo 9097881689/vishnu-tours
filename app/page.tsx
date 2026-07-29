@@ -1434,8 +1434,8 @@ export default function Home() {
     }
   }
 
-  async function openAdminLookupDashboard() {
-    const normalizedMobile = adminLookupMobile.replace(/\D/g, "");
+  async function openAdminLookupDashboard(targetMobile = adminLookupMobile) {
+    const normalizedMobile = targetMobile.replace(/\D/g, "");
 
     if (!normalizedMobile) {
       setAdminLookupStatus("Please Enter Driver Or Customer Mobile Number.");
@@ -1495,6 +1495,47 @@ export default function Home() {
     } catch {
       setAdminLookupStatus("Dashboard Could Not Be Opened.");
     }
+  }
+
+  function getAdminLookupOptions(activeDashboard: NonNullable<typeof dashboard>) {
+    const driverMap = new Map<string, DriverProfile>();
+
+    drivers.forEach((driver) => {
+      if (driver.mobile && driver.mobile !== "7004291529" && !driverMap.has(driver.mobile)) {
+        driverMap.set(driver.mobile, driver);
+      }
+    });
+
+    const driverOptions = Array.from(driverMap.values()).map((driver) => ({
+      key: `driver-${driver.mobile}`,
+      label: `Driver | ${driver.name || "Driver"} | ${driver.mobile} | ${driver.vehicle}`,
+      mobile: driver.mobile,
+    }));
+    const customerMap = new Map<string, string>();
+
+    activeDashboard.recentBookings.forEach((booking) => {
+      if (booking.customer_mobile) {
+        customerMap.set(booking.customer_mobile, booking.customer_name || "Customer");
+      }
+    });
+
+    const customerOptions = Array.from(customerMap.entries()).map(([mobile, name]) => ({
+      key: `customer-${mobile}`,
+      label: `Customer | ${name} | ${mobile}`,
+      mobile,
+    }));
+
+    return [...driverOptions, ...customerOptions];
+  }
+
+  function selectAdminLookupDashboard(mobile: string) {
+    setAdminLookupMobile(mobile);
+
+    if (!mobile) {
+      return;
+    }
+
+    openAdminLookupDashboard(mobile);
   }
 
   async function updateBookingOperation(
@@ -3434,23 +3475,18 @@ export default function Home() {
             {portalRole === "admin" && dashboard ? (
               <div className="admin-switch-panel">
                 <strong>Switch Dashboard</strong>
-                <div className="admin-login-row admin-lookup-row">
-                  <input
-                    value={adminLookupMobile}
-                    onChange={(event) => setAdminLookupMobile(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        openAdminLookupDashboard();
-                      }
-                    }}
-                    placeholder="Driver Or Customer Mobile"
-                    inputMode="tel"
-                  />
-                  <button type="button" onClick={openAdminLookupDashboard}>
-                    Open Driver/User
-                  </button>
-                </div>
-                <span>Admin Can Open Any Driver Or Customer Dashboard From Here.</span>
+                <select
+                  value={adminLookupMobile}
+                  onChange={(event) => selectAdminLookupDashboard(event.target.value)}
+                >
+                  <option value="">Select Driver Or Customer Dashboard</option>
+                  {getAdminLookupOptions(dashboard).map((option) => (
+                    <option key={option.key} value={option.mobile}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span>Select A Driver Or Customer To Open Their Dashboard Automatically.</span>
               </div>
             ) : null}
             {portalRole === "admin" && dashboard ? (
@@ -3773,17 +3809,18 @@ export default function Home() {
                   <div className="admin-ops-panel ledger-panel admin-tab-panel">
                     <div>
                       <h3>Open Driver Or Customer Dashboard</h3>
-                      <div className="admin-login-row admin-lookup-row">
-                        <input
-                          value={adminLookupMobile}
-                          onChange={(event) => setAdminLookupMobile(event.target.value)}
-                          placeholder="Enter Driver Or Customer Mobile"
-                          inputMode="tel"
-                        />
-                        <button type="button" onClick={openAdminLookupDashboard}>
-                          Open Dashboard
-                        </button>
-                      </div>
+                      <select
+                        className="admin-dashboard-select"
+                        value={adminLookupMobile}
+                        onChange={(event) => selectAdminLookupDashboard(event.target.value)}
+                      >
+                        <option value="">Select Driver Or Customer Dashboard</option>
+                        {getAdminLookupOptions(dashboard).map((option) => (
+                          <option key={`tab-${option.key}`} value={option.mobile}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                       {adminLookupStatus ? (
                         <p className="admin-status">{adminLookupStatus}</p>
                       ) : null}

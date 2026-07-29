@@ -3052,6 +3052,23 @@ h4,
   font-weight: 800;
 }
 
+.admin-switch-panel select,
+.admin-dashboard-select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.admin-dashboard-select {
+  margin: 0 0 10px;
+}
+
 .admin-dashboard {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
