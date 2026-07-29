@@ -3357,7 +3357,7 @@ h4,
 
 .admin-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
   padding: 8px;
   border: 1px solid #dbe4ee;
@@ -3406,6 +3406,19 @@ h4,
 
 .admin-tab-panel {
   grid-column: 1 / -1;
+}
+
+.admin-lookup-row {
+  margin: 0 0 10px;
+}
+
+.lookup-role-chip {
+  width: fit-content;
+  margin: 0 0 12px;
+}
+
+.lookup-booking-list {
+  margin-top: 12px;
 }
 
 .cash-summary-panel {

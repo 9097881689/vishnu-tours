@@ -322,7 +322,13 @@ type DriverWithdrawal = {
 };
 
 type PortalRole = "admin" | "driver" | "customer";
-type AdminPanelTab = "breakup" | "bookings" | "vehicles" | "ledger" | "withdrawals";
+type AdminPanelTab =
+  | "breakup"
+  | "bookings"
+  | "vehicles"
+  | "ledger"
+  | "withdrawals"
+  | "portalLookup";
 
 type AdminBreakupType =
   | "bookings"
@@ -628,6 +634,20 @@ export default function Home() {
   const [customerBooking, setCustomerBooking] = useState<DashboardBooking | null>(
     null,
   );
+  const [adminLookupMobile, setAdminLookupMobile] = useState("");
+  const [adminLookupStatus, setAdminLookupStatus] = useState("");
+  const [adminLookupRole, setAdminLookupRole] = useState<PortalRole | null>(null);
+  const [adminLookupBookings, setAdminLookupBookings] = useState<DashboardBooking[]>([]);
+  const [adminLookupDriverVehicles, setAdminLookupDriverVehicles] = useState<DriverRow[]>([]);
+  const [adminLookupDriverLedger, setAdminLookupDriverLedger] = useState<DashboardBooking[]>([]);
+  const [adminLookupWithdrawals, setAdminLookupWithdrawals] = useState<DriverWithdrawal[]>([]);
+  const [adminLookupNextRide, setAdminLookupNextRide] =
+    useState<DashboardBooking | null>(null);
+  const [adminLookupDriverEarning, setAdminLookupDriverEarning] = useState({
+    completedRides: 0,
+    totalEarning: 0,
+    cashInHand: 0,
+  });
   const [assignmentForm, setAssignmentForm] = useState<
     Record<
       string,
@@ -1398,6 +1418,68 @@ export default function Home() {
       setPortalStatus(loginError);
       window.alert(loginError);
       setDashboard(null);
+    }
+  }
+
+  async function openAdminLookupDashboard() {
+    const normalizedMobile = adminLookupMobile.replace(/\D/g, "");
+
+    if (!normalizedMobile) {
+      setAdminLookupStatus("Please Enter Driver Or Customer Mobile Number.");
+      return;
+    }
+
+    if (normalizedMobile === "7004291529") {
+      setAdminLookupStatus("Admin Dashboard Is Already Open.");
+      return;
+    }
+
+    setAdminLookupStatus("Opening Dashboard...");
+    setAdminLookupRole(null);
+    setAdminLookupBookings([]);
+    setAdminLookupDriverVehicles([]);
+    setAdminLookupDriverLedger([]);
+    setAdminLookupWithdrawals([]);
+    setAdminLookupNextRide(null);
+
+    try {
+      const response = await fetch(
+        `/api/bookings?loginMobile=${encodeURIComponent(normalizedMobile)}`,
+      );
+      const result = (await response.json()) as {
+        role?: PortalRole;
+        recentBookings?: DashboardBooking[];
+        driverVehicles?: DriverRow[];
+        driverLedger?: DashboardBooking[];
+        withdrawalRequests?: DriverWithdrawal[];
+        nextRide?: DashboardBooking | null;
+        driverCashInHand?: number;
+        driverEarning?: {
+          completedRides: number;
+          totalEarning: number;
+        };
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setAdminLookupStatus(result.error || "No User Found. Please Check Mobile Number.");
+        return;
+      }
+
+      setAdminLookupRole(result.role || "customer");
+      setAdminLookupBookings(sortDashboardBookings(result.recentBookings || []));
+      setAdminLookupDriverVehicles(result.driverVehicles || []);
+      setAdminLookupDriverLedger(result.driverLedger || []);
+      setAdminLookupWithdrawals(result.withdrawalRequests || []);
+      setAdminLookupNextRide(result.nextRide || null);
+      setAdminLookupDriverEarning({
+        completedRides: result.driverEarning?.completedRides || 0,
+        totalEarning: result.driverEarning?.totalEarning || 0,
+        cashInHand: result.driverCashInHand || 0,
+      });
+      setAdminLookupStatus("");
+    } catch {
+      setAdminLookupStatus("Dashboard Could Not Be Opened.");
     }
   }
 
@@ -3425,6 +3507,11 @@ export default function Home() {
                               label: "Cash Withdrawal Requests",
                               count: taskCounts.withdrawalPending,
                             },
+                            {
+                              id: "portalLookup",
+                              label: "Open Any Dashboard",
+                              count: adminLookupBookings.length,
+                            },
                           ];
 
                           return tabs.map((tab) => (
@@ -3643,6 +3730,102 @@ export default function Home() {
                     <div>
                       <h3>Cash Withdrawal Requests</h3>
                       {renderWithdrawalList(dashboard.withdrawalRequests, true)}
+                    </div>
+                  </div>
+                ) : null}
+                {activeAdminTab === "portalLookup" ? (
+                  <div className="admin-ops-panel ledger-panel admin-tab-panel">
+                    <div>
+                      <h3>Open Driver Or Customer Dashboard</h3>
+                      <div className="admin-login-row admin-lookup-row">
+                        <input
+                          value={adminLookupMobile}
+                          onChange={(event) => setAdminLookupMobile(event.target.value)}
+                          placeholder="Enter Driver Or Customer Mobile"
+                          inputMode="tel"
+                        />
+                        <button type="button" onClick={openAdminLookupDashboard}>
+                          Open Dashboard
+                        </button>
+                      </div>
+                      {adminLookupStatus ? (
+                        <p className="admin-status">{adminLookupStatus}</p>
+                      ) : null}
+                      {adminLookupRole ? (
+                        <div className="portal-role-chip lookup-role-chip">
+                          {adminLookupRole === "driver"
+                            ? "Driver Dashboard View"
+                            : "Customer Dashboard View"}
+                        </div>
+                      ) : null}
+                      {adminLookupRole === "driver" ? (
+                        <>
+                          <div className="driver-earning-panel">
+                            <div>
+                              <span>Total Earning</span>
+                              <strong>{formatInr(adminLookupDriverEarning.totalEarning)}</strong>
+                            </div>
+                            <div>
+                              <span>Completed Rides</span>
+                              <strong>{adminLookupDriverEarning.completedRides}</strong>
+                            </div>
+                            <div>
+                              <span>Cash In Hand</span>
+                              <strong>{formatInr(adminLookupDriverEarning.cashInHand)}</strong>
+                            </div>
+                          </div>
+                          {adminLookupNextRide ? (
+                            <div className="next-ride-panel">
+                              <span>Next Ride</span>
+                              <strong>
+                                {adminLookupNextRide.booking_id} |{" "}
+                                {formatDisplayDateTime(adminLookupNextRide.pickup_datetime)}
+                              </strong>
+                              <p>
+                                {adminLookupNextRide.start_point} To{" "}
+                                {adminLookupNextRide.destination} |{" "}
+                                {adminLookupNextRide.vehicle}
+                              </p>
+                            </div>
+                          ) : null}
+                          <h3>Registered Vehicles</h3>
+                          <div className="driver-list">
+                            {adminLookupDriverVehicles.length ? (
+                              adminLookupDriverVehicles.map((driverVehicle) => (
+                                <span
+                                  key={`lookup-${driverVehicle.driver_mobile}-${driverVehicle.vehicle_number}`}
+                                >
+                                  Owner {driverVehicle.driver_name} |{" "}
+                                  {driverVehicle.vehicle_type} |{" "}
+                                  {driverVehicle.vehicle_number}
+                                </span>
+                              ))
+                            ) : (
+                              <span>No Registered Vehicle Found.</span>
+                            )}
+                          </div>
+                          <h3>Driver Ledger</h3>
+                          {renderDriverLedger(adminLookupDriverLedger)}
+                          <h3>Withdrawal Requests</h3>
+                          {renderWithdrawalList(adminLookupWithdrawals, false)}
+                        </>
+                      ) : null}
+                      {adminLookupRole ? (
+                        <div className="admin-recent lookup-booking-list">
+                          <h3>
+                            {adminLookupRole === "driver"
+                              ? "Available And Assigned Rides"
+                              : "Customer Bookings"}
+                          </h3>
+                          {adminLookupBookings.length ? (
+                            adminLookupBookings.map((booking) =>
+                              renderPortalBookingCard(booking, false),
+                            )
+                          ) : (
+                            <p>No Bookings Found.</p>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
