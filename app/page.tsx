@@ -3442,7 +3442,7 @@ export default function Home() {
                   </div>
                 ) : null}
                 {activeAdminTab === "vehicles" ? (
-                  <div className="admin-ops-panel admin-tab-panel">
+                  <div className="admin-ops-panel admin-tab-panel vehicle-admin-panel">
                     <div>
                       <h3>Admin Driver And Vehicle Registration</h3>
                       <div className="driver-form">
