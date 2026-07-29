@@ -296,6 +296,9 @@ type DriverRow = {
   driver_mobile: string;
   vehicle_type: string;
   vehicle_number: string;
+  bank_name?: string;
+  bank_account?: string;
+  bank_ifsc?: string;
 };
 
 type DriverCashSummary = {
@@ -618,6 +621,7 @@ export default function Home() {
     totalEarning: 0,
     cashInHand: 0,
   });
+  const [maxWithdrawalAmount, setMaxWithdrawalAmount] = useState(0);
   const [collectionPrompt, setCollectionPrompt] = useState<DashboardBooking | null>(
     null,
   );
@@ -1327,6 +1331,7 @@ export default function Home() {
     setDriverLedger([]);
     setWithdrawalRequests([]);
     setNextRide(null);
+    setMaxWithdrawalAmount(0);
 
     try {
       const response = await fetch(
@@ -1353,6 +1358,7 @@ export default function Home() {
           completedRides: number;
           totalEarning: number;
         };
+        maxWithdrawalAmount?: number;
         error?: string;
       };
 
@@ -1410,6 +1416,13 @@ export default function Home() {
           totalEarning: result.driverEarning?.totalEarning || 0,
           cashInHand: result.driverCashInHand || 0,
         });
+        setMaxWithdrawalAmount(result.maxWithdrawalAmount || 0);
+        setWithdrawalForm((currentForm) => ({
+          ...currentForm,
+          bankName: result.driverProfile?.bank_name || currentForm.bankName,
+          bankAccount: result.driverProfile?.bank_account || currentForm.bankAccount,
+          bankIfsc: result.driverProfile?.bank_ifsc || currentForm.bankIfsc,
+        }));
       }
 
       setPortalStatus("");
@@ -2004,9 +2017,9 @@ export default function Home() {
 
       setWithdrawalForm({
         amount: "",
-        bankName: "",
-        bankAccount: "",
-        bankIfsc: "",
+        bankName: withdrawalForm.bankName,
+        bankAccount: withdrawalForm.bankAccount,
+        bankIfsc: withdrawalForm.bankIfsc,
       });
       await loadDashboard();
       setPortalStatus("Withdrawal Request Sent To Admin.");
@@ -3875,6 +3888,22 @@ export default function Home() {
                   <div className="admin-ops-panel ledger-panel">
                     <div>
                       <h3>Cash Withdrawal Request</h3>
+                      <div className="withdrawal-limit-box">
+                        <span>Maximum Withdrawal After Cash Adjustment</span>
+                        <strong>{formatInr(maxWithdrawalAmount)}</strong>
+                        <button
+                          type="button"
+                          disabled={maxWithdrawalAmount < 1}
+                          onClick={() =>
+                            setWithdrawalForm((currentForm) => ({
+                              ...currentForm,
+                              amount: String(maxWithdrawalAmount),
+                            }))
+                          }
+                        >
+                          Use Max
+                        </button>
+                      </div>
                       <div className="driver-form withdrawal-form">
                         <input
                           value={withdrawalForm.amount}

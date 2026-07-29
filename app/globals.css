@@ -3496,6 +3496,48 @@ h4,
   margin-bottom: 12px;
 }
 
+.withdrawal-limit-box {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.withdrawal-limit-box span {
+  color: #166534;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.withdrawal-limit-box strong {
+  color: #15803d;
+  font-size: 24px;
+}
+
+.withdrawal-limit-box button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #15803d;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.withdrawal-limit-box button:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 .admin-recent {
   grid-column: 1 / -1;
   display: grid;
@@ -4093,6 +4135,7 @@ h4,
   .admin-login-row,
   .admin-ops-panel,
   .driver-list .driver-cash-row,
+  .withdrawal-limit-box,
   .driver-earning-panel,
   .driver-form,
   .booking-detail-grid,

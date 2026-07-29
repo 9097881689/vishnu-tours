@@ -101,6 +101,9 @@ type DriverRow = {
   driver_mobile: string;
   vehicle_type: string;
   vehicle_number: string;
+  bank_name?: string;
+  bank_account?: string;
+  bank_ifsc?: string;
   updated_at: string;
 };
 
@@ -369,6 +372,21 @@ async function getWithdrawals(driverMobile?: string) {
   return withdrawals.results || [];
 }
 
+async function getDriverSavedBankDetails(driverMobile: string) {
+  const latestWithdrawal = await env.DB.prepare(
+    `SELECT bank_name, bank_account, bank_ifsc
+     FROM driver_withdrawals
+     WHERE driver_mobile = ?
+       AND COALESCE(bank_account, '') != ''
+     ORDER BY id DESC
+     LIMIT 1`,
+  )
+    .bind(driverMobile)
+    .first<{ bank_name: string; bank_account: string; bank_ifsc: string }>();
+
+  return latestWithdrawal || { bank_name: "", bank_account: "", bank_ifsc: "" };
+}
+
 async function ensureBookingsTable() {
   const db = env.DB;
   if (!db) {
@@ -495,10 +513,26 @@ async function ensureBookingsTable() {
         driver_name TEXT NOT NULL,
         vehicle_type TEXT NOT NULL,
         vehicle_number TEXT NOT NULL,
+        bank_name TEXT NOT NULL DEFAULT '',
+        bank_account TEXT NOT NULL DEFAULT '',
+        bank_ifsc TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL
       )`,
     )
     .run();
+
+  await db
+    .prepare("ALTER TABLE drivers ADD COLUMN bank_name TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE drivers ADD COLUMN bank_account TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE drivers ADD COLUMN bank_ifsc TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
 
   await db
     .prepare(
@@ -592,7 +626,8 @@ export async function GET(request: Request) {
       }
 
       const driverProfile = await env.DB.prepare(
-        `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
+        `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number,
+           bank_name, bank_account, bank_ifsc, updated_at
          FROM drivers
          WHERE driver_mobile = ?
          LIMIT 1`,
@@ -632,9 +667,21 @@ export async function GET(request: Request) {
       );
 
       if (driverProfile || driverBookings.results?.length) {
+        const latestBank = driverProfile
+          ? await getDriverSavedBankDetails(loginMobile)
+          : { bank_name: "", bank_account: "", bank_ifsc: "" };
+        const profileWithBank = driverProfile
+          ? {
+              ...driverProfile,
+              bank_name: driverProfile.bank_name || latestBank.bank_name,
+              bank_account: driverProfile.bank_account || latestBank.bank_account,
+              bank_ifsc: driverProfile.bank_ifsc || latestBank.bank_ifsc,
+            }
+          : driverProfile;
+
         return Response.json({
           role: "driver",
-          driverProfile,
+          driverProfile: profileWithBank,
           driverVehicles,
           nextRide: await getDriverNextRide(loginMobile),
           recentBookings: [
@@ -643,6 +690,7 @@ export async function GET(request: Request) {
           ],
           driverEarning: await getDriverEarning(loginMobile),
           driverCashInHand: await getDriverCashInHand(loginMobile),
+          maxWithdrawalAmount: await getDriverWithdrawableBalance(loginMobile),
           driverLedger: await getDriverLedger(loginMobile),
           withdrawalRequests: await getWithdrawals(loginMobile),
         });
@@ -798,6 +846,14 @@ export async function PATCH(request: Request) {
             bankAccount,
             bankIfsc,
           )
+          .run();
+
+        await env.DB.prepare(
+          `UPDATE drivers
+           SET bank_name = ?, bank_account = ?, bank_ifsc = ?, updated_at = ?
+           WHERE driver_mobile = ?`,
+        )
+          .bind(bankName, bankAccount, bankIfsc, now, driverMobile)
           .run();
 
         return Response.json({ success: true });
