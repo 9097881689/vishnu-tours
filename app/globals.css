@@ -3827,6 +3827,29 @@ h4,
   background: #f8fafc;
 }
 
+.admin-payment-field {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-payment-field span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-payment-field select {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
 .collection-meta-grid span {
   color: #64748b;
   font-size: 12px;

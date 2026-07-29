@@ -696,6 +696,12 @@ export default function Home() {
     vehicle: "Toyota Innova Crysta",
     vehicleNumber: "",
   });
+  const [adminPaymentPrompt, setAdminPaymentPrompt] =
+    useState<DashboardBooking | null>(null);
+  const [adminPaymentSource, setAdminPaymentSource] = useState<"online" | "driver_cash">(
+    "online",
+  );
+  const [adminPaymentDriverMobile, setAdminPaymentDriverMobile] = useState("");
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -1528,6 +1534,18 @@ export default function Home() {
     return [...driverOptions, ...customerOptions];
   }
 
+  function getUniqueDriverOptions() {
+    const driverMap = new Map<string, DriverProfile>();
+
+    drivers.forEach((driver) => {
+      if (driver.mobile && !driverMap.has(driver.mobile)) {
+        driverMap.set(driver.mobile, driver);
+      }
+    });
+
+    return Array.from(driverMap.values());
+  }
+
   function selectAdminLookupDashboard(mobile: string) {
     setAdminLookupMobile(mobile);
 
@@ -1979,6 +1997,47 @@ export default function Home() {
     await updateBookingOperation(booking.booking_id, {
       rideStatus: "Ride Started",
     });
+  }
+
+  function openAdminPaymentPrompt(booking: DashboardBooking) {
+    setAdminPaymentPrompt(booking);
+    setAdminPaymentSource("online");
+    setAdminPaymentDriverMobile(booking.driver_mobile || "");
+  }
+
+  async function submitAdminPaymentReceived() {
+    if (!adminPaymentPrompt) {
+      return;
+    }
+
+    const selectedDriver = drivers.find(
+      (driver) => driver.mobile === adminPaymentDriverMobile,
+    );
+    const totalWithGst = getInvoiceTotals(adminPaymentPrompt).total;
+    const balanceToCollect = Math.max(
+      0,
+      totalWithGst - Number(adminPaymentPrompt.payment_amount || 0),
+    );
+
+    if (adminPaymentSource === "driver_cash" && !selectedDriver) {
+      setPortalStatus("Select Driver Who Received Cash.");
+      return;
+    }
+
+    const cashDriver = adminPaymentSource === "driver_cash" ? selectedDriver : undefined;
+
+    await updateBookingOperation(adminPaymentPrompt.booking_id, {
+      paymentStatus: "Complete",
+      paymentAmount: totalWithGst,
+      rideStatus: "Payment Received",
+      collectionMode: adminPaymentSource === "online" ? "online" : "driver_cash",
+      cashCollected: adminPaymentSource === "driver_cash" ? balanceToCollect : 0,
+      driverName: cashDriver?.name,
+      driverMobile: cashDriver?.mobile,
+      vehicle: cashDriver?.vehicle,
+      vehicleNumber: cashDriver?.vehicleNumber,
+    });
+    setAdminPaymentPrompt(null);
   }
 
   async function updatePaymentReceived(
@@ -2755,13 +2814,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  updateBookingOperation(booking.booking_id, {
-                    paymentStatus: "Complete",
-                    paymentAmount: getInvoiceTotals(booking).total,
-                    rideStatus: "Payment Received",
-                  })
-                }
+                onClick={() => openAdminPaymentPrompt(booking)}
               >
                 Payment Received
               </button>
@@ -3433,6 +3486,84 @@ export default function Home() {
             {collectionStatus ? (
               <p className="collection-status">{collectionStatus}</p>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {adminPaymentPrompt ? (
+        <div className="collection-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="collection-modal admin-payment-modal">
+            <button
+              className="admin-close"
+              type="button"
+              onClick={() => setAdminPaymentPrompt(null)}
+            >
+              ×
+            </button>
+            <span className="collection-alert-label">Admin Payment Received</span>
+            <h2>{adminPaymentPrompt.booking_id}</h2>
+            <p>
+              Select How Payment Was Received For {adminPaymentPrompt.customer_name}.
+            </p>
+            <div className="collection-meta-grid">
+              <span>Total Fare With GST</span>
+              <b>{formatInr(getInvoiceTotals(adminPaymentPrompt).total)}</b>
+              <span>Already Paid</span>
+              <b>{formatPaymentAmount(adminPaymentPrompt.payment_amount || 0)}</b>
+              <span>Balance To Update</span>
+              <b>
+                {formatInr(
+                  Math.max(
+                    0,
+                    getInvoiceTotals(adminPaymentPrompt).total -
+                      Number(adminPaymentPrompt.payment_amount || 0),
+                  ),
+                )}
+              </b>
+            </div>
+            <label className="admin-payment-field">
+              <span>Payment Received By</span>
+              <select
+                value={adminPaymentSource}
+                onChange={(event) =>
+                  setAdminPaymentSource(event.target.value as "online" | "driver_cash")
+                }
+              >
+                <option value="online">Online</option>
+                <option value="driver_cash">Driver Cash</option>
+              </select>
+            </label>
+            {adminPaymentSource === "driver_cash" ? (
+              <label className="admin-payment-field">
+                <span>Select Driver</span>
+                <select
+                  value={adminPaymentDriverMobile}
+                  onChange={(event) => setAdminPaymentDriverMobile(event.target.value)}
+                >
+                  <option value="">Select Driver Who Received Cash</option>
+                  {getUniqueDriverOptions().map((driver) => (
+                    <option
+                      key={`payment-driver-${driver.mobile}-${driver.vehicleNumber}`}
+                      value={driver.mobile}
+                    >
+                      {driver.name} | {driver.mobile} | {driver.vehicle}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <div className="collection-actions">
+              <button type="button" onClick={submitAdminPaymentReceived}>
+                Confirm Payment Received
+              </button>
+              <button
+                className="ghost-action"
+                type="button"
+                onClick={() => setAdminPaymentPrompt(null)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

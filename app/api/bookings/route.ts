@@ -344,7 +344,7 @@ async function getDriverCashSummary() {
 async function getDriverLedger(driverMobile?: string) {
   const query = `${bookingSelectSql}
      WHERE booking_id NOT LIKE 'PENDING-%'
-       AND ride_status = 'Ride Complete'
+       AND (ride_status = 'Ride Complete' OR driver_cash_collected > 0)
        ${driverMobile ? "AND driver_mobile = ?" : ""}
      ORDER BY COALESCE(ride_completed_at, pickup_datetime, created_at) DESC
      LIMIT 80`;
@@ -1239,6 +1239,18 @@ export async function PATCH(request: Request) {
     const requestedDriverMobile = clean(payload.driverMobile);
     const requestedDriverName = clean(payload.driverName);
     const requestedVehicleNumber = clean(payload.vehicleNumber);
+    const requestedCollectionMode = clean(payload.collectionMode);
+    const requestedCashCollected = Math.max(
+      0,
+      Math.round(Number(payload.cashCollected || 0)),
+    );
+
+    if (requestedCashCollected > 0 && !requestedDriverMobile) {
+      return Response.json(
+        { error: "Select Driver Who Received Cash." },
+        { status: 400 },
+      );
+    }
 
     if (
       requestedRideStatus === "Ride Started" &&
@@ -1313,6 +1325,11 @@ export async function PATCH(request: Request) {
            driver_name = COALESCE(NULLIF(?, ''), driver_name),
            driver_mobile = COALESCE(NULLIF(?, ''), driver_mobile),
            vehicle_number = COALESCE(NULLIF(?, ''), vehicle_number),
+           payment_collection_mode = COALESCE(NULLIF(?, ''), payment_collection_mode),
+           driver_cash_collected = CASE
+             WHEN ? > 0 THEN driver_cash_collected + ?
+             ELSE driver_cash_collected
+           END,
            cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason),
            ride_started_at = CASE
              WHEN NULLIF(?, '') IS NOT NULL AND ride_started_at = '' THEN ?
@@ -1335,6 +1352,9 @@ export async function PATCH(request: Request) {
         requestedDriverName,
         requestedDriverMobile,
         requestedVehicleNumber,
+        requestedCollectionMode,
+        requestedCashCollected,
+        requestedCashCollected,
         clean(payload.cancelReason),
         rideStartedAt,
         rideStartedAt,
