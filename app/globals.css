@@ -3555,6 +3555,40 @@ h4,
   gap: 8px;
 }
 
+.driver-due-panel {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #dbe4ee;
+}
+
+.driver-due-panel span {
+  font-size: 12px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.driver-due-panel strong {
+  font-size: 22px;
+}
+
+.driver-due-clear {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.driver-due-pending {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #dc2626;
+}
+
+.driver-ride-actions button:nth-child(2) {
+  background: #dc2626;
+}
+
 .booking-actions button:nth-child(4),
 .booking-actions button:nth-child(7) {
   background: #dc2626;

@@ -783,6 +783,42 @@ export async function PATCH(request: Request) {
         return Response.json({ success: true });
       }
 
+      if (payload.action === "driverCancelRide" && driverMobile) {
+        const assignedBooking = await env.DB.prepare(
+          `SELECT booking_id, ride_completed_at
+           FROM bookings
+           WHERE booking_id = ? AND driver_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(bookingId, driverMobile)
+          .first<{ booking_id: string; ride_completed_at: string }>();
+
+        if (!assignedBooking) {
+          return Response.json(
+            { error: "This Ride Is Not Assigned To This Driver." },
+            { status: 403 },
+          );
+        }
+
+        if (assignedBooking.ride_completed_at) {
+          return Response.json(
+            { error: "Completed Ride Cannot Be Cancelled By Driver." },
+            { status: 409 },
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE bookings
+           SET ride_status = 'Ride Cancelled',
+               cancel_reason = 'Cancelled By Driver'
+           WHERE booking_id = ? AND driver_mobile = ?`,
+        )
+          .bind(bookingId, driverMobile)
+          .run();
+
+        return Response.json({ success: true });
+      }
+
       return Response.json({ error: "Invalid login mobile." }, { status: 401 });
     }
 

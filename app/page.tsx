@@ -1556,6 +1556,38 @@ export default function Home() {
     }
   }
 
+  async function cancelDriverRide(booking: DashboardBooking) {
+    if (booking.driver_mobile !== driverProfileForm.mobile.replace(/\D/g, "")) {
+      setPortalStatus("This Ride Is Not Assigned To This Driver.");
+      return;
+    }
+
+    setPortalStatus("Cancelling Ride...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "driverCancelRide",
+          mobile: driverProfileForm.mobile.replace(/\D/g, ""),
+          bookingId: booking.booking_id,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Ride Could Not Be Cancelled.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus("Ride Cancelled.");
+    } catch {
+      setPortalStatus("Ride Could Not Be Cancelled.");
+    }
+  }
+
   async function completeRideWithCash(booking: DashboardBooking) {
     const balanceDue = getBalanceDue(booking);
 
@@ -1963,22 +1995,43 @@ export default function Home() {
         ) : null}
         {portalRole === "driver" &&
         booking.driver_mobile === driverProfileForm.mobile.replace(/\D/g, "") ? (
-          <div className="booking-actions">
-            <button
-              type="button"
-              disabled={Boolean(booking.ride_started_at)}
-              onClick={() => updateDriverRideStatus(booking, "Ride Started")}
+          <>
+            <div
+              className={`driver-due-panel ${
+                balanceDue > 0 ? "driver-due-pending" : "driver-due-clear"
+              }`}
             >
-              Ride Started
-            </button>
-            <button
-              type="button"
-              disabled={!booking.ride_started_at || Boolean(booking.ride_completed_at)}
-              onClick={() => updateDriverRideStatus(booking, "Ride Complete")}
-            >
-              Ride Complete
-            </button>
-          </div>
+              <span>Due Amount Before Start / Complete</span>
+              <strong>
+                {balanceDue > 0
+                  ? `Collect ${formatInr(balanceDue)}`
+                  : "Due ₹0"}
+              </strong>
+            </div>
+            <div className="booking-actions driver-ride-actions">
+              <button
+                type="button"
+                disabled={Boolean(booking.ride_started_at)}
+                onClick={() => updateDriverRideStatus(booking, "Ride Started")}
+              >
+                Ride Start
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(booking.ride_completed_at)}
+                onClick={() => cancelDriverRide(booking)}
+              >
+                Cancel Ride
+              </button>
+              <button
+                type="button"
+                disabled={!booking.ride_started_at || Boolean(booking.ride_completed_at)}
+                onClick={() => updateDriverRideStatus(booking, "Ride Complete")}
+              >
+                Ride Complete
+              </button>
+            </div>
+          </>
         ) : null}
         {canManage ? (
           <>
