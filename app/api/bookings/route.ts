@@ -17,6 +17,7 @@ type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
 
 type BookingPayload = {
   action?: string;
+  requesterMobile?: string;
   tripType?: string;
   vehicle?: string;
   vehicleNumber?: string;
@@ -95,6 +96,8 @@ type DriverRow = {
   updated_at: string;
 };
 
+type DriverVehicleRow = DriverRow;
+
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
@@ -119,12 +122,45 @@ async function getRecentBookings(limit = 8) {
 
 async function getDrivers() {
   const drivers = await env.DB.prepare(
-    `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
-     FROM drivers
-     ORDER BY updated_at DESC`,
+    `SELECT d.driver_name, d.driver_mobile,
+      COALESCE(v.vehicle_type, d.vehicle_type) AS vehicle_type,
+      COALESCE(v.vehicle_number, d.vehicle_number) AS vehicle_number,
+      COALESCE(v.updated_at, d.updated_at) AS updated_at
+     FROM drivers d
+     LEFT JOIN driver_vehicles v ON v.driver_mobile = d.driver_mobile
+     ORDER BY COALESCE(v.updated_at, d.updated_at) DESC`,
   ).all<DriverRow>();
 
   return drivers.results || [];
+}
+
+async function getDriverVehicles(driverMobile: string) {
+  const vehicles = await env.DB.prepare(
+    `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
+     FROM driver_vehicles
+     WHERE driver_mobile = ?
+     ORDER BY updated_at DESC`,
+  )
+    .bind(driverMobile)
+    .all<DriverVehicleRow>();
+
+  return vehicles.results || [];
+}
+
+async function getDriverNextRide(driverMobile: string) {
+  const ride = await env.DB.prepare(
+    `${bookingSelectSql}
+     WHERE booking_id NOT LIKE 'PENDING-%'
+       AND driver_mobile = ?
+       AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+       AND pickup_datetime >= ?
+     ORDER BY pickup_datetime ASC
+     LIMIT 1`,
+  )
+    .bind(driverMobile, new Date().toISOString().slice(0, 16))
+    .first<BookingRow>();
+
+  return ride || null;
 }
 
 async function getDriverEarning(driverMobile: string) {
@@ -303,6 +339,30 @@ async function ensureBookingsTable() {
       )`,
     )
     .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS driver_vehicles (
+        vehicle_number TEXT PRIMARY KEY,
+        driver_mobile TEXT NOT NULL,
+        driver_name TEXT NOT NULL,
+        vehicle_type TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO driver_vehicles (
+        vehicle_number, driver_mobile, driver_name, vehicle_type, updated_at
+      )
+      SELECT vehicle_number, driver_mobile, driver_name, vehicle_type, updated_at
+      FROM drivers
+      WHERE COALESCE(vehicle_number, '') != ''`,
+    )
+    .run()
+    .catch(() => undefined);
 }
 
 export async function GET(request: Request) {
@@ -356,27 +416,24 @@ export async function GET(request: Request) {
             `${bookingSelectSql}
              WHERE booking_id NOT LIKE 'PENDING-%'
                AND COALESCE(driver_mobile, '') = ''
-               AND vehicle = ?
                AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
-               AND (
-                 payment_status = 'Complete'
-                 OR payment_amount > 0
-                 OR ride_status IN ('Payment Received', 'Booking Confirmed')
-               )
              ORDER BY id DESC
              LIMIT 20`,
           )
-            .bind(driverProfile.vehicle_type)
             .all<BookingRow>()
         : { results: [] as BookingRow[] };
 
       if (driverProfile || driverBookings.results?.length) {
+        const driverVehicles = await getDriverVehicles(loginMobile);
+
         return Response.json({
           role: "driver",
           driverProfile,
+          driverVehicles,
+          nextRide: await getDriverNextRide(loginMobile),
           recentBookings: [
-            ...(driverBookings.results || []),
             ...(openBookings.results || []),
+            ...(driverBookings.results || []),
           ],
           driverEarning: await getDriverEarning(loginMobile),
           driverCashInHand: await getDriverCashInHand(loginMobile),
@@ -402,6 +459,8 @@ export async function GET(request: Request) {
       return Response.json({
         role: "driver",
         driverProfile: null,
+        driverVehicles: [],
+        nextRide: null,
         recentBookings: openBookings.results || [],
         driverEarning: { completedRides: 0, totalEarning: 0 },
         driverCashInHand: 0,
@@ -534,14 +593,11 @@ export async function PATCH(request: Request) {
           );
         }
 
-        if (booking.vehicle !== driver.vehicle_type) {
-          return Response.json(
-            {
-              error: `This Ride Requires ${booking.vehicle}. Your Saved Vehicle Is ${driver.vehicle_type}.`,
-            },
-            { status: 409 },
-          );
-        }
+        const driverVehicles = await getDriverVehicles(driverMobile);
+        const assignedVehicle =
+          driverVehicles.find((vehicle) => vehicle.vehicle_type === booking.vehicle) ||
+          driverVehicles[0] ||
+          driver;
 
         const conflict = await env.DB.prepare(
           `SELECT booking_id, pickup_datetime
@@ -568,15 +624,17 @@ export async function PATCH(request: Request) {
         await env.DB.prepare(
           `UPDATE bookings
            SET ride_status = 'Driver Assigned',
+               vehicle = ?,
                driver_name = ?,
                driver_mobile = ?,
                vehicle_number = ?
            WHERE booking_id = ? AND COALESCE(driver_mobile, '') = ''`,
         )
           .bind(
+            assignedVehicle.vehicle_type,
             driver.driver_name,
             driver.driver_mobile,
-            driver.vehicle_number,
+            assignedVehicle.vehicle_number,
             bookingId,
           )
           .run();
@@ -887,6 +945,13 @@ export async function POST(request: Request) {
     await ensureBookingsTable();
 
     if (action === "saveDriver") {
+      if (clean(payload.requesterMobile) !== adminMobile) {
+        return Response.json(
+          { error: "Only Admin Can Register Driver And Vehicle." },
+          { status: 401 },
+        );
+      }
+
       const driverName = clean(payload.name);
       const driverMobile = clean(payload.mobile);
       const vehicleType = clean(payload.vehicle);
@@ -914,6 +979,25 @@ export async function POST(request: Request) {
           driverName,
           vehicleType,
           vehicleNumber,
+          new Date().toISOString(),
+        )
+        .run();
+
+      await env.DB.prepare(
+        `INSERT INTO driver_vehicles (
+          vehicle_number, driver_mobile, driver_name, vehicle_type, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(vehicle_number) DO UPDATE SET
+          driver_mobile = excluded.driver_mobile,
+          driver_name = excluded.driver_name,
+          vehicle_type = excluded.vehicle_type,
+          updated_at = excluded.updated_at`,
+      )
+        .bind(
+          vehicleNumber,
+          driverMobile,
+          driverName,
+          vehicleType,
           new Date().toISOString(),
         )
         .run();

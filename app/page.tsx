@@ -305,6 +305,16 @@ type DriverCashSummary = {
   cash_rides: number;
 };
 
+const permanentWorkflowRules = [
+  "Any Registered Driver Can Take Any Registered Vehicle Assigned By Admin.",
+  "Vehicle Registration Is Admin Only.",
+  "Admin Gets A Conflict Message If A Driver Is Already Engaged On The Same Date And Time.",
+  "Postpaid Bookings Can Be Assigned And Started Before Payment Received.",
+  "Driver Can Start And Complete Assigned Rides.",
+  "Ride Completion Requires Balance Collection If Any Amount Is Pending.",
+  "Prepaid Payment Amount Shows In Green And Postpaid Pending Amount Shows In Red.",
+];
+
 type PortalRole = "admin" | "driver" | "customer";
 
 type WorkflowStage = {
@@ -472,6 +482,22 @@ function getBalanceDue(booking: DashboardBooking) {
   return Math.max(0, total - Number(booking.payment_amount || 0));
 }
 
+function sortDashboardBookings(bookings: DashboardBooking[]) {
+  return [...bookings].sort((firstBooking, secondBooking) => {
+    const firstOpen = firstBooking.driver_mobile ? 1 : 0;
+    const secondOpen = secondBooking.driver_mobile ? 1 : 0;
+
+    if (firstOpen !== secondOpen) {
+      return firstOpen - secondOpen;
+    }
+
+    return (
+      new Date(secondBooking.created_at).getTime() -
+      new Date(firstBooking.created_at).getTime()
+    );
+  });
+}
+
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
   const mumbaiAreas = [
@@ -556,6 +582,8 @@ export default function Home() {
   const [portalStatus, setPortalStatus] = useState("");
   const [portalRole, setPortalRole] = useState<PortalRole | null>(null);
   const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
+  const [driverVehicles, setDriverVehicles] = useState<DriverRow[]>([]);
+  const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
     totalEarning: 0,
@@ -1245,6 +1273,8 @@ export default function Home() {
     setPortalRole(null);
     setDashboard(null);
     setPortalBookings([]);
+    setDriverVehicles([]);
+    setNextRide(null);
 
     try {
       const response = await fetch(
@@ -1256,6 +1286,8 @@ export default function Home() {
         totalFare?: number;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
+        driverVehicles?: DriverRow[];
+        nextRide?: DashboardBooking | null;
         driverCashSummary?: DriverCashSummary[];
         driverCashInHand?: number;
         driverProfile?: DriverRow | null;
@@ -1273,7 +1305,9 @@ export default function Home() {
       }
 
       setPortalRole(result.role || "customer");
-      setPortalBookings(result.recentBookings || []);
+      setPortalBookings(sortDashboardBookings(result.recentBookings || []));
+      setDriverVehicles(result.driverVehicles || []);
+      setNextRide(result.nextRide || null);
 
       if (result.drivers) {
         setDrivers(
@@ -1395,6 +1429,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "saveDriver",
+          requesterMobile: loginMobile.replace(/\D/g, ""),
           name: form.name,
           mobile: form.mobile.replace(/\D/g, ""),
           vehicle: form.vehicle,
@@ -1419,14 +1454,7 @@ export default function Home() {
 
   async function acceptRide(booking: DashboardBooking) {
     if (!driverProfileForm.name || !driverProfileForm.vehicleNumber) {
-      setPortalStatus("Please Save Driver Profile Before Accepting Ride.");
-      return;
-    }
-
-    if (booking.vehicle !== driverProfileForm.vehicle) {
-      setPortalStatus(
-        `This Ride Requires ${booking.vehicle}. Your Saved Vehicle Is ${driverProfileForm.vehicle}.`,
-      );
+      setPortalStatus("Admin Must Register Driver And Vehicle Before Accepting Ride.");
       return;
     }
 
@@ -1837,6 +1865,15 @@ export default function Home() {
         : "booking-card-progress";
     const invoiceTotals = getInvoiceTotals(booking);
     const balanceDue = getBalanceDue(booking);
+    const hasPayment = Number(booking.payment_amount || 0) > 0;
+    const uniqueDrivers = drivers.filter(
+      (driver, index, driverList) =>
+        driverList.findIndex((item) => item.mobile === driver.mobile) === index,
+    );
+    const selectedAssignmentDriver = assignmentForm[booking.booking_id]?.driverMobile;
+    const assignmentVehicleRows = selectedAssignmentDriver
+      ? drivers.filter((driver) => driver.mobile === selectedAssignmentDriver)
+      : drivers;
 
     return (
       <article className={cardStatusClass} key={booking.booking_id}>
@@ -1860,10 +1897,12 @@ export default function Home() {
           <b>
             {formatDisplayDate((booking.pickup_datetime || booking.created_at).slice(0, 10))}
           </b>
+          <small>Booking Date And Time</small>
+          <b>{formatDisplayDateTime(booking.pickup_datetime || booking.created_at)}</b>
           <small>Fare</small>
           <b>{formatInr(invoiceTotals.total)} Including GST 5%</b>
           <small>Payment</small>
-          <b>
+          <b className={hasPayment ? "payment-prepaid-text" : "payment-postpaid-text"}>
             {booking.payment_status || "Pending"} |{" "}
             {formatPaymentAmount(booking.payment_amount || 0)}
           </b>
@@ -1902,8 +1941,7 @@ export default function Home() {
               type="button"
               disabled={
                 !driverProfileForm.name ||
-                !driverProfileForm.vehicleNumber ||
-                booking.vehicle !== driverProfileForm.vehicle
+                !driverProfileForm.vehicleNumber
               }
               onClick={() => acceptRide(booking)}
             >
@@ -1940,6 +1978,9 @@ export default function Home() {
                   const selectedDriver = drivers.find(
                     (driver) => driver.mobile === event.target.value,
                   );
+                  const firstVehicleForDriver = drivers.find(
+                    (driver) => driver.mobile === event.target.value && driver.vehicleNumber,
+                  );
 
                   setAssignmentForm((currentForm) => ({
                     ...currentForm,
@@ -1947,17 +1988,17 @@ export default function Home() {
                       driverName: selectedDriver?.name || "",
                       driverMobile: selectedDriver?.mobile || "",
                       vehicleName:
-                        selectedDriver?.vehicle ||
+                        firstVehicleForDriver?.vehicle ||
                         currentForm[booking.booking_id]?.vehicleName ||
                         booking.vehicle,
-                      vehicleNumber: selectedDriver?.vehicleNumber || "",
+                      vehicleNumber: firstVehicleForDriver?.vehicleNumber || "",
                     },
                   }));
                   }
                 }
               >
                 <option value="">Select Driver</option>
-                {drivers.map((driver) => (
+                {uniqueDrivers.map((driver) => (
                   <option key={`${booking.booking_id}-${driver.mobile}`} value={driver.mobile}>
                     {driver.name} | {driver.mobile}
                   </option>
@@ -1990,6 +2031,11 @@ export default function Home() {
               <select
                 value={assignmentForm[booking.booking_id]?.vehicleNumber || ""}
                 onChange={(event) =>
+                  {
+                  const selectedVehicle = drivers.find(
+                    (driver) => driver.vehicleNumber === event.target.value,
+                  );
+
                   setAssignmentForm((currentForm) => ({
                     ...currentForm,
                     [booking.booking_id]: {
@@ -1998,19 +2044,24 @@ export default function Home() {
                       driverMobile:
                         currentForm[booking.booking_id]?.driverMobile || "",
                       vehicleName:
-                        currentForm[booking.booking_id]?.vehicleName || booking.vehicle,
+                        selectedVehicle?.vehicle ||
+                        currentForm[booking.booking_id]?.vehicleName ||
+                        booking.vehicle,
                       vehicleNumber: event.target.value,
                     },
-                  }))
+                  }));
+                  }
                 }
               >
                 <option value="">Select Vehicle Number</option>
-                {drivers
-                  .map((driver) => driver.vehicleNumber)
-                  .filter(Boolean)
-                  .map((number) => (
-                    <option key={`${booking.booking_id}-${number}`} value={number}>
-                      {number}
+                {assignmentVehicleRows
+                  .filter((driver) => driver.vehicleNumber)
+                  .map((driver) => (
+                    <option
+                      key={`${booking.booking_id}-${driver.vehicleNumber}`}
+                      value={driver.vehicleNumber}
+                    >
+                      {driver.vehicleNumber} | {driver.vehicle}
                     </option>
                   ))}
               </select>
@@ -2827,9 +2878,17 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                <div className="workflow-rules-panel">
+                  <h3>Permanent Workflow Rules</h3>
+                  <div>
+                    {permanentWorkflowRules.map((rule) => (
+                      <span key={rule}>{rule}</span>
+                    ))}
+                  </div>
+                </div>
                 <div className="admin-ops-panel">
                   <div>
-                    <h3>Driver Onboarding</h3>
+                    <h3>Admin Driver And Vehicle Registration</h3>
                     <div className="driver-form">
                       <input
                         value={driverForm.name}
@@ -2877,16 +2936,16 @@ export default function Home() {
                         ))}
                       </select>
                       <button type="button" onClick={onboardDriver}>
-                        Add Driver
+                        Register Driver Vehicle
                       </button>
                     </div>
                   </div>
                   <div>
-                    <h3>Driver Pool</h3>
+                    <h3>Registered Driver Vehicles</h3>
                     <div className="driver-list">
                       {drivers.map((driver) => (
-                        <span key={`${driver.name}-${driver.mobile}`}>
-                          {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
+                        <span key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}>
+                          Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
                           {driver.vehicleNumber || "Vehicle No. Pending"}
                         </span>
                       ))}
@@ -2923,6 +2982,19 @@ export default function Home() {
                       <strong>{formatInr(driverEarning.cashInHand)}</strong>
                     </div>
                   </div>
+                  {nextRide ? (
+                    <div className="next-ride-panel">
+                      <span>Next Ride</span>
+                      <strong>
+                        {nextRide.booking_id} |{" "}
+                        {formatDisplayDateTime(nextRide.pickup_datetime)}
+                      </strong>
+                      <p>
+                        {nextRide.start_point} To {nextRide.destination} |{" "}
+                        {nextRide.vehicle} | {nextRide.vehicle_number || "Vehicle Pending"}
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="admin-ops-panel driver-profile-panel">
                     <div>
                       <h3>Driver Profile</h3>
@@ -2930,64 +3002,28 @@ export default function Home() {
                         <div className="driver-profile-summary">
                           <strong>{driverProfileForm.name}</strong>
                           <span>Mobile: {driverProfileForm.mobile}</span>
-                          <span>Vehicle: {driverProfileForm.vehicle}</span>
-                          <span>Vehicle No: {driverProfileForm.vehicleNumber}</span>
+                          <span>Primary Vehicle: {driverProfileForm.vehicle}</span>
+                          <span>Primary Vehicle No: {driverProfileForm.vehicleNumber}</span>
                         </div>
                       ) : (
                         <p className="driver-profile-note">
-                          Save Your Driver And Vehicle Details Once To Accept Matching Rides.
+                          Admin Must Register This Driver Before Rides Can Be Accepted.
                         </p>
                       )}
-                      <div className="driver-form">
-                        <input
-                          value={driverProfileForm.name}
-                          onChange={(event) =>
-                            setDriverProfileForm((currentForm) => ({
-                              ...currentForm,
-                              name: event.target.value,
-                            }))
-                          }
-                          placeholder="Driver Name"
-                        />
-                        <input
-                          value={driverProfileForm.mobile}
-                          onChange={(event) =>
-                            setDriverProfileForm((currentForm) => ({
-                              ...currentForm,
-                              mobile: event.target.value,
-                            }))
-                          }
-                          placeholder="Driver Mobile"
-                          inputMode="tel"
-                        />
-                        <select
-                          value={driverProfileForm.vehicle}
-                          onChange={(event) =>
-                            setDriverProfileForm((currentForm) => ({
-                              ...currentForm,
-                              vehicle: event.target.value,
-                            }))
-                          }
-                        >
-                          {vehicles.map((item) => (
-                            <option key={`driver-${item.name}`} value={item.name}>
-                              {item.name}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          value={driverProfileForm.vehicleNumber}
-                          onChange={(event) =>
-                            setDriverProfileForm((currentForm) => ({
-                              ...currentForm,
-                              vehicleNumber: event.target.value,
-                            }))
-                          }
-                          placeholder="Vehicle Number"
-                        />
-                        <button type="button" onClick={() => saveDriverProfile()}>
-                          Save Profile
-                        </button>
+                      <div className="driver-list">
+                        {driverVehicles.length ? (
+                          driverVehicles.map((driverVehicle) => (
+                            <span
+                              key={`${driverVehicle.driver_mobile}-${driverVehicle.vehicle_number}`}
+                            >
+                              Owner {driverVehicle.driver_name} |{" "}
+                              {driverVehicle.vehicle_type} |{" "}
+                              {driverVehicle.vehicle_number}
+                            </span>
+                          ))
+                        ) : (
+                          <span>No Registered Vehicle Found For This Driver.</span>
+                        )}
                       </div>
                     </div>
                   </div>
