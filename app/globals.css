@@ -3032,7 +3032,7 @@ h4,
 
 .admin-dashboard {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-top: 18px;
 }
@@ -3157,8 +3157,19 @@ h4,
   display: grid;
   gap: 8px;
   padding: 16px;
+  border: 1px solid transparent;
   border-radius: 12px;
   background: #f8fbff;
+  text-align: left;
+}
+
+.metric-button {
+  cursor: pointer;
+}
+
+.metric-button.is-active {
+  border-color: #075985;
+  box-shadow: 0 0 0 3px rgba(7, 89, 133, 0.12);
 }
 
 .admin-metric span {
@@ -3179,6 +3190,28 @@ h4,
 
 .cash-metric strong {
   color: #c2410c;
+}
+
+.collected-metric {
+  background: #f0fdf4;
+}
+
+.collected-metric strong {
+  color: #15803d;
+}
+
+.metric-breakup-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.metric-breakup-panel h3 {
+  margin: 0;
 }
 
 .cash-summary-panel {
@@ -3254,6 +3287,11 @@ h4,
 
 .payment-prepaid-text {
   color: #15803d;
+}
+
+.booking-confirmed-chip {
+  background: #dcfce7 !important;
+  color: #15803d !important;
 }
 
 .payment-postpaid-text {

@@ -129,7 +129,7 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   ride_completed_at
   FROM bookings`;
 
-async function getRecentBookings(limit = 8) {
+async function getRecentBookings(limit = 80) {
   const recent = await env.DB.prepare(
     `${bookingSelectSql}
      WHERE booking_id NOT LIKE 'PENDING-%'
@@ -140,6 +140,42 @@ async function getRecentBookings(limit = 8) {
     .all<BookingRow>();
 
   return recent.results || [];
+}
+
+async function getAdminFinanceSummary() {
+  const summary = await env.DB.prepare(
+    `SELECT
+       COUNT(*) AS total_bookings,
+       COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_booking_amount,
+       COALESCE(SUM(payment_amount), 0) AS total_collected,
+       COALESCE(SUM(driver_cash_collected), 0) AS driver_cash_collected
+     FROM bookings
+     WHERE booking_id NOT LIKE 'PENDING-%'`,
+  ).first<{
+    total_bookings: number;
+    total_booking_amount: number;
+    total_collected: number;
+    driver_cash_collected: number;
+  }>();
+  const withdrawn = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
+     FROM driver_withdrawals
+     WHERE status = 'Completed'`,
+  ).first<{ withdrawn_amount: number }>();
+  const totalCollected = Number(summary?.total_collected || 0);
+  const driverCashCollected = Number(summary?.driver_cash_collected || 0);
+  const driverCashInHand = Math.max(
+    0,
+    driverCashCollected - Number(withdrawn?.withdrawn_amount || 0),
+  );
+
+  return {
+    totalBookings: Number(summary?.total_bookings || 0),
+    totalBookingAmount: Number(summary?.total_booking_amount || 0),
+    totalCollected,
+    onlineCollected: Math.max(0, totalCollected - driverCashCollected),
+    driverCashInHand,
+  };
 }
 
 async function getBookingById(bookingId: string) {
@@ -497,9 +533,7 @@ export async function GET(request: Request) {
 
     if (loginMobile) {
       if (loginMobile === adminMobile) {
-        const summary = await env.DB.prepare(
-          "SELECT COUNT(*) AS total_bookings, COALESCE(SUM(estimated_fare), 0) AS total_fare FROM bookings WHERE booking_id NOT LIKE 'PENDING-%'",
-        ).first<{ total_bookings: number; total_fare: number }>();
+        const financeSummary = await getAdminFinanceSummary();
         const recent = await getRecentBookings();
         const drivers = await getDrivers();
         const driverCashSummary = await getDriverCashSummary();
@@ -508,8 +542,12 @@ export async function GET(request: Request) {
 
         return Response.json({
           role: "admin",
-          totalBookings: Number(summary?.total_bookings || 0),
-          totalFare: Number(summary?.total_fare || 0),
+          totalBookings: financeSummary.totalBookings,
+          totalFare: financeSummary.totalBookingAmount,
+          totalBookingAmount: financeSummary.totalBookingAmount,
+          totalCollected: financeSummary.totalCollected,
+          onlineCollected: financeSummary.onlineCollected,
+          driverCashInHand: financeSummary.driverCashInHand,
           recentBookings: recent,
           drivers,
           driverCashSummary,

@@ -334,6 +334,13 @@ const permanentWorkflowRules = [
 
 type PortalRole = "admin" | "driver" | "customer";
 
+type AdminBreakupType =
+  | "bookings"
+  | "bookingAmount"
+  | "collected"
+  | "online"
+  | "driverCash";
+
 type WorkflowStage = {
   id: string;
   label: string;
@@ -608,6 +615,8 @@ export default function Home() {
     bankAccount: "",
     bankIfsc: "",
   });
+  const [activeAdminBreakup, setActiveAdminBreakup] =
+    useState<AdminBreakupType>("bookings");
   const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
@@ -644,6 +653,10 @@ export default function Home() {
   const [dashboard, setDashboard] = useState<{
     totalBookings: number;
     totalFare: number;
+    totalBookingAmount: number;
+    totalCollected: number;
+    onlineCollected: number;
+    driverCashInHand: number;
     recentBookings: DashboardBooking[];
     driverCashSummary: DriverCashSummary[];
     driverLedger: DashboardBooking[];
@@ -1314,6 +1327,10 @@ export default function Home() {
         role?: PortalRole;
         totalBookings?: number;
         totalFare?: number;
+        totalBookingAmount?: number;
+        totalCollected?: number;
+        onlineCollected?: number;
+        driverCashInHand?: number;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
@@ -1359,6 +1376,10 @@ export default function Home() {
         setDashboard({
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
+          totalBookingAmount: result.totalBookingAmount || result.totalFare || 0,
+          totalCollected: result.totalCollected || 0,
+          onlineCollected: result.onlineCollected || 0,
+          driverCashInHand: result.driverCashInHand || 0,
           recentBookings: result.recentBookings || [],
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
@@ -2028,6 +2049,115 @@ export default function Home() {
     );
   }
 
+  function getAdminFinanceMetrics(activeDashboard: NonNullable<typeof dashboard>) {
+    const allBookings = activeDashboard.recentBookings || [];
+    const ledgerBookings = activeDashboard.driverLedger || [];
+    const totalBookingAmount = allBookings.reduce(
+      (total, booking) => total + getInvoiceTotals(booking).total,
+      0,
+    );
+    const totalCollected = allBookings.reduce(
+      (total, booking) => total + Number(booking.payment_amount || 0),
+      0,
+    );
+    const driverCashCollected = ledgerBookings.reduce(
+      (total, booking) => total + Number(booking.driver_cash_collected || 0),
+      0,
+    );
+    const onlineCollected = Math.max(0, totalCollected - driverCashCollected);
+    const driverCashInHand = activeDashboard.driverCashSummary.reduce(
+      (total, driver) => total + Number(driver.cash_amount || 0),
+      0,
+    );
+
+    return {
+      allBookings,
+      ledgerBookings,
+      totalBookingAmount: activeDashboard.totalBookingAmount || totalBookingAmount,
+      totalCollected: activeDashboard.totalCollected || totalCollected,
+      onlineCollected: activeDashboard.onlineCollected || onlineCollected,
+      driverCashInHand: activeDashboard.driverCashInHand || driverCashInHand,
+    };
+  }
+
+  function renderAdminMetricBreakup(activeDashboard: NonNullable<typeof dashboard>) {
+    const metrics = getAdminFinanceMetrics(activeDashboard);
+    const titleMap: Record<AdminBreakupType, string> = {
+      bookings: "Total Booking Breakup",
+      bookingAmount: "Total Booking Amount Breakup",
+      collected: "Amount Collected Breakup",
+      online: "Online Collection Breakup",
+      driverCash: "Driver Cash In Hand Breakup",
+    };
+
+    if (activeAdminBreakup === "driverCash") {
+      return (
+        <div className="metric-breakup-panel">
+          <h3>{titleMap[activeAdminBreakup]}</h3>
+          <div className="ledger-table">
+            {activeDashboard.driverCashSummary.length ? (
+              activeDashboard.driverCashSummary.map((driver) => (
+                <div className="ledger-row" key={`cash-${driver.driver_mobile}`}>
+                  <strong>{driver.driver_name || "Driver"}</strong>
+                  <span>{driver.driver_mobile}</span>
+                  <span>Collected {formatInr(Number(driver.cash_collected || 0))}</span>
+                  <span>In Hand {formatInr(Number(driver.cash_amount || 0))}</span>
+                  <span>{driver.cash_rides} Cash Ride</span>
+                </div>
+              ))
+            ) : (
+              <p>No Driver Cash In Hand Yet.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const rows =
+      activeAdminBreakup === "online"
+        ? metrics.ledgerBookings.filter(
+            (booking) =>
+              Number(booking.payment_amount || 0) -
+                Number(booking.driver_cash_collected || 0) >
+              0,
+          )
+        : metrics.allBookings;
+
+    return (
+      <div className="metric-breakup-panel">
+        <h3>{titleMap[activeAdminBreakup]}</h3>
+        <div className="ledger-table">
+          {rows.length ? (
+            rows.map((booking) => {
+              const totalFare = getInvoiceTotals(booking).total;
+              const driverCash = Number(booking.driver_cash_collected || 0);
+              const online = Math.max(0, Number(booking.payment_amount || 0) - driverCash);
+              const valueMap: Record<Exclude<AdminBreakupType, "driverCash">, string> = {
+                bookings: booking.ride_status || "Booked",
+                bookingAmount: formatInr(totalFare),
+                collected: formatPaymentAmount(booking.payment_amount || 0),
+                online: formatPaymentAmount(online),
+              };
+
+              return (
+                <div className="ledger-row" key={`breakup-${activeAdminBreakup}-${booking.booking_id}`}>
+                  <strong>{booking.booking_id}</strong>
+                  <span>{booking.customer_name}</span>
+                  <span>{booking.start_point} To {booking.destination}</span>
+                  <span>{formatDisplayDateTime(booking.pickup_datetime)}</span>
+                  <span>{booking.vehicle}</span>
+                  <b>{valueMap[activeAdminBreakup as Exclude<AdminBreakupType, "driverCash">]}</b>
+                </div>
+              );
+            })
+          ) : (
+            <p>No Breakup Data Yet.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   function renderBookingTimeline(booking: DashboardBooking) {
     const completedStages = getCompletedWorkflowStages(booking);
     const isCancelled = (booking.ride_status || "").toLowerCase().includes("cancel");
@@ -2087,6 +2217,9 @@ export default function Home() {
     const invoiceTotals = getInvoiceTotals(booking);
     const balanceDue = getBalanceDue(booking);
     const hasPayment = Number(booking.payment_amount || 0) > 0;
+    const isBookingConfirmed = (booking.ride_status || "")
+      .toLowerCase()
+      .includes("confirm");
     const uniqueDrivers = drivers.filter(
       (driver, index, driverList) =>
         driverList.findIndex((item) => item.mobile === driver.mobile) === index,
@@ -2109,7 +2242,9 @@ export default function Home() {
       <article className={cardStatusClass} key={booking.booking_id}>
         <div className="booking-row-head">
           <strong>{booking.booking_id}</strong>
-          <span>{booking.ride_status || "Booked"}</span>
+          <span className={isBookingConfirmed ? "booking-confirmed-chip" : ""}>
+            {booking.ride_status || "Booked"}
+          </span>
         </div>
         {renderBookingTimeline(booking)}
         <div className="booking-detail-grid">
@@ -3087,25 +3222,62 @@ export default function Home() {
             ) : null}
             {portalRole === "admin" && dashboard ? (
               <div className="admin-dashboard">
-                <div className="admin-metric">
-                  <span>Total Bookings</span>
-                  <strong>{dashboard.totalBookings}</strong>
-                </div>
-                <div className="admin-metric">
-                  <span>Total Fare</span>
-                  <strong>{formatInr(dashboard.totalFare)}</strong>
-                </div>
-                <div className="admin-metric cash-metric">
-                  <span>Driver Cash In Hand</span>
-                  <strong>
-                    {formatInr(
-                      dashboard.driverCashSummary.reduce(
-                        (total, driver) => total + Number(driver.cash_amount || 0),
-                        0,
-                      ),
-                    )}
-                  </strong>
-                </div>
+                {(() => {
+                  const adminMetrics = getAdminFinanceMetrics(dashboard);
+                  const metricCards: Array<{
+                    id: AdminBreakupType;
+                    label: string;
+                    value: string;
+                    className?: string;
+                  }> = [
+                    {
+                      id: "bookings",
+                      label: "Total No Of Booking",
+                      value: String(dashboard.totalBookings),
+                    },
+                    {
+                      id: "bookingAmount",
+                      label: "Total Booking Amount",
+                      value: formatInr(adminMetrics.totalBookingAmount),
+                    },
+                    {
+                      id: "collected",
+                      label: "Amount Collected",
+                      value: formatInr(adminMetrics.totalCollected),
+                      className: "collected-metric",
+                    },
+                    {
+                      id: "online",
+                      label: "Online",
+                      value: formatInr(adminMetrics.onlineCollected),
+                    },
+                    {
+                      id: "driverCash",
+                      label: "In Driver Hand",
+                      value: formatInr(adminMetrics.driverCashInHand),
+                      className: "cash-metric",
+                    },
+                  ];
+
+                  return (
+                    <>
+                      {metricCards.map((card) => (
+                        <button
+                          className={`admin-metric metric-button ${
+                            activeAdminBreakup === card.id ? "is-active" : ""
+                          } ${card.className || ""}`}
+                          key={card.id}
+                          type="button"
+                          onClick={() => setActiveAdminBreakup(card.id)}
+                        >
+                          <span>{card.label}</span>
+                          <strong>{card.value}</strong>
+                        </button>
+                      ))}
+                      {renderAdminMetricBreakup(dashboard)}
+                    </>
+                  );
+                })()}
                 <div className="admin-ops-panel cash-summary-panel">
                   <div>
                     <h3>Driver Cash Collection</h3>
