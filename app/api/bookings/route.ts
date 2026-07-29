@@ -54,6 +54,7 @@ type DeleteBookingPayload = {
 
 const adminPin = "710529";
 const adminMobile = "7004291529";
+const adminWhatsappMobile = "917004291529";
 
 type BookingRow = {
   booking_id: string;
@@ -891,19 +892,37 @@ export async function POST(request: Request) {
       .bind(bookingId, rowId)
       .run();
 
+    const booking = {
+      bookingId,
+      status: "pending",
+      startPoint,
+      destination,
+      oneSideKm,
+      billableKm,
+      ratePerKm: selectedRate.perKm,
+      packageType,
+      estimatedFare,
+    };
+
+    await sendAdminWhatsAppNotification({
+      bookingId,
+      tripType,
+      vehicle,
+      startPoint,
+      destination,
+      oneSideKm,
+      billableKm,
+      ratePerKm: selectedRate.perKm,
+      estimatedFare,
+      pickupDatetime: date,
+      customerName: name,
+      customerMobile: mobile,
+      paymentMode,
+    });
+
     return Response.json(
       {
-        booking: {
-          bookingId,
-          status: "pending",
-          startPoint,
-          destination,
-          oneSideKm,
-          billableKm,
-          ratePerKm: selectedRate.perKm,
-          packageType,
-          estimatedFare,
-        },
+        booking,
       },
       { status: 201 },
     );
@@ -922,6 +941,71 @@ function formatBookingId(rowId: number) {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+async function sendAdminWhatsAppNotification(booking: {
+  bookingId: string;
+  tripType: string;
+  vehicle: string;
+  startPoint: string;
+  destination: string;
+  oneSideKm: number;
+  billableKm: number;
+  ratePerKm: number;
+  estimatedFare: number;
+  pickupDatetime: string;
+  customerName: string;
+  customerMobile: string;
+  paymentMode: string;
+}) {
+  const token = process.env.WHATSAPP_TOKEN || "";
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+  const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v20.0";
+  const recipient = process.env.WHATSAPP_ADMIN_MOBILE || adminWhatsappMobile;
+
+  if (!token || !phoneNumberId) {
+    return;
+  }
+
+  const totalWithGst = Math.round(booking.estimatedFare * 1.05);
+  const message = [
+    "New Booking Received - Vishnu Tours",
+    `Booking ID: ${booking.bookingId}`,
+    `Customer: ${booking.customerName}`,
+    `Mobile: ${booking.customerMobile}`,
+    `Trip: ${booking.tripType}`,
+    `Cab: ${booking.vehicle}`,
+    `Pickup: ${booking.startPoint}`,
+    `Drop: ${booking.destination}`,
+    `Pickup Time: ${booking.pickupDatetime}`,
+    `One Side KM: ${booking.oneSideKm}`,
+    `Billable KM: ${booking.billableKm}`,
+    `Rate: Rs ${booking.ratePerKm}/KM`,
+    `Fare With GST 5%: Rs ${totalWithGst}`,
+    `Payment: ${booking.paymentMode}`,
+  ].join("\n");
+
+  await fetch(
+    `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: recipient,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: message,
+        },
+      }),
+    },
+  ).catch((error) => {
+    console.warn("Admin WhatsApp notification failed.", error);
+  });
 }
 
 function normalizePackage(value: unknown): PackageType {
