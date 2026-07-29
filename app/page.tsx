@@ -3271,45 +3271,6 @@ export default function Home() {
 
                   return (
                     <>
-                      {metricCards.map((card) => (
-                        <button
-                          className={`admin-metric metric-button ${
-                            activeAdminBreakup === card.id ? "is-active" : ""
-                          } ${card.className || ""}`}
-                          key={card.id}
-                          type="button"
-                          onClick={() => setActiveAdminBreakup(card.id)}
-                        >
-                          <span>{card.label}</span>
-                          <strong>{card.value}</strong>
-                        </button>
-                      ))}
-                      {renderAdminMetricBreakup(dashboard)}
-                      <div className="admin-task-strip">
-                        {(() => {
-                          const taskCounts = getAdminTaskCounts(dashboard);
-                          return (
-                            <>
-                              <span>
-                                <b>{taskCounts.assignmentPending}</b>
-                                Driver Assign Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.paymentPending}</b>
-                                Payment Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.ridePending}</b>
-                                Ride Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.rideInProgress}</b>
-                                In Progress
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </div>
                       <div className="admin-tabs">
                         {(() => {
                           const taskCounts = getAdminTaskCounts(dashboard);
@@ -3353,6 +3314,45 @@ export default function Home() {
                           ));
                         })()}
                       </div>
+                      <div className="admin-task-strip">
+                        {(() => {
+                          const taskCounts = getAdminTaskCounts(dashboard);
+                          return (
+                            <>
+                              <span>
+                                <b>{taskCounts.assignmentPending}</b>
+                                Driver Assign Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.paymentPending}</b>
+                                Payment Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.ridePending}</b>
+                                Ride Pending
+                              </span>
+                              <span>
+                                <b>{taskCounts.rideInProgress}</b>
+                                In Progress
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      {metricCards.map((card) => (
+                        <button
+                          className={`admin-metric metric-button ${
+                            activeAdminBreakup === card.id ? "is-active" : ""
+                          } ${card.className || ""}`}
+                          key={card.id}
+                          type="button"
+                          onClick={() => setActiveAdminBreakup(card.id)}
+                        >
+                          <span>{card.label}</span>
+                          <strong>{card.value}</strong>
+                        </button>
+                      ))}
+                      {renderAdminMetricBreakup(dashboard)}
                     </>
                   );
                 })()}
