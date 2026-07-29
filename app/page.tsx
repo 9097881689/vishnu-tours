@@ -1434,6 +1434,7 @@ export default function Home() {
       return;
     }
 
+    setActiveAdminTab("portalLookup");
     setAdminLookupStatus("Opening Dashboard...");
     setAdminLookupRole(null);
     setAdminLookupBookings([]);
@@ -3415,6 +3416,28 @@ export default function Home() {
                   : portalRole === "driver"
                     ? "Driver Panel"
                     : "Customer Panel"}
+              </div>
+            ) : null}
+            {portalRole === "admin" && dashboard ? (
+              <div className="admin-switch-panel">
+                <strong>Switch Dashboard</strong>
+                <div className="admin-login-row admin-lookup-row">
+                  <input
+                    value={adminLookupMobile}
+                    onChange={(event) => setAdminLookupMobile(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        openAdminLookupDashboard();
+                      }
+                    }}
+                    placeholder="Driver Or Customer Mobile"
+                    inputMode="tel"
+                  />
+                  <button type="button" onClick={openAdminLookupDashboard}>
+                    Open Driver/User
+                  </button>
+                </div>
+                <span>Admin Can Open Any Driver Or Customer Dashboard From Here.</span>
               </div>
             ) : null}
             {portalRole === "admin" && dashboard ? (

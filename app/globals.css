@@ -3030,6 +3030,28 @@ h4,
   font-weight: 900;
 }
 
+.admin-switch-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.admin-switch-panel strong {
+  color: #075985;
+  font-size: 14px;
+  font-weight: 1000;
+}
+
+.admin-switch-panel span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .admin-dashboard {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
