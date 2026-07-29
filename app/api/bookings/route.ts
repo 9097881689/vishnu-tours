@@ -821,6 +821,11 @@ export async function POST(request: Request) {
         ? Math.round(billableKm * selectedRate.perKm)
         : selectedRate[packageType];
     const createdAt = new Date().toISOString();
+    const initialRideStatus =
+      paymentMode.toLowerCase().includes("zero") ||
+      paymentMode.toLowerCase().includes("later")
+        ? "Booking Confirmed"
+        : "Booked";
 
     const temporaryBookingId =
       typeof crypto.randomUUID === "function"
@@ -873,7 +878,7 @@ export async function POST(request: Request) {
         mobile,
         packageType,
         paymentMode,
-        "Booked",
+        initialRideStatus,
         "None",
         "",
         "",

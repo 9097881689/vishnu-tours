@@ -421,6 +421,10 @@ function getCompletedWorkflowStages(booking: DashboardBooking) {
     completed.add("confirmed");
   }
 
+  if (rideStatus.includes("confirmed")) {
+    completed.add("confirmed");
+  }
+
   if (
     booking.driver_name ||
     booking.driver_mobile ||
@@ -531,6 +535,7 @@ export default function Home() {
   const [bookingStatus, setBookingStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+  const [showBookingTicket, setShowBookingTicket] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginMobile, setLoginMobile] = useState("");
   const [portalStatus, setPortalStatus] = useState("");
@@ -848,6 +853,7 @@ export default function Home() {
     setBookingView("home");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    setShowBookingTicket(false);
     const detectedTripType = getLocationTripType(startPoint, value);
 
     if (detectedTripType && detectedTripType !== tripType) {
@@ -878,6 +884,7 @@ export default function Home() {
     setBookingStatus("");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    setShowBookingTicket(false);
   }
 
   function updateStartPoint(value: string) {
@@ -888,6 +895,7 @@ export default function Home() {
     setBookingView("home");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    setShowBookingTicket(false);
     setBookingStatus("");
     const detectedTripType = getLocationTripType(value, drop);
 
@@ -948,6 +956,7 @@ export default function Home() {
     setPaymentStatus("");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    setShowBookingTicket(false);
     setBookingView("review");
   }
 
@@ -970,6 +979,7 @@ export default function Home() {
     setBookingStatus("");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
+    setShowBookingTicket(false);
 
     try {
       const response = await fetch("/api/bookings", {
@@ -1026,7 +1036,45 @@ export default function Home() {
       setAdvanceAmount(String(selectedPaymentAmount));
       await startPayment(booking, selectedPaymentAmount);
     } else {
-      setPaymentStatus("Booking Saved. Customer Can Pay Later After Confirmation.");
+      setIsPaymentComplete(false);
+      setShowBookingTicket(true);
+      playBookingConfirmSound();
+      setBookingStatus("Booking Confirmed. Payment Is Pending.");
+      setPaymentStatus("Booking Confirmed. Customer Can Pay Later.");
+    }
+  }
+
+  function playBookingConfirmSound() {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+
+      if (!AudioContextClass) {
+        return;
+      }
+
+      const audioContext = new AudioContextClass();
+      const gain = audioContext.createGain();
+      gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.42);
+      gain.connect(audioContext.destination);
+
+      [660, 880].forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime + index * 0.13,
+        );
+        oscillator.connect(gain);
+        oscillator.start(audioContext.currentTime + index * 0.13);
+        oscillator.stop(audioContext.currentTime + index * 0.13 + 0.18);
+      });
+    } catch {
+      // Sound feedback is optional; booking confirmation should never fail.
     }
   }
 
@@ -1139,7 +1187,9 @@ export default function Home() {
       handler: async () => {
         setIsPaying(false);
         setIsPaymentComplete(true);
+        setShowBookingTicket(true);
         setPaymentStatus("Payment Received Successfully.");
+        playBookingConfirmSound();
         await updatePaymentReceived(activeBooking, amount);
       },
       modal: {
@@ -2220,9 +2270,10 @@ export default function Home() {
 
       {bookingView === "review" ? (
         <section className="review-page" ref={reviewRef}>
-          {isPaymentComplete && confirmedBooking ? (
+          {showBookingTicket && confirmedBooking ? (
             <article className="payment-complete-screen" aria-live="polite">
-              <span>Payment Successful</span>
+              <span>{isPaymentComplete ? "Payment Successful" : "Booking Confirmed"}</span>
+              <div className="success-tick" aria-hidden="true">✓</div>
               <h2>Booking Confirmed</h2>
               <div className="confirmation-number">
                 <small>Booking Number</small>
@@ -2267,7 +2318,11 @@ export default function Home() {
                 </div>
                 <div>
                   <small>Payment</small>
-                  <strong>{formatPaymentAmount(selectedPaymentAmount)}</strong>
+                  <strong>
+                    {isPaymentComplete
+                      ? `${formatPaymentAmount(selectedPaymentAmount)} Paid`
+                      : "Payment Pending"}
+                  </strong>
                 </div>
               </div>
               <button
