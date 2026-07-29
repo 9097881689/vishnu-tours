@@ -2019,6 +2019,15 @@ export default function Home() {
     );
   }
 
+  function renderCollectionAmount(amount: number) {
+    return (
+      <span className="collect-amount-lockup">
+        <span className="cash-collect-icon" aria-hidden="true" />
+        <span>{amount > 0 ? formatInr(amount) : "₹0"}</span>
+      </span>
+    );
+  }
+
   function renderBookingTimeline(booking: DashboardBooking) {
     const completedStages = getCompletedWorkflowStages(booking);
     const isCancelled = (booking.ride_status || "").toLowerCase().includes("cancel");
@@ -2180,11 +2189,7 @@ export default function Home() {
               }`}
             >
               <span>Due Amount Before Start / Complete</span>
-              <strong>
-                {balanceDue > 0
-                  ? `Collect ${formatInr(balanceDue)}`
-                  : "Due ₹0"}
-              </strong>
+              <strong>{renderCollectionAmount(balanceDue)}</strong>
             </div>
             <div className="booking-actions driver-ride-actions">
               <button
@@ -2992,7 +2997,7 @@ export default function Home() {
               {collectionPrompt.start_point} To {collectionPrompt.destination}.
             </p>
             <strong className="collection-due-amount">
-              Collect {formatInr(getBalanceDue(collectionPrompt))}
+              {renderCollectionAmount(getBalanceDue(collectionPrompt))}
             </strong>
             <div className="collection-meta-grid">
               <span>Total Fare With GST</span>
