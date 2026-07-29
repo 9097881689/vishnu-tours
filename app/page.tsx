@@ -321,7 +321,7 @@ type DriverWithdrawal = {
 };
 
 type PortalRole = "admin" | "driver" | "customer";
-type AdminPanelTab = "bookings" | "vehicles" | "ledger" | "withdrawals";
+type AdminPanelTab = "breakup" | "bookings" | "vehicles" | "ledger" | "withdrawals";
 
 type AdminBreakupType =
   | "bookings"
@@ -3290,6 +3290,11 @@ export default function Home() {
                             count: number;
                           }> = [
                             {
+                              id: "breakup",
+                              label: "Total Booking Breakup",
+                              count: taskCounts.bookings,
+                            },
+                            {
                               id: "bookings",
                               label: "Booking",
                               count: taskCounts.bookings,
@@ -3356,16 +3361,19 @@ export default function Home() {
                           } ${card.className || ""}`}
                           key={card.id}
                           type="button"
-                          onClick={() => setActiveAdminBreakup(card.id)}
+                          onClick={() => {
+                            setActiveAdminBreakup(card.id);
+                            setActiveAdminTab("breakup");
+                          }}
                         >
                           <span>{card.label}</span>
                           <strong>{card.value}</strong>
                         </button>
                       ))}
-                      {renderAdminMetricBreakup(dashboard)}
                     </>
                   );
                 })()}
+                {activeAdminTab === "breakup" ? renderAdminMetricBreakup(dashboard) : null}
                 {activeAdminTab === "bookings" ? (
                   <div className="admin-recent admin-tab-panel">
                     <h3>Booking Details And Operations</h3>
