@@ -2035,10 +2035,20 @@ export default function Home() {
   }
 
   function renderCollectionAmount(amount: number) {
+    const hasBalance = amount > 0;
+
     return (
-      <span className="collect-amount-lockup">
+      <span className={`collect-amount-lockup ${hasBalance ? "collect-due" : "collect-clear"}`}>
+        {hasBalance ? (
+          <span className="collect-action-badge">
+            <span className="collect-hand-icon" aria-hidden="true">
+              ₹
+            </span>
+            <span>Collect</span>
+          </span>
+        ) : null}
         <span className="cash-collect-icon" aria-hidden="true" />
-        <span>{amount > 0 ? formatInr(amount) : "₹0"}</span>
+        <span>{hasBalance ? formatInr(amount) : "₹0"}</span>
       </span>
     );
   }

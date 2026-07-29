@@ -3510,6 +3510,51 @@ h4,
   align-items: center;
   justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.collect-action-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #be123c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 1000;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  box-shadow: 0 10px 22px rgba(190, 18, 60, 0.24);
+  animation: collectBadgePulse 1.15s ease-in-out infinite;
+}
+
+.collect-action-badge::after {
+  content: "";
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 10px solid #be123c;
+  transform: translateY(-50%);
+}
+
+.collect-hand-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  color: #be123c;
+  font-size: 17px;
+  font-weight: 1000;
+  animation: collectHandMove 0.9s ease-in-out infinite;
 }
 
 .cash-collect-icon {
@@ -3549,6 +3594,30 @@ h4,
   border-bottom: 4px solid currentColor;
   border-radius: 0 0 12px 12px;
   transform: rotate(-10deg);
+}
+
+@keyframes collectBadgePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 22px rgba(190, 18, 60, 0.24);
+  }
+
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px rgba(190, 18, 60, 0.36);
+  }
+}
+
+@keyframes collectHandMove {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(3px);
+  }
 }
 
 .collection-meta-grid {
