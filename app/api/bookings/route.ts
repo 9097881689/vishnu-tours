@@ -40,6 +40,8 @@ type BookingOperationPayload = {
   refundStatus?: string;
   paymentStatus?: string;
   paymentAmount?: number;
+  collectionMode?: string;
+  cashCollected?: number;
   vehicle?: string;
   vehicleNumber?: string;
   cancelReason?: string;
@@ -78,6 +80,8 @@ type BookingRow = {
   vehicle_number: string;
   payment_status: string;
   payment_amount: number;
+  payment_collection_mode: string;
+  driver_cash_collected: number;
   cancel_reason: string;
   ride_started_at: string;
   ride_completed_at: string;
@@ -95,7 +99,8 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
   ride_status, refund_status, driver_name, driver_mobile, vehicle_number,
-  payment_status, payment_amount, cancel_reason, ride_started_at,
+  payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
+  cancel_reason, ride_started_at,
   ride_completed_at
   FROM bookings`;
 
@@ -140,6 +145,40 @@ async function getDriverEarning(driverMobile: string) {
   };
 }
 
+async function getDriverCashInHand(driverMobile: string) {
+  const summary = await env.DB.prepare(
+    `SELECT COALESCE(SUM(driver_cash_collected), 0) AS cash_amount
+     FROM bookings
+     WHERE driver_mobile = ?
+       AND driver_cash_collected > 0
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  )
+    .bind(driverMobile)
+    .first<{ cash_amount: number }>();
+
+  return Number(summary?.cash_amount || 0);
+}
+
+async function getDriverCashSummary() {
+  const summary = await env.DB.prepare(
+    `SELECT driver_mobile, driver_name,
+      COALESCE(SUM(driver_cash_collected), 0) AS cash_amount,
+      COUNT(*) AS cash_rides
+     FROM bookings
+     WHERE driver_cash_collected > 0
+       AND booking_id NOT LIKE 'PENDING-%'
+     GROUP BY driver_mobile, driver_name
+     ORDER BY cash_amount DESC`,
+  ).all<{
+    driver_mobile: string;
+    driver_name: string;
+    cash_amount: number;
+    cash_rides: number;
+  }>();
+
+  return summary.results || [];
+}
+
 async function ensureBookingsTable() {
   const db = env.DB;
   if (!db) {
@@ -173,6 +212,8 @@ async function ensureBookingsTable() {
         vehicle_number TEXT NOT NULL DEFAULT '',
         payment_status TEXT NOT NULL DEFAULT 'Pending',
         payment_amount INTEGER NOT NULL DEFAULT 0,
+        payment_collection_mode TEXT NOT NULL DEFAULT '',
+        driver_cash_collected INTEGER NOT NULL DEFAULT 0,
         cancel_reason TEXT NOT NULL DEFAULT '',
         ride_started_at TEXT NOT NULL DEFAULT '',
         ride_completed_at TEXT NOT NULL DEFAULT ''
@@ -217,6 +258,16 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN payment_amount INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN payment_collection_mode TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN driver_cash_collected INTEGER NOT NULL DEFAULT 0")
     .run()
     .catch(() => undefined);
 
@@ -271,6 +322,7 @@ export async function GET(request: Request) {
         ).first<{ total_bookings: number; total_fare: number }>();
         const recent = await getRecentBookings();
         const drivers = await getDrivers();
+        const driverCashSummary = await getDriverCashSummary();
 
         return Response.json({
           role: "admin",
@@ -278,6 +330,7 @@ export async function GET(request: Request) {
           totalFare: Number(summary?.total_fare || 0),
           recentBookings: recent,
           drivers,
+          driverCashSummary,
         });
       }
 
@@ -326,6 +379,7 @@ export async function GET(request: Request) {
             ...(openBookings.results || []),
           ],
           driverEarning: await getDriverEarning(loginMobile),
+          driverCashInHand: await getDriverCashInHand(loginMobile),
         });
       }
 
@@ -350,6 +404,7 @@ export async function GET(request: Request) {
         driverProfile: null,
         recentBookings: openBookings.results || [],
         driverEarning: { completedRides: 0, totalEarning: 0 },
+        driverCashInHand: 0,
       });
     }
 
@@ -359,7 +414,8 @@ export async function GET(request: Request) {
           one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
           customer_name, customer_mobile, status, ride_status, refund_status,
           driver_name, driver_mobile, vehicle_number, payment_status,
-          payment_amount, cancel_reason, ride_started_at, ride_completed_at
+          payment_amount, payment_collection_mode, driver_cash_collected,
+          cancel_reason, ride_started_at, ride_completed_at
          FROM bookings
          WHERE booking_id = ? AND customer_mobile = ?
          LIMIT 1`,
@@ -540,7 +596,8 @@ export async function PATCH(request: Request) {
         const now = new Date().toISOString();
 
         const assignedBooking = await env.DB.prepare(
-          `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at
+          `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at,
+            estimated_fare, payment_amount
            FROM bookings
            WHERE booking_id = ? AND driver_mobile = ?
            LIMIT 1`,
@@ -551,6 +608,8 @@ export async function PATCH(request: Request) {
             driver_mobile: string;
             ride_started_at: string;
             ride_completed_at: string;
+            estimated_fare: number;
+            payment_amount: number;
           }>();
 
         if (!assignedBooking) {
@@ -574,16 +633,74 @@ export async function PATCH(request: Request) {
           );
         }
 
+        const totalWithGst = Math.round(Number(assignedBooking.estimated_fare || 0) * 1.05);
+        const paidAmount = Number(assignedBooking.payment_amount || 0);
+        const balanceDue = Math.max(0, totalWithGst - paidAmount);
+        const collectionMode = clean(payload.collectionMode);
+        const requestedPaymentAmount = Number(payload.paymentAmount);
+
+        if (rideStatus === "Ride Complete" && balanceDue > 0) {
+          const validCollectionMode =
+            collectionMode === "cash" || collectionMode === "payment_gateway";
+          const collectedFullAmount =
+            Number.isFinite(requestedPaymentAmount) &&
+            requestedPaymentAmount >= totalWithGst;
+
+          if (!validCollectionMode || !collectedFullAmount) {
+            return Response.json(
+              {
+                error: `Collect Rs ${balanceDue} Before Completing This Ride.`,
+                balanceDue,
+              },
+              { status: 400 },
+            );
+          }
+        }
+
+        const completedWithCollection =
+          rideStatus === "Ride Complete" && balanceDue > 0;
+        const updatedPaymentAmount = completedWithCollection ? totalWithGst : 0;
+        const driverCashCollected =
+          completedWithCollection && collectionMode === "cash" ? balanceDue : 0;
+
         await env.DB.prepare(
           `UPDATE bookings
            SET ride_status = ?,
+               payment_status = CASE
+                 WHEN ? > 0 THEN 'Complete'
+                 ELSE payment_status
+               END,
+               payment_amount = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE payment_amount
+               END,
+               payment_collection_mode = CASE
+                 WHEN ? != '' THEN ?
+                 ELSE payment_collection_mode
+               END,
+               driver_cash_collected = CASE
+                 WHEN ? > 0 THEN driver_cash_collected + ?
+                 ELSE driver_cash_collected
+               END,
                ${timestampColumn} = CASE
                  WHEN ${timestampColumn} = '' THEN ?
                  ELSE ${timestampColumn}
                END
            WHERE booking_id = ? AND driver_mobile = ?`,
         )
-          .bind(rideStatus, now, bookingId, driverMobile)
+          .bind(
+            rideStatus,
+            updatedPaymentAmount,
+            updatedPaymentAmount,
+            updatedPaymentAmount,
+            collectionMode,
+            collectionMode,
+            driverCashCollected,
+            driverCashCollected,
+            now,
+            bookingId,
+            driverMobile,
+          )
           .run();
 
         return Response.json({ success: true });
@@ -594,7 +711,7 @@ export async function PATCH(request: Request) {
 
     const existingBooking = await env.DB.prepare(
       `SELECT booking_id, pickup_datetime, driver_mobile, driver_name,
-        vehicle_number, ride_status
+        vehicle_number, ride_status, estimated_fare, payment_amount
        FROM bookings
        WHERE booking_id = ?
        LIMIT 1`,
@@ -607,6 +724,8 @@ export async function PATCH(request: Request) {
         driver_name: string;
         vehicle_number: string;
         ride_status: string;
+        estimated_fare: number;
+        payment_amount: number;
       }>();
 
     if (!existingBooking) {
@@ -660,6 +779,26 @@ export async function PATCH(request: Request) {
     const now = new Date().toISOString();
     const rideStartedAt = requestedRideStatus === "Ride Started" ? now : "";
     const rideCompletedAt = requestedRideStatus === "Ride Complete" ? now : "";
+    const existingTotalWithGst = Math.round(
+      Number(existingBooking.estimated_fare || 0) * 1.05,
+    );
+    const requestedPaymentAmount = Number(payload.paymentAmount);
+    const adminPaymentAmount = Number.isFinite(requestedPaymentAmount)
+      ? requestedPaymentAmount
+      : Number(existingBooking.payment_amount || 0);
+
+    if (
+      requestedRideStatus === "Ride Complete" &&
+      adminPaymentAmount < existingTotalWithGst
+    ) {
+      return Response.json(
+        {
+          error:
+            "Collect Or Mark Full Payment With GST Before Completing The Ride.",
+        },
+        { status: 400 },
+      );
+    }
 
     await env.DB.prepare(
       `UPDATE bookings
@@ -856,10 +995,12 @@ export async function POST(request: Request) {
         vehicle_number,
         payment_status,
         payment_amount,
+        payment_collection_mode,
+        driver_cash_collected,
         cancel_reason,
         ride_started_at,
         ride_completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -884,6 +1025,8 @@ export async function POST(request: Request) {
         "",
         "",
         "Pending",
+        0,
+        "",
         0,
         "",
         "",

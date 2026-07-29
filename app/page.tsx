@@ -276,6 +276,8 @@ type DashboardBooking = {
   vehicle_number?: string;
   payment_status?: string;
   payment_amount?: number;
+  payment_collection_mode?: string;
+  driver_cash_collected?: number;
   cancel_reason?: string;
   ride_started_at?: string;
   ride_completed_at?: string;
@@ -294,6 +296,13 @@ type DriverRow = {
   driver_mobile: string;
   vehicle_type: string;
   vehicle_number: string;
+};
+
+type DriverCashSummary = {
+  driver_mobile: string;
+  driver_name: string;
+  cash_amount: number;
+  cash_rides: number;
 };
 
 type PortalRole = "admin" | "driver" | "customer";
@@ -457,6 +466,12 @@ function getInvoiceTotals(booking: DashboardBooking) {
   return { baseFare, tax, total };
 }
 
+function getBalanceDue(booking: DashboardBooking) {
+  const { total } = getInvoiceTotals(booking);
+
+  return Math.max(0, total - Number(booking.payment_amount || 0));
+}
+
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
   const mumbaiAreas = [
@@ -544,7 +559,15 @@ export default function Home() {
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
     totalEarning: 0,
+    cashInHand: 0,
   });
+  const [collectionPrompt, setCollectionPrompt] = useState<DashboardBooking | null>(
+    null,
+  );
+  const [collectionPromptMode, setCollectionPromptMode] = useState<
+    "start" | "complete"
+  >("complete");
+  const [collectionStatus, setCollectionStatus] = useState("");
   const [showCustomerLogin, setShowCustomerLogin] = useState(false);
   const [customerStatus, setCustomerStatus] = useState("");
   const [customerLookup, setCustomerLookup] = useState({
@@ -569,6 +592,7 @@ export default function Home() {
     totalBookings: number;
     totalFare: number;
     recentBookings: DashboardBooking[];
+    driverCashSummary: DriverCashSummary[];
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -1232,6 +1256,8 @@ export default function Home() {
         totalFare?: number;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
+        driverCashSummary?: DriverCashSummary[];
+        driverCashInHand?: number;
         driverProfile?: DriverRow | null;
         driverEarning?: {
           completedRides: number;
@@ -1266,6 +1292,7 @@ export default function Home() {
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
           recentBookings: result.recentBookings || [],
+          driverCashSummary: result.driverCashSummary || [],
         });
       }
 
@@ -1279,6 +1306,7 @@ export default function Home() {
         setDriverEarning({
           completedRides: result.driverEarning?.completedRides || 0,
           totalEarning: result.driverEarning?.totalEarning || 0,
+          cashInHand: result.driverCashInHand || 0,
         });
       }
 
@@ -1296,6 +1324,8 @@ export default function Home() {
       refundStatus?: string;
       paymentStatus?: string;
       paymentAmount?: number;
+      collectionMode?: string;
+      cashCollected?: number;
       vehicle?: string;
       driverName?: string;
       driverMobile?: string;
@@ -1435,7 +1465,36 @@ export default function Home() {
       return;
     }
 
+    const balanceDue = getBalanceDue(booking);
+
+    if (balanceDue > 0 && rideStatus === "Ride Started" && !booking.ride_started_at) {
+      setCollectionPromptMode("start");
+      setCollectionPrompt(booking);
+      setCollectionStatus("");
+      return;
+    }
+
+    if (balanceDue > 0 && rideStatus === "Ride Complete") {
+      setCollectionPromptMode("complete");
+      setCollectionPrompt(booking);
+      setCollectionStatus("");
+      return;
+    }
+
+    await submitDriverRideStatus(booking, rideStatus);
+  }
+
+  async function submitDriverRideStatus(
+    booking: DashboardBooking,
+    rideStatus: "Ride Started" | "Ride Complete",
+    collection?: {
+      collectionMode: "cash" | "payment_gateway";
+      paymentAmount: number;
+      cashCollected?: number;
+    },
+  ) {
     setPortalStatus("Updating Ride Status...");
+    setCollectionStatus(collection ? "Updating Collection And Ride Status..." : "");
 
     try {
       const response = await fetch("/api/bookings", {
@@ -1446,20 +1505,148 @@ export default function Home() {
           mobile: driverProfileForm.mobile.replace(/\D/g, ""),
           bookingId: booking.booking_id,
           rideStatus,
+          ...collection,
         }),
       });
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
         setPortalStatus(result.error || "Ride Status Could Not Be Updated.");
+        setCollectionStatus(result.error || "Ride Status Could Not Be Updated.");
         return;
       }
 
       await loadDashboard();
+      setCollectionPrompt(null);
+      setCollectionStatus("");
       setPortalStatus(`${rideStatus} Updated.`);
     } catch {
       setPortalStatus("Ride Status Could Not Be Updated.");
+      setCollectionStatus("Ride Status Could Not Be Updated.");
     }
+  }
+
+  async function completeRideWithCash(booking: DashboardBooking) {
+    const balanceDue = getBalanceDue(booking);
+
+    if (balanceDue <= 0) {
+      await submitDriverRideStatus(booking, "Ride Complete");
+      return;
+    }
+
+    await submitDriverRideStatus(booking, "Ride Complete", {
+      collectionMode: "cash",
+      paymentAmount: getInvoiceTotals(booking).total,
+      cashCollected: balanceDue,
+    });
+  }
+
+  async function completeRideWithGateway(booking: DashboardBooking) {
+    const balanceDue = getBalanceDue(booking);
+
+    if (balanceDue <= 0) {
+      await submitDriverRideStatus(booking, "Ride Complete");
+      return;
+    }
+
+    setIsPaying(true);
+    setCollectionStatus("Opening Razorpay QR And Payment Gateway...");
+
+    let order: { keyId?: string; orderId?: string | null; error?: string };
+
+    try {
+      const response = await fetch("/api/razorpay-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Math.round(balanceDue * 100),
+          receipt: `driver-${booking.booking_id}`,
+          notes: {
+            bookingId: booking.booking_id,
+            collectionBy: driverProfileForm.mobile,
+            balanceDue: String(balanceDue),
+            vehicle: booking.vehicle,
+            pickup: booking.start_point,
+            drop: booking.destination,
+          },
+        }),
+      });
+      order = (await response.json()) as {
+        keyId?: string;
+        orderId?: string | null;
+        error?: string;
+      };
+    } catch {
+      order = { error: "Payment Gateway Could Not Be Reached." };
+    }
+
+    if (!order.keyId) {
+      setIsPaying(false);
+      setCollectionStatus(
+        order.error ||
+          "Razorpay Credentials Are Not Configured. Please Add Razorpay Key ID And Key Secret.",
+      );
+      return;
+    }
+
+    if (!window.Razorpay) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Razorpay failed to load"));
+        document.body.appendChild(script);
+      }).catch(() => {
+        setCollectionStatus("Payment Gateway Could Not Load. Please Try Again.");
+      });
+    }
+
+    if (!window.Razorpay) {
+      setIsPaying(false);
+      return;
+    }
+
+    const checkoutOptions: Record<string, unknown> = {
+      key: order.keyId,
+      amount: Math.round(balanceDue * 100),
+      currency: "INR",
+      name: "Vishnu Tours",
+      description: `${booking.booking_id} Balance Collection`,
+      prefill: {
+        name: booking.customer_name,
+        contact: booking.customer_mobile,
+      },
+      notes: {
+        bookingId: booking.booking_id,
+        balanceDue: String(balanceDue),
+        driverMobile: driverProfileForm.mobile,
+      },
+      theme: {
+        color: "#f6bd16",
+      },
+      handler: async () => {
+        setIsPaying(false);
+        playBookingConfirmSound();
+        await submitDriverRideStatus(booking, "Ride Complete", {
+          collectionMode: "payment_gateway",
+          paymentAmount: getInvoiceTotals(booking).total,
+        });
+      },
+      modal: {
+        ondismiss: () => {
+          setIsPaying(false);
+          setCollectionStatus("Payment Window Was Closed Before Completion.");
+        },
+      },
+    };
+
+    if (order.orderId) {
+      checkoutOptions.order_id = order.orderId;
+    }
+
+    const checkout = new window.Razorpay(checkoutOptions);
+
+    checkout.open();
   }
 
   async function onboardDriver() {
@@ -1648,6 +1835,8 @@ export default function Home() {
       : normalizedStatus.includes("complete")
         ? "booking-card-complete"
         : "booking-card-progress";
+    const invoiceTotals = getInvoiceTotals(booking);
+    const balanceDue = getBalanceDue(booking);
 
     return (
       <article className={cardStatusClass} key={booking.booking_id}>
@@ -1672,11 +1861,26 @@ export default function Home() {
             {formatDisplayDate((booking.pickup_datetime || booking.created_at).slice(0, 10))}
           </b>
           <small>Fare</small>
-          <b>{formatInr(booking.estimated_fare)}</b>
+          <b>{formatInr(invoiceTotals.total)} Including GST 5%</b>
           <small>Payment</small>
           <b>
             {booking.payment_status || "Pending"} |{" "}
             {formatPaymentAmount(booking.payment_amount || 0)}
+          </b>
+          <small>Balance Due</small>
+          <b className={balanceDue > 0 ? "balance-due-text" : "balance-clear-text"}>
+            {balanceDue > 0 ? formatInr(balanceDue) : "No Balance"}
+          </b>
+          <small>Collection</small>
+          <b>
+            {booking.payment_collection_mode
+              ? booking.payment_collection_mode === "cash"
+                ? "Cash Collected By Driver"
+                : "Razorpay / QR Collected"
+              : "Not Collected"}
+            {booking.driver_cash_collected
+              ? ` | Driver Cash ${formatInr(booking.driver_cash_collected)}`
+              : ""}
           </b>
           <small>Refund</small>
           <b>{booking.refund_status || "None"}</b>
@@ -2472,6 +2676,83 @@ export default function Home() {
         </div>
       </footer>
 
+      {collectionPrompt ? (
+        <div className="collection-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="collection-modal">
+            <button
+              className="admin-close"
+              type="button"
+              onClick={() => {
+                setCollectionPrompt(null);
+                setCollectionStatus("");
+              }}
+            >
+              ×
+            </button>
+            <span className="collection-alert-label">
+              {collectionPromptMode === "start"
+                ? "Pending Balance Reminder"
+                : "Collect Balance Before Complete"}
+            </span>
+            <h2>{collectionPrompt.booking_id}</h2>
+            <p>
+              {collectionPrompt.customer_name} Has Pending Balance For{" "}
+              {collectionPrompt.start_point} To {collectionPrompt.destination}.
+            </p>
+            <strong className="collection-due-amount">
+              Collect {formatInr(getBalanceDue(collectionPrompt))}
+            </strong>
+            <div className="collection-meta-grid">
+              <span>Total Fare With GST</span>
+              <b>{formatInr(getInvoiceTotals(collectionPrompt).total)}</b>
+              <span>Already Paid</span>
+              <b>{formatPaymentAmount(collectionPrompt.payment_amount || 0)}</b>
+              <span>Cab</span>
+              <b>{collectionPrompt.vehicle}</b>
+            </div>
+            {collectionPromptMode === "start" ? (
+              <div className="collection-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    submitDriverRideStatus(collectionPrompt, "Ride Started")
+                  }
+                >
+                  Start Ride Now
+                </button>
+                <button
+                  className="ghost-action"
+                  type="button"
+                  onClick={() => setCollectionPrompt(null)}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="collection-actions">
+                <button
+                  type="button"
+                  disabled={isPaying}
+                  onClick={() => completeRideWithCash(collectionPrompt)}
+                >
+                  Cash Collected And Complete
+                </button>
+                <button
+                  type="button"
+                  disabled={isPaying}
+                  onClick={() => completeRideWithGateway(collectionPrompt)}
+                >
+                  Open Razorpay QR
+                </button>
+              </div>
+            )}
+            {collectionStatus ? (
+              <p className="collection-status">{collectionStatus}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {showLogin ? (
         <div className="admin-modal" role="dialog" aria-modal="true">
           <div className="admin-card">
@@ -2516,6 +2797,35 @@ export default function Home() {
                 <div className="admin-metric">
                   <span>Total Fare</span>
                   <strong>{formatInr(dashboard.totalFare)}</strong>
+                </div>
+                <div className="admin-metric cash-metric">
+                  <span>Driver Cash In Hand</span>
+                  <strong>
+                    {formatInr(
+                      dashboard.driverCashSummary.reduce(
+                        (total, driver) => total + Number(driver.cash_amount || 0),
+                        0,
+                      ),
+                    )}
+                  </strong>
+                </div>
+                <div className="admin-ops-panel cash-summary-panel">
+                  <div>
+                    <h3>Driver Cash Collection</h3>
+                    <div className="driver-list">
+                      {dashboard.driverCashSummary.length ? (
+                        dashboard.driverCashSummary.map((driver) => (
+                          <span key={`${driver.driver_mobile}-${driver.cash_amount}`}>
+                            {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
+                            {formatInr(Number(driver.cash_amount || 0))} Cash |{" "}
+                            {driver.cash_rides} Ride
+                          </span>
+                        ))
+                      ) : (
+                        <span>No Driver Cash Collection Yet.</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="admin-ops-panel">
                   <div>
@@ -2607,6 +2917,10 @@ export default function Home() {
                     <div>
                       <span>Completed Rides</span>
                       <strong>{driverEarning.completedRides}</strong>
+                    </div>
+                    <div>
+                      <span>Cash In Hand</span>
+                      <strong>{formatInr(driverEarning.cashInHand)}</strong>
                     </div>
                   </div>
                   <div className="admin-ops-panel driver-profile-panel">

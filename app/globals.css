@@ -3173,6 +3173,18 @@ h4,
   font-size: 34px;
 }
 
+.cash-metric {
+  background: #fff7ed;
+}
+
+.cash-metric strong {
+  color: #c2410c;
+}
+
+.cash-summary-panel {
+  grid-template-columns: 1fr;
+}
+
 .admin-recent {
   grid-column: 1 / -1;
   display: grid;
@@ -3181,6 +3193,139 @@ h4,
 
 .admin-recent h3 {
   margin: 8px 0 0;
+}
+
+.balance-due-text {
+  color: #dc2626;
+}
+
+.balance-clear-text {
+  color: #15803d;
+}
+
+.collection-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.collection-modal {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 34px 90px rgba(2, 8, 23, 0.32);
+}
+
+.collection-alert-label {
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.collection-modal h2,
+.collection-modal p {
+  margin: 0;
+}
+
+.collection-modal h2 {
+  color: #0f172a;
+  font-size: 28px;
+}
+
+.collection-modal p {
+  color: #475569;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.collection-due-amount {
+  display: block;
+  padding: 18px;
+  border: 2px solid #fecaca;
+  border-radius: 14px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: clamp(34px, 8vw, 56px);
+  font-weight: 1000;
+  line-height: 1;
+  text-align: center;
+}
+
+.collection-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.collection-meta-grid span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.collection-meta-grid b {
+  color: #0f172a;
+  text-align: right;
+}
+
+.collection-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.collection-actions button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: #f97316;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 1000;
+}
+
+.collection-actions button:nth-child(2) {
+  background: #075985;
+}
+
+.collection-actions .ghost-action {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.collection-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.collection-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #075985;
+  font-weight: 900;
 }
 
 .admin-recent article {
@@ -3422,7 +3567,13 @@ h4,
   .driver-form,
   .booking-detail-grid,
   .status-timeline,
-  .manual-assign-grid {
+  .manual-assign-grid,
+  .collection-actions,
+  .collection-meta-grid {
     grid-template-columns: 1fr;
+  }
+
+  .collection-meta-grid b {
+    text-align: left;
   }
 }
