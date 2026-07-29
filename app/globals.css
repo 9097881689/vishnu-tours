@@ -3850,6 +3850,26 @@ h4,
   padding: 0 10px;
 }
 
+.admin-payment-field input {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
+.refund-label {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.booking-actions .refund-action {
+  background: #b91c1c;
+}
+
 .collection-meta-grid span {
   color: #64748b;
   font-size: 12px;

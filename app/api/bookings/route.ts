@@ -40,6 +40,7 @@ type BookingOperationPayload = {
   bookingId?: string;
   rideStatus?: string;
   refundStatus?: string;
+  refundAmount?: number;
   paymentStatus?: string;
   paymentAmount?: number;
   collectionMode?: string;
@@ -84,6 +85,7 @@ type BookingRow = {
   status: string;
   ride_status: string;
   refund_status: string;
+  refund_amount: number;
   driver_name: string;
   driver_mobile: string;
   vehicle_number: string;
@@ -126,7 +128,7 @@ type WithdrawalRow = {
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, customer_email, status,
-  ride_status, refund_status, driver_name, driver_mobile, vehicle_number,
+  ride_status, refund_status, refund_amount, driver_name, driver_mobile, vehicle_number,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
   cancel_reason, ride_started_at,
   ride_completed_at
@@ -150,7 +152,7 @@ async function getAdminFinanceSummary() {
     `SELECT
        COUNT(*) AS total_bookings,
        COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_booking_amount,
-       COALESCE(SUM(payment_amount), 0) AS total_collected,
+       COALESCE(SUM(payment_amount - refund_amount), 0) AS total_collected,
        COALESCE(SUM(driver_cash_collected), 0) AS driver_cash_collected
      FROM bookings
      WHERE booking_id NOT LIKE 'PENDING-%'`,
@@ -416,6 +418,7 @@ async function ensureBookingsTable() {
         payment_mode TEXT NOT NULL,
         ride_status TEXT NOT NULL DEFAULT 'Booked',
         refund_status TEXT NOT NULL DEFAULT 'None',
+        refund_amount INTEGER NOT NULL DEFAULT 0,
         driver_name TEXT NOT NULL DEFAULT '',
         driver_mobile TEXT NOT NULL DEFAULT '',
         vehicle_number TEXT NOT NULL DEFAULT '',
@@ -447,6 +450,10 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN refund_status TEXT NOT NULL DEFAULT 'None'")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN refund_amount INTEGER NOT NULL DEFAULT 0")
     .run()
     .catch(() => undefined);
 
@@ -722,7 +729,8 @@ export async function GET(request: Request) {
       const booking = await env.DB.prepare(
         `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
           one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
-          customer_name, customer_mobile, customer_email, status, ride_status, refund_status,
+          customer_name, customer_mobile, customer_email, status, ride_status,
+          refund_status, refund_amount,
           driver_name, driver_mobile, vehicle_number, payment_status,
           payment_amount, payment_collection_mode, driver_cash_collected,
           cancel_reason, ride_started_at, ride_completed_at
@@ -1244,6 +1252,10 @@ export async function PATCH(request: Request) {
       0,
       Math.round(Number(payload.cashCollected || 0)),
     );
+    const requestedRefundAmount = Math.max(
+      0,
+      Math.round(Number(payload.refundAmount || 0)),
+    );
 
     if (requestedCashCollected > 0 && !requestedDriverMobile) {
       return Response.json(
@@ -1319,6 +1331,10 @@ export async function PATCH(request: Request) {
       `UPDATE bookings
        SET ride_status = COALESCE(NULLIF(?, ''), ride_status),
            refund_status = COALESCE(NULLIF(?, ''), refund_status),
+           refund_amount = CASE
+             WHEN ? > 0 THEN refund_amount + ?
+             ELSE refund_amount
+           END,
            payment_status = COALESCE(NULLIF(?, ''), payment_status),
            payment_amount = COALESCE(?, payment_amount),
            vehicle = COALESCE(NULLIF(?, ''), vehicle),
@@ -1344,6 +1360,8 @@ export async function PATCH(request: Request) {
       .bind(
         requestedRideStatus,
         clean(payload.refundStatus),
+        requestedRefundAmount,
+        requestedRefundAmount,
         clean(payload.paymentStatus),
         Number.isFinite(Number(payload.paymentAmount))
           ? Number(payload.paymentAmount)

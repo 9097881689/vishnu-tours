@@ -271,6 +271,7 @@ type DashboardBooking = {
   status: string;
   ride_status?: string;
   refund_status?: string;
+  refund_amount?: number;
   driver_name?: string;
   driver_mobile?: string;
   vehicle_number?: string;
@@ -702,6 +703,11 @@ export default function Home() {
     "online",
   );
   const [adminPaymentDriverMobile, setAdminPaymentDriverMobile] = useState("");
+  const [adminRefundPrompt, setAdminRefundPrompt] =
+    useState<DashboardBooking | null>(null);
+  const [adminRefundType, setAdminRefundType] = useState<"full" | "partial">("full");
+  const [adminRefundMode, setAdminRefundMode] = useState<"amount" | "percent">("amount");
+  const [adminRefundValue, setAdminRefundValue] = useState("");
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -1561,6 +1567,7 @@ export default function Home() {
     updates: {
       rideStatus?: string;
       refundStatus?: string;
+      refundAmount?: number;
       paymentStatus?: string;
       paymentAmount?: number;
       collectionMode?: string;
@@ -2040,6 +2047,53 @@ export default function Home() {
     setAdminPaymentPrompt(null);
   }
 
+  function openAdminRefundPrompt(booking: DashboardBooking) {
+    setAdminRefundPrompt(booking);
+    setAdminRefundType("full");
+    setAdminRefundMode("amount");
+    setAdminRefundValue("");
+  }
+
+  async function submitAdminRefund() {
+    if (!adminRefundPrompt) {
+      return;
+    }
+
+    const paidAmount = Number(adminRefundPrompt.payment_amount || 0);
+    const alreadyRefunded = Number(adminRefundPrompt.refund_amount || 0);
+    const refundableAmount = Math.max(0, paidAmount - alreadyRefunded);
+    const partialValue = Number(adminRefundValue || 0);
+    const refundAmount =
+      adminRefundType === "full"
+        ? refundableAmount
+        : adminRefundMode === "percent"
+          ? Math.round((refundableAmount * partialValue) / 100)
+          : Math.round(partialValue);
+
+    if (refundableAmount < 1) {
+      setPortalStatus("No Refundable Amount Available.");
+      return;
+    }
+
+    if (!refundAmount || refundAmount < 1 || refundAmount > refundableAmount) {
+      setPortalStatus(`Refund Amount Must Be Between ₹1 And ${formatInr(refundableAmount)}.`);
+      return;
+    }
+
+    const isRideComplete = (adminRefundPrompt.ride_status || "")
+      .toLowerCase()
+      .includes("complete");
+
+    await updateBookingOperation(adminRefundPrompt.booking_id, {
+      refundStatus:
+        refundAmount === refundableAmount ? "Refund Completed" : "Partial Refund Completed",
+      refundAmount,
+      rideStatus: isRideComplete ? "Ride Complete With Refund" : "Ride Cancelled",
+      cancelReason: isRideComplete ? "" : "Cancelled After Refund",
+    });
+    setAdminRefundPrompt(null);
+  }
+
   async function updatePaymentReceived(
     activeBooking: {
       bookingId: string;
@@ -2307,7 +2361,12 @@ export default function Home() {
       0,
     );
     const totalCollected = allBookings.reduce(
-      (total, booking) => total + Number(booking.payment_amount || 0),
+      (total, booking) =>
+        total +
+        Math.max(
+          0,
+          Number(booking.payment_amount || 0) - Number(booking.refund_amount || 0),
+        ),
       0,
     );
     const driverCashCollected = ledgerBookings.reduce(
@@ -2618,7 +2677,10 @@ export default function Home() {
               : ""}
           </b>
           <small>Refund</small>
-          <b>{booking.refund_status || "None"}</b>
+          <b>
+            {booking.refund_status || "None"}
+            {booking.refund_amount ? ` | ${formatInr(booking.refund_amount)}` : ""}
+          </b>
           <small>Driver</small>
           <b>
             {booking.driver_name
@@ -2830,24 +2892,11 @@ export default function Home() {
                 Payment Failed
               </button>
               <button
+                className="refund-action"
                 type="button"
-                onClick={() =>
-                  updateBookingOperation(booking.booking_id, {
-                    refundStatus: "Refund Requested",
-                  })
-                }
+                onClick={() => openAdminRefundPrompt(booking)}
               >
-                Refund Customer
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updateBookingOperation(booking.booking_id, {
-                    refundStatus: "Refund Completed",
-                  })
-                }
-              >
-                Refund Complete
+                Refund
               </button>
               <button
                 className="danger-action"
@@ -3560,6 +3609,85 @@ export default function Home() {
                 className="ghost-action"
                 type="button"
                 onClick={() => setAdminPaymentPrompt(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {adminRefundPrompt ? (
+        <div className="collection-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="collection-modal admin-payment-modal">
+            <button
+              className="admin-close"
+              type="button"
+              onClick={() => setAdminRefundPrompt(null)}
+            >
+              ×
+            </button>
+            <span className="collection-alert-label refund-label">Refund Customer</span>
+            <h2>{adminRefundPrompt.booking_id}</h2>
+            <div className="collection-meta-grid">
+              <span>Paid Amount</span>
+              <b>{formatPaymentAmount(adminRefundPrompt.payment_amount || 0)}</b>
+              <span>Already Refunded</span>
+              <b>{formatPaymentAmount(adminRefundPrompt.refund_amount || 0)}</b>
+              <span>Refundable Amount</span>
+              <b>
+                {formatPaymentAmount(
+                  Math.max(
+                    0,
+                    Number(adminRefundPrompt.payment_amount || 0) -
+                      Number(adminRefundPrompt.refund_amount || 0),
+                  ),
+                )}
+              </b>
+            </div>
+            <label className="admin-payment-field">
+              <span>Refund Type</span>
+              <select
+                value={adminRefundType}
+                onChange={(event) => setAdminRefundType(event.target.value as "full" | "partial")}
+              >
+                <option value="full">Full Refund</option>
+                <option value="partial">Partial Refund</option>
+              </select>
+            </label>
+            {adminRefundType === "partial" ? (
+              <>
+                <label className="admin-payment-field">
+                  <span>Partial Refund By</span>
+                  <select
+                    value={adminRefundMode}
+                    onChange={(event) =>
+                      setAdminRefundMode(event.target.value as "amount" | "percent")
+                    }
+                  >
+                    <option value="amount">Manual Amount</option>
+                    <option value="percent">Percentage</option>
+                  </select>
+                </label>
+                <label className="admin-payment-field">
+                  <span>{adminRefundMode === "percent" ? "Refund Percent" : "Refund Amount"}</span>
+                  <input
+                    value={adminRefundValue}
+                    onChange={(event) => setAdminRefundValue(event.target.value)}
+                    placeholder={adminRefundMode === "percent" ? "Enter Percent" : "Enter Amount"}
+                    inputMode="numeric"
+                  />
+                </label>
+              </>
+            ) : null}
+            <div className="collection-actions">
+              <button type="button" onClick={submitAdminRefund}>
+                Confirm Refund
+              </button>
+              <button
+                className="ghost-action"
+                type="button"
+                onClick={() => setAdminRefundPrompt(null)}
               >
                 Close
               </button>
@@ -4289,7 +4417,12 @@ export default function Home() {
                   <small>Vehicle No.</small>
                   <b>{customerBooking.vehicle_number || "Not Assigned"}</b>
                   <small>Refund</small>
-                  <b>{customerBooking.refund_status || "None"}</b>
+                  <b>
+                    {customerBooking.refund_status || "None"}
+                    {customerBooking.refund_amount
+                      ? ` | ${formatInr(customerBooking.refund_amount)}`
+                      : ""}
+                  </b>
                   <small>Cancel Reason</small>
                   <b>{customerBooking.cancel_reason || "None"}</b>
                 </div>
