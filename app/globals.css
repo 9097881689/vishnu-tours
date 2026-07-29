@@ -3201,6 +3201,40 @@ h4,
   background: transparent;
 }
 
+.driver-list .driver-cash-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.driver-list .driver-cash-row span {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.driver-cash-row button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #15803d;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
+.driver-cash-row button:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 .vehicle-engaged,
 .vehicle-vacant {
   flex: 0 0 auto;
@@ -4023,6 +4057,7 @@ h4,
   .fleet-availability-strip,
   .admin-login-row,
   .admin-ops-panel,
+  .driver-list .driver-cash-row,
   .driver-earning-panel,
   .driver-form,
   .booking-detail-grid,

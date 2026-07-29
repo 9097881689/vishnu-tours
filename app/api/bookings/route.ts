@@ -157,16 +157,15 @@ async function getAdminFinanceSummary() {
     total_collected: number;
     driver_cash_collected: number;
   }>();
-  const withdrawn = await env.DB.prepare(
-    `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
-     FROM driver_withdrawals
-     WHERE status = 'Completed'`,
-  ).first<{ withdrawn_amount: number }>();
+  const deposited = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
+     FROM driver_cash_deposits`,
+  ).first<{ deposited_amount: number }>();
   const totalCollected = Number(summary?.total_collected || 0);
   const driverCashCollected = Number(summary?.driver_cash_collected || 0);
   const driverCashInHand = Math.max(
     0,
-    driverCashCollected - Number(withdrawn?.withdrawn_amount || 0),
+    driverCashCollected - Number(deposited?.deposited_amount || 0),
   );
 
   return {
@@ -249,6 +248,18 @@ async function getDriverEarning(driverMobile: string) {
   };
 }
 
+async function getDriverCashDeposited(driverMobile?: string) {
+  const query = `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
+     FROM driver_cash_deposits
+     ${driverMobile ? "WHERE driver_mobile = ?" : ""}`;
+  const statement = env.DB.prepare(query);
+  const deposited = driverMobile
+    ? await statement.bind(driverMobile).first<{ deposited_amount: number }>()
+    : await statement.first<{ deposited_amount: number }>();
+
+  return Number(deposited?.deposited_amount || 0);
+}
+
 async function getDriverCashInHand(driverMobile: string) {
   const cash = await env.DB.prepare(
     `SELECT COALESCE(SUM(driver_cash_collected), 0) AS cash_amount
@@ -259,17 +270,28 @@ async function getDriverCashInHand(driverMobile: string) {
   )
     .bind(driverMobile)
     .first<{ cash_amount: number }>();
+  const deposited = await getDriverCashDeposited(driverMobile);
+
+  return Math.max(
+    0,
+    Number(cash?.cash_amount || 0) - deposited,
+  );
+}
+
+async function getDriverWithdrawableBalance(driverMobile: string) {
+  const earning = await getDriverEarning(driverMobile);
+  const cashInHand = await getDriverCashInHand(driverMobile);
   const withdrawn = await env.DB.prepare(
     `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
      FROM driver_withdrawals
-     WHERE driver_mobile = ? AND status = 'Completed'`,
+     WHERE driver_mobile = ? AND status IN ('Pending', 'Completed')`,
   )
     .bind(driverMobile)
     .first<{ withdrawn_amount: number }>();
 
   return Math.max(
     0,
-    Number(cash?.cash_amount || 0) - Number(withdrawn?.withdrawn_amount || 0),
+    earning.totalEarning - Number(withdrawn?.withdrawn_amount || 0) - cashInHand,
   );
 }
 
@@ -290,16 +312,15 @@ async function getDriverCashSummary() {
     cash_rides: number;
   }>();
 
-  const withdrawals = await env.DB.prepare(
-    `SELECT driver_mobile, COALESCE(SUM(amount), 0) AS withdrawn_amount
-     FROM driver_withdrawals
-     WHERE status = 'Completed'
+  const deposits = await env.DB.prepare(
+    `SELECT driver_mobile, COALESCE(SUM(amount), 0) AS deposited_amount
+     FROM driver_cash_deposits
      GROUP BY driver_mobile`,
-  ).all<{ driver_mobile: string; withdrawn_amount: number }>();
-  const withdrawalMap = new Map(
-    (withdrawals.results || []).map((row) => [
+  ).all<{ driver_mobile: string; deposited_amount: number }>();
+  const depositMap = new Map(
+    (deposits.results || []).map((row) => [
       row.driver_mobile,
-      Number(row.withdrawn_amount || 0),
+      Number(row.deposited_amount || 0),
     ]),
   );
 
@@ -309,9 +330,10 @@ async function getDriverCashSummary() {
     cash_amount: Math.max(
       0,
       Number(row.cash_collected || 0) -
-        Number(withdrawalMap.get(row.driver_mobile) || 0),
+        Number(depositMap.get(row.driver_mobile) || 0),
     ),
     cash_collected: Number(row.cash_collected || 0),
+    cash_deposited: Number(depositMap.get(row.driver_mobile) || 0),
     cash_rides: row.cash_rides,
   }));
 }
@@ -519,6 +541,19 @@ async function ensureBookingsTable() {
       )`,
     )
     .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS driver_cash_deposits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT NOT NULL,
+        driver_name TEXT NOT NULL,
+        driver_mobile TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        admin_mobile TEXT NOT NULL
+      )`,
+    )
+    .run();
 }
 
 export async function GET(request: Request) {
@@ -691,7 +726,8 @@ export async function PATCH(request: Request) {
     if (
       !bookingId &&
       action !== "requestWithdrawal" &&
-      action !== "updateWithdrawal"
+      action !== "updateWithdrawal" &&
+      action !== "recordCashDeposit"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
@@ -720,7 +756,7 @@ export async function PATCH(request: Request) {
         const bankName = clean(payload.bankName);
         const bankAccount = clean(payload.bankAccount);
         const bankIfsc = clean(payload.bankIfsc).toUpperCase();
-        const cashInHand = await getDriverCashInHand(driverMobile);
+        const withdrawableBalance = await getDriverWithdrawableBalance(driverMobile);
 
         if (!driver) {
           return Response.json(
@@ -729,9 +765,11 @@ export async function PATCH(request: Request) {
           );
         }
 
-        if (!amount || amount < 1 || amount > cashInHand) {
+        if (!amount || amount < 1 || amount > withdrawableBalance) {
           return Response.json(
-            { error: "Withdrawal Amount Must Be Within Cash In Hand Balance." },
+            {
+              error: `Withdrawal Amount Must Be Within Driver Ledger Balance. Available Balance Is ₹${withdrawableBalance}.`,
+            },
             { status: 400 },
           );
         }
@@ -1069,6 +1107,50 @@ export async function PATCH(request: Request) {
          WHERE id = ?`,
       )
         .bind(withdrawalStatus, new Date().toISOString(), withdrawalId)
+        .run();
+
+      return Response.json({ success: true });
+    }
+
+    if (action === "recordCashDeposit") {
+      const driverMobile = clean(payload.driverMobile);
+      const amount = Math.round(Number(payload.amount || 0));
+
+      if (!driverMobile || !amount || amount < 1) {
+        return Response.json(
+          { error: "Driver Mobile And Valid Cash Deposit Amount Are Required." },
+          { status: 400 },
+        );
+      }
+
+      const driver = await env.DB.prepare(
+        `SELECT driver_name, driver_mobile
+         FROM drivers
+         WHERE driver_mobile = ?
+         LIMIT 1`,
+      )
+        .bind(driverMobile)
+        .first<{ driver_name: string; driver_mobile: string }>();
+
+      if (!driver) {
+        return Response.json({ error: "Driver Profile Not Found." }, { status: 404 });
+      }
+
+      const cashInHand = await getDriverCashInHand(driverMobile);
+
+      if (amount > cashInHand) {
+        return Response.json(
+          { error: `Cash Deposit Cannot Be More Than Driver Cash In Hand ₹${cashInHand}.` },
+          { status: 400 },
+        );
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO driver_cash_deposits (
+          created_at, driver_name, driver_mobile, amount, admin_mobile
+        ) VALUES (?, ?, ?, ?, ?)`,
+      )
+        .bind(new Date().toISOString(), driver.driver_name, driverMobile, amount, adminMobile)
         .run();
 
       return Response.json({ success: true });

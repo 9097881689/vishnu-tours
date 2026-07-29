@@ -303,6 +303,7 @@ type DriverCashSummary = {
   driver_name: string;
   cash_amount: number;
   cash_collected?: number;
+  cash_deposited?: number;
   cash_rides: number;
 };
 
@@ -1959,6 +1960,57 @@ export default function Home() {
     }
   }
 
+  async function recordDriverCashDeposit(driver: DriverCashSummary) {
+    const cashInHand = Math.round(Number(driver.cash_amount || 0));
+
+    if (cashInHand < 1) {
+      setPortalStatus("No Driver Cash In Hand To Receive.");
+      return;
+    }
+
+    const enteredAmount = window.prompt(
+      `Enter Cash Received From ${driver.driver_name || "Driver"}. Cash In Hand: ${formatInr(cashInHand)}`,
+      String(cashInHand),
+    );
+
+    if (enteredAmount === null) {
+      return;
+    }
+
+    const amount = Math.round(Number(enteredAmount || 0));
+
+    if (!amount || amount < 1 || amount > cashInHand) {
+      setPortalStatus(`Cash Received Amount Must Be Between ₹1 And ${formatInr(cashInHand)}.`);
+      return;
+    }
+
+    setPortalStatus("Updating Driver Cash Ledger...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "recordCashDeposit",
+          mobile: loginMobile.replace(/\D/g, ""),
+          driverMobile: driver.driver_mobile,
+          amount,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Driver Cash Ledger Could Not Be Updated.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus("Driver Cash Received And Ledger Updated.");
+    } catch {
+      setPortalStatus("Driver Cash Ledger Could Not Be Updated.");
+    }
+  }
+
   function renderDriverLedger(bookings: DashboardBooking[]) {
     return (
       <div className="ledger-table">
@@ -3555,11 +3607,25 @@ export default function Home() {
                       <div className="driver-list">
                         {dashboard.driverCashSummary.length ? (
                           dashboard.driverCashSummary.map((driver) => (
-                            <span key={`${driver.driver_mobile}-${driver.cash_amount}`}>
-                              {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
-                              {formatInr(Number(driver.cash_amount || 0))} Cash |{" "}
-                              {driver.cash_rides} Ride
-                            </span>
+                            <div
+                              className="driver-cash-row"
+                              key={`${driver.driver_mobile}-${driver.cash_amount}`}
+                            >
+                              <span>
+                                {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
+                                Collected {formatInr(Number(driver.cash_collected || 0))} |{" "}
+                                Deposited {formatInr(Number(driver.cash_deposited || 0))} |{" "}
+                                In Hand {formatInr(Number(driver.cash_amount || 0))} |{" "}
+                                {driver.cash_rides} Ride
+                              </span>
+                              <button
+                                type="button"
+                                disabled={Number(driver.cash_amount || 0) < 1}
+                                onClick={() => recordDriverCashDeposit(driver)}
+                              >
+                                Cash Received
+                              </button>
+                            </div>
                           ))
                         ) : (
                           <span>No Driver Cash Collection Yet.</span>
