@@ -3153,6 +3153,71 @@ h4,
   font-weight: 800;
 }
 
+.fleet-availability-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.fleet-availability-strip span {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fleet-availability-strip b {
+  color: #075985;
+  font-size: 22px;
+}
+
+.driver-list .driver-vehicle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.driver-list .driver-vehicle-row span {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.vehicle-engaged,
+.vehicle-vacant {
+  flex: 0 0 auto;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.vehicle-engaged {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.vehicle-vacant {
+  background: #dcfce7;
+  color: #15803d;
+}
+
 .admin-metric {
   display: grid;
   gap: 8px;
@@ -3221,7 +3286,7 @@ h4,
 
 .admin-task-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
@@ -3951,6 +4016,7 @@ h4,
   .admin-dashboard,
   .admin-task-strip,
   .admin-tabs,
+  .fleet-availability-strip,
   .admin-login-row,
   .admin-ops-panel,
   .driver-earning-panel,

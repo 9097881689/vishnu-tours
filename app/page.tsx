@@ -2216,6 +2216,27 @@ export default function Home() {
       const status = (booking.ride_status || booking.status || "").toLowerCase();
       return !status.includes("cancel") && !status.includes("complete");
     });
+    const startedBookings = activeBookings.filter((booking) =>
+      (booking.ride_status || "").toLowerCase().includes("started"),
+    );
+    const engagedVehicleNumbers = new Set(
+      startedBookings
+        .map((booking) => (booking.vehicle_number || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const engagedDriverMobiles = new Set(
+      startedBookings
+        .map((booking) => (booking.driver_mobile || "").trim())
+        .filter(Boolean),
+    );
+    const registeredVehicleNumbers = new Set(
+      drivers
+        .map((driver) => (driver.vehicleNumber || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const registeredDriverMobiles = new Set(
+      drivers.map((driver) => driver.mobile.trim()).filter(Boolean),
+    );
     const assignmentPending = activeBookings.filter(
       (booking) => !booking.driver_mobile || !booking.vehicle_number,
     ).length;
@@ -2227,9 +2248,6 @@ export default function Home() {
       const status = (booking.ride_status || "").toLowerCase();
       return !status.includes("started");
     }).length;
-    const rideInProgress = activeBookings.filter((booking) =>
-      (booking.ride_status || "").toLowerCase().includes("started"),
-    ).length;
     const withdrawalPending = activeDashboard.withdrawalRequests.filter(
       (withdrawal) => withdrawal.status === "Pending",
     ).length;
@@ -2238,13 +2256,40 @@ export default function Home() {
       assignmentPending,
       paymentPending,
       ridePending,
-      rideInProgress,
+      rideInProgress: startedBookings.length,
       withdrawalPending,
       bookings: activeDashboard.recentBookings.length,
       vehicles: drivers.length,
       ledger: activeDashboard.driverLedger.length,
       withdrawals: activeDashboard.withdrawalRequests.length,
+      totalCarsWithDriver: registeredVehicleNumbers.size,
+      totalDrivers: registeredDriverMobiles.size,
+      vacantCars: Math.max(0, registeredVehicleNumbers.size - engagedVehicleNumbers.size),
+      vacantDrivers: Math.max(0, registeredDriverMobiles.size - engagedDriverMobiles.size),
+      engagedVehicleNumbers,
+      engagedDriverMobiles,
     };
+  }
+
+  function isStartedRideVehicle(
+    vehicleNumber: string | undefined,
+    bookings: DashboardBooking[],
+  ) {
+    const normalizedVehicleNumber = (vehicleNumber || "").trim().toLowerCase();
+
+    if (!normalizedVehicleNumber) {
+      return false;
+    }
+
+    return bookings.some((booking) => {
+      const status = (booking.ride_status || "").toLowerCase();
+      return (
+        status.includes("started") &&
+        !status.includes("complete") &&
+        !status.includes("cancel") &&
+        (booking.vehicle_number || "").trim().toLowerCase() === normalizedVehicleNumber
+      );
+    });
   }
 
   function renderPortalBookingCard(booking: DashboardBooking, canManage: boolean) {
@@ -3350,6 +3395,18 @@ export default function Home() {
                                 <b>{taskCounts.rideInProgress}</b>
                                 In Progress
                               </span>
+                              <span>
+                                <b>{taskCounts.totalCarsWithDriver}</b>
+                                Total Cars With Driver
+                              </span>
+                              <span>
+                                <b>{taskCounts.vacantCars}</b>
+                                Vacant Cars
+                              </span>
+                              <span>
+                                <b>{taskCounts.vacantDrivers}</b>
+                                Vacant Drivers
+                              </span>
                             </>
                           );
                         })()}
@@ -3443,13 +3500,52 @@ export default function Home() {
                     </div>
                     <div>
                       <h3>Registered Driver Vehicles</h3>
+                      {(() => {
+                        const taskCounts = getAdminTaskCounts(dashboard);
+
+                        return (
+                          <div className="fleet-availability-strip">
+                            <span>
+                              <b>{taskCounts.totalCarsWithDriver}</b>
+                              Total Cars With Driver
+                            </span>
+                            <span>
+                              <b>{taskCounts.vacantCars}</b>
+                              Vacant Cars
+                            </span>
+                            <span>
+                              <b>{taskCounts.vacantDrivers}</b>
+                              Vacant Drivers
+                            </span>
+                            <span>
+                              <b>{taskCounts.rideInProgress}</b>
+                              Engaged Vehicles
+                            </span>
+                          </div>
+                        );
+                      })()}
                       <div className="driver-list">
-                        {drivers.map((driver) => (
-                          <span key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}>
-                            Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
-                            {driver.vehicleNumber || "Vehicle No. Pending"}
-                          </span>
-                        ))}
+                        {drivers.map((driver) => {
+                          const isEngaged = isStartedRideVehicle(
+                            driver.vehicleNumber,
+                            dashboard.recentBookings,
+                          );
+
+                          return (
+                            <div
+                              className="driver-vehicle-row"
+                              key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}
+                            >
+                              <span>
+                                Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
+                                {driver.vehicleNumber || "Vehicle No. Pending"}
+                              </span>
+                              <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
+                                {isEngaged ? "Engaged" : "Vacant"}
+                              </b>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -3594,15 +3690,28 @@ export default function Home() {
                       )}
                       <div className="driver-list">
                         {driverVehicles.length ? (
-                          driverVehicles.map((driverVehicle) => (
-                            <span
-                              key={`${driverVehicle.driver_mobile}-${driverVehicle.vehicle_number}`}
-                            >
-                              Owner {driverVehicle.driver_name} |{" "}
-                              {driverVehicle.vehicle_type} |{" "}
-                              {driverVehicle.vehicle_number}
-                            </span>
-                          ))
+                          driverVehicles.map((driverVehicle) => {
+                            const isEngaged = isStartedRideVehicle(
+                              driverVehicle.vehicle_number,
+                              portalBookings,
+                            );
+
+                            return (
+                              <div
+                                className="driver-vehicle-row"
+                                key={`${driverVehicle.driver_mobile}-${driverVehicle.vehicle_number}`}
+                              >
+                                <span>
+                                  Owner {driverVehicle.driver_name} |{" "}
+                                  {driverVehicle.vehicle_type} |{" "}
+                                  {driverVehicle.vehicle_number}
+                                </span>
+                                <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
+                                  {isEngaged ? "Engaged" : "Vacant"}
+                                </b>
+                              </div>
+                            );
+                          })
                         ) : (
                           <span>No Registered Vehicle Found For This Driver.</span>
                         )}
