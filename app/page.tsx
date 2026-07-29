@@ -373,13 +373,11 @@ function getPlaceSuggestions(
 }
 
 function formatInr(amount: number) {
-  return amount
-    ? new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-      }).format(amount)
-    : "Enter KM";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
 }
 
 function formatPaymentAmount(amount: number) {
@@ -731,7 +729,7 @@ export default function Home() {
   const partPayAmount = Math.max(500, Math.round(payableFare * 0.25));
   const selectedPaymentAmount =
     paymentChoice === "zero" ? 0 : paymentChoice === "part" ? partPayAmount : payableFare;
-  const formattedFare = formatInr(fareTotal);
+  const formattedFare = fareTotal ? formatInr(fareTotal) : "Enter KM";
   const pickupDateTime = date && pickupTime ? `${date}T${pickupTime}` : "";
   const pickupAllowed = isMumbaiPickup(startPoint);
   const showPickupError =
