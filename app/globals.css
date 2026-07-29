@@ -3185,6 +3185,55 @@ h4,
   grid-template-columns: 1fr;
 }
 
+.ledger-panel {
+  grid-template-columns: 1fr;
+}
+
+.ledger-table {
+  display: grid;
+  gap: 8px;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 0.75fr 1fr 1.4fr repeat(3, minmax(110px, 0.8fr));
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ledger-row strong {
+  color: #075985;
+}
+
+.ledger-row b {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.withdrawal-completed b {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.withdrawal-rejected b {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.withdrawal-form {
+  margin-bottom: 12px;
+}
+
 .admin-recent {
   grid-column: 1 / -1;
   display: grid;
@@ -3663,6 +3712,7 @@ h4,
   .booking-detail-grid,
   .status-timeline,
   .manual-assign-grid,
+  .ledger-row,
   .collection-actions,
   .collection-meta-grid {
     grid-template-columns: 1fr;

@@ -302,7 +302,22 @@ type DriverCashSummary = {
   driver_mobile: string;
   driver_name: string;
   cash_amount: number;
+  cash_collected?: number;
   cash_rides: number;
+};
+
+type DriverWithdrawal = {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  driver_name: string;
+  driver_mobile: string;
+  amount: number;
+  bank_name: string;
+  bank_account: string;
+  bank_ifsc: string;
+  status: string;
+  admin_note?: string;
 };
 
 const permanentWorkflowRules = [
@@ -585,6 +600,14 @@ export default function Home() {
   const [portalRole, setPortalRole] = useState<PortalRole | null>(null);
   const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
   const [driverVehicles, setDriverVehicles] = useState<DriverRow[]>([]);
+  const [driverLedger, setDriverLedger] = useState<DashboardBooking[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<DriverWithdrawal[]>([]);
+  const [withdrawalForm, setWithdrawalForm] = useState({
+    amount: "",
+    bankName: "",
+    bankAccount: "",
+    bankIfsc: "",
+  });
   const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
@@ -623,6 +646,8 @@ export default function Home() {
     totalFare: number;
     recentBookings: DashboardBooking[];
     driverCashSummary: DriverCashSummary[];
+    driverLedger: DashboardBooking[];
+    withdrawalRequests: DriverWithdrawal[];
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -1277,6 +1302,8 @@ export default function Home() {
     setDashboard(null);
     setPortalBookings([]);
     setDriverVehicles([]);
+    setDriverLedger([]);
+    setWithdrawalRequests([]);
     setNextRide(null);
 
     try {
@@ -1290,6 +1317,8 @@ export default function Home() {
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
+        driverLedger?: DashboardBooking[];
+        withdrawalRequests?: DriverWithdrawal[];
         nextRide?: DashboardBooking | null;
         driverCashSummary?: DriverCashSummary[];
         driverCashInHand?: number;
@@ -1310,6 +1339,8 @@ export default function Home() {
       setPortalRole(result.role || "customer");
       setPortalBookings(sortDashboardBookings(result.recentBookings || []));
       setDriverVehicles(result.driverVehicles || []);
+      setDriverLedger(result.driverLedger || []);
+      setWithdrawalRequests(result.withdrawalRequests || []);
       setNextRide(result.nextRide || null);
 
       if (result.drivers) {
@@ -1330,6 +1361,8 @@ export default function Home() {
           totalFare: result.totalFare || 0,
           recentBookings: result.recentBookings || [],
           driverCashSummary: result.driverCashSummary || [],
+          driverLedger: result.driverLedger || [],
+          withdrawalRequests: result.withdrawalRequests || [],
         });
       }
 
@@ -1840,6 +1873,150 @@ export default function Home() {
     } catch {
       setCustomerStatus("Customer Booking Could Not Load.");
     }
+  }
+
+  async function requestCashWithdrawal() {
+    const amount = Math.round(Number(withdrawalForm.amount || 0));
+
+    if (!amount || amount < 1) {
+      setPortalStatus("Enter Valid Withdrawal Amount.");
+      return;
+    }
+
+    setPortalStatus("Submitting Withdrawal Request...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "requestWithdrawal",
+          mobile: driverProfileForm.mobile.replace(/\D/g, ""),
+          amount,
+          bankName: withdrawalForm.bankName,
+          bankAccount: withdrawalForm.bankAccount,
+          bankIfsc: withdrawalForm.bankIfsc,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Withdrawal Request Failed.");
+        return;
+      }
+
+      setWithdrawalForm({
+        amount: "",
+        bankName: "",
+        bankAccount: "",
+        bankIfsc: "",
+      });
+      await loadDashboard();
+      setPortalStatus("Withdrawal Request Sent To Admin.");
+    } catch {
+      setPortalStatus("Withdrawal Request Failed.");
+    }
+  }
+
+  async function updateWithdrawalStatus(withdrawalId: number, status: string) {
+    setPortalStatus("Updating Withdrawal...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateWithdrawal",
+          mobile: loginMobile.replace(/\D/g, ""),
+          withdrawalId,
+          withdrawalStatus: status,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Withdrawal Update Failed.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus(`Withdrawal ${status}.`);
+    } catch {
+      setPortalStatus("Withdrawal Update Failed.");
+    }
+  }
+
+  function renderDriverLedger(bookings: DashboardBooking[]) {
+    return (
+      <div className="ledger-table">
+        {bookings.length ? (
+          bookings.map((booking) => {
+            const totalFare = getInvoiceTotals(booking).total;
+            const driverCash = Number(booking.driver_cash_collected || 0);
+            const onlineCollected = Math.max(
+              0,
+              Number(booking.payment_amount || 0) - driverCash,
+            );
+
+            return (
+              <div className="ledger-row" key={`ledger-${booking.booking_id}`}>
+                <strong>{booking.booking_id}</strong>
+                <span>{formatDisplayDateTime(booking.ride_started_at || booking.pickup_datetime)}</span>
+                <span>{booking.start_point} To {booking.destination}</span>
+                <span>Fare {formatInr(totalFare)}</span>
+                <span>Online {formatPaymentAmount(onlineCollected)}</span>
+                <span>Driver Cash {formatPaymentAmount(driverCash)}</span>
+              </div>
+            );
+          })
+        ) : (
+          <p>No Driver Ledger Entries Yet.</p>
+        )}
+      </div>
+    );
+  }
+
+  function renderWithdrawalList(withdrawals: DriverWithdrawal[], canManage: boolean) {
+    return (
+      <div className="ledger-table">
+        {withdrawals.length ? (
+          withdrawals.map((withdrawal) => (
+            <div
+              className={`ledger-row withdrawal-${withdrawal.status.toLowerCase()}`}
+              key={`withdrawal-${withdrawal.id}`}
+            >
+              <strong>WR-{withdrawal.id}</strong>
+              <span>{formatDisplayDateTime(withdrawal.created_at)}</span>
+              <span>{withdrawal.driver_name} | {withdrawal.driver_mobile}</span>
+              <span>{formatInr(withdrawal.amount)}</span>
+              <span>{withdrawal.bank_name} | {withdrawal.bank_account}</span>
+              <span>{withdrawal.bank_ifsc}</span>
+              <b>{withdrawal.status}</b>
+              {canManage ? (
+                <div className="booking-actions">
+                  <button
+                    type="button"
+                    disabled={withdrawal.status === "Completed"}
+                    onClick={() => updateWithdrawalStatus(withdrawal.id, "Completed")}
+                  >
+                    Complete Withdrawal
+                  </button>
+                  <button
+                    type="button"
+                    disabled={withdrawal.status === "Rejected"}
+                    onClick={() => updateWithdrawalStatus(withdrawal.id, "Rejected")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ))
+        ) : (
+          <p>No Withdrawal Requests Yet.</p>
+        )}
+      </div>
+    );
   }
 
   function renderBookingTimeline(booking: DashboardBooking) {
@@ -2942,6 +3119,18 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                <div className="admin-ops-panel ledger-panel">
+                  <div>
+                    <h3>Driver Ledger</h3>
+                    {renderDriverLedger(dashboard.driverLedger)}
+                  </div>
+                </div>
+                <div className="admin-ops-panel ledger-panel">
+                  <div>
+                    <h3>Cash Withdrawal Requests</h3>
+                    {renderWithdrawalList(dashboard.withdrawalRequests, true)}
+                  </div>
+                </div>
                 <div className="workflow-rules-panel">
                   <h3>Permanent Workflow Rules</h3>
                   <div>
@@ -3044,6 +3233,64 @@ export default function Home() {
                     <div>
                       <span>Cash In Hand</span>
                       <strong>{formatInr(driverEarning.cashInHand)}</strong>
+                    </div>
+                  </div>
+                  <div className="admin-ops-panel ledger-panel">
+                    <div>
+                      <h3>Cash Withdrawal Request</h3>
+                      <div className="driver-form withdrawal-form">
+                        <input
+                          value={withdrawalForm.amount}
+                          onChange={(event) =>
+                            setWithdrawalForm((currentForm) => ({
+                              ...currentForm,
+                              amount: event.target.value,
+                            }))
+                          }
+                          placeholder="Amount"
+                          inputMode="numeric"
+                        />
+                        <input
+                          value={withdrawalForm.bankName}
+                          onChange={(event) =>
+                            setWithdrawalForm((currentForm) => ({
+                              ...currentForm,
+                              bankName: event.target.value,
+                            }))
+                          }
+                          placeholder="Bank Name"
+                        />
+                        <input
+                          value={withdrawalForm.bankAccount}
+                          onChange={(event) =>
+                            setWithdrawalForm((currentForm) => ({
+                              ...currentForm,
+                              bankAccount: event.target.value,
+                            }))
+                          }
+                          placeholder="Account Number"
+                        />
+                        <input
+                          value={withdrawalForm.bankIfsc}
+                          onChange={(event) =>
+                            setWithdrawalForm((currentForm) => ({
+                              ...currentForm,
+                              bankIfsc: event.target.value,
+                            }))
+                          }
+                          placeholder="IFSC Code"
+                        />
+                        <button type="button" onClick={requestCashWithdrawal}>
+                          Request Withdrawal
+                        </button>
+                      </div>
+                      {renderWithdrawalList(withdrawalRequests, false)}
+                    </div>
+                  </div>
+                  <div className="admin-ops-panel ledger-panel">
+                    <div>
+                      <h3>My Driver Ledger</h3>
+                      {renderDriverLedger(driverLedger)}
                     </div>
                   </div>
                   {nextRide ? (

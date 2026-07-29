@@ -49,6 +49,12 @@ type BookingOperationPayload = {
   cancelReason?: string;
   driverName?: string;
   driverMobile?: string;
+  amount?: number;
+  bankName?: string;
+  bankAccount?: string;
+  bankIfsc?: string;
+  withdrawalId?: number;
+  withdrawalStatus?: string;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -99,6 +105,20 @@ type DriverRow = {
 };
 
 type DriverVehicleRow = DriverRow;
+
+type WithdrawalRow = {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  driver_name: string;
+  driver_mobile: string;
+  amount: number;
+  bank_name: string;
+  bank_account: string;
+  bank_ifsc: string;
+  status: string;
+  admin_note: string;
+};
 
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
@@ -194,7 +214,7 @@ async function getDriverEarning(driverMobile: string) {
 }
 
 async function getDriverCashInHand(driverMobile: string) {
-  const summary = await env.DB.prepare(
+  const cash = await env.DB.prepare(
     `SELECT COALESCE(SUM(driver_cash_collected), 0) AS cash_amount
      FROM bookings
      WHERE driver_mobile = ?
@@ -203,28 +223,92 @@ async function getDriverCashInHand(driverMobile: string) {
   )
     .bind(driverMobile)
     .first<{ cash_amount: number }>();
+  const withdrawn = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
+     FROM driver_withdrawals
+     WHERE driver_mobile = ? AND status = 'Completed'`,
+  )
+    .bind(driverMobile)
+    .first<{ withdrawn_amount: number }>();
 
-  return Number(summary?.cash_amount || 0);
+  return Math.max(
+    0,
+    Number(cash?.cash_amount || 0) - Number(withdrawn?.withdrawn_amount || 0),
+  );
 }
 
 async function getDriverCashSummary() {
   const summary = await env.DB.prepare(
     `SELECT driver_mobile, driver_name,
-      COALESCE(SUM(driver_cash_collected), 0) AS cash_amount,
+      COALESCE(SUM(driver_cash_collected), 0) AS cash_collected,
       COUNT(*) AS cash_rides
      FROM bookings
      WHERE driver_cash_collected > 0
        AND booking_id NOT LIKE 'PENDING-%'
      GROUP BY driver_mobile, driver_name
-     ORDER BY cash_amount DESC`,
+     ORDER BY cash_collected DESC`,
   ).all<{
     driver_mobile: string;
     driver_name: string;
-    cash_amount: number;
+    cash_collected: number;
     cash_rides: number;
   }>();
 
-  return summary.results || [];
+  const withdrawals = await env.DB.prepare(
+    `SELECT driver_mobile, COALESCE(SUM(amount), 0) AS withdrawn_amount
+     FROM driver_withdrawals
+     WHERE status = 'Completed'
+     GROUP BY driver_mobile`,
+  ).all<{ driver_mobile: string; withdrawn_amount: number }>();
+  const withdrawalMap = new Map(
+    (withdrawals.results || []).map((row) => [
+      row.driver_mobile,
+      Number(row.withdrawn_amount || 0),
+    ]),
+  );
+
+  return (summary.results || []).map((row) => ({
+    driver_mobile: row.driver_mobile,
+    driver_name: row.driver_name,
+    cash_amount: Math.max(
+      0,
+      Number(row.cash_collected || 0) -
+        Number(withdrawalMap.get(row.driver_mobile) || 0),
+    ),
+    cash_collected: Number(row.cash_collected || 0),
+    cash_rides: row.cash_rides,
+  }));
+}
+
+async function getDriverLedger(driverMobile?: string) {
+  const query = `${bookingSelectSql}
+     WHERE booking_id NOT LIKE 'PENDING-%'
+       AND ride_status = 'Ride Complete'
+       ${driverMobile ? "AND driver_mobile = ?" : ""}
+     ORDER BY COALESCE(ride_completed_at, pickup_datetime, created_at) DESC
+     LIMIT 80`;
+
+  const statement = env.DB.prepare(query);
+  const ledger = driverMobile
+    ? await statement.bind(driverMobile).all<BookingRow>()
+    : await statement.all<BookingRow>();
+
+  return ledger.results || [];
+}
+
+async function getWithdrawals(driverMobile?: string) {
+  const query = `SELECT id, created_at, updated_at, driver_name, driver_mobile,
+      amount, bank_name, bank_account, bank_ifsc, status, admin_note
+     FROM driver_withdrawals
+     ${driverMobile ? "WHERE driver_mobile = ?" : ""}
+     ORDER BY id DESC
+     LIMIT 80`;
+  const statement = env.DB.prepare(query);
+  const withdrawals = driverMobile
+    ? await statement.bind(driverMobile).all<WithdrawalRow>()
+    : await statement.all<WithdrawalRow>();
+
+  return withdrawals.results || [];
 }
 
 async function ensureBookingsTable() {
@@ -381,6 +465,24 @@ async function ensureBookingsTable() {
     )
     .run()
     .catch(() => undefined);
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS driver_withdrawals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        driver_name TEXT NOT NULL,
+        driver_mobile TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        bank_name TEXT NOT NULL,
+        bank_account TEXT NOT NULL,
+        bank_ifsc TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'Pending',
+        admin_note TEXT NOT NULL DEFAULT ''
+      )`,
+    )
+    .run();
 }
 
 export async function GET(request: Request) {
@@ -401,6 +503,8 @@ export async function GET(request: Request) {
         const recent = await getRecentBookings();
         const drivers = await getDrivers();
         const driverCashSummary = await getDriverCashSummary();
+        const driverLedger = await getDriverLedger();
+        const withdrawalRequests = await getWithdrawals();
 
         return Response.json({
           role: "admin",
@@ -409,6 +513,8 @@ export async function GET(request: Request) {
           recentBookings: recent,
           drivers,
           driverCashSummary,
+          driverLedger,
+          withdrawalRequests,
         });
       }
 
@@ -464,6 +570,8 @@ export async function GET(request: Request) {
           ],
           driverEarning: await getDriverEarning(loginMobile),
           driverCashInHand: await getDriverCashInHand(loginMobile),
+          driverLedger: await getDriverLedger(loginMobile),
+          withdrawalRequests: await getWithdrawals(loginMobile),
         });
       }
 
@@ -491,6 +599,8 @@ export async function GET(request: Request) {
         recentBookings: matchingOpenBookings,
         driverEarning: { completedRides: 0, totalEarning: 0 },
         driverCashInHand: 0,
+        driverLedger: [],
+        withdrawalRequests: [],
       });
     }
 
@@ -544,9 +654,14 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const payload = (await request.json()) as BookingOperationPayload;
+    const action = clean(payload.action);
     const bookingId = clean(payload.bookingId);
 
-    if (!bookingId) {
+    if (
+      !bookingId &&
+      action !== "requestWithdrawal" &&
+      action !== "updateWithdrawal"
+    ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
 
@@ -560,6 +675,64 @@ export async function PATCH(request: Request) {
       const paymentStatus = clean(payload.paymentStatus);
       const paymentAmount = Number(payload.paymentAmount);
       const driverMobile = clean(payload.mobile);
+
+      if (action === "requestWithdrawal" && driverMobile) {
+        const driver = await env.DB.prepare(
+          `SELECT driver_name, driver_mobile
+           FROM drivers
+           WHERE driver_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(driverMobile)
+          .first<{ driver_name: string; driver_mobile: string }>();
+        const amount = Math.round(Number(payload.amount || 0));
+        const bankName = clean(payload.bankName);
+        const bankAccount = clean(payload.bankAccount);
+        const bankIfsc = clean(payload.bankIfsc).toUpperCase();
+        const cashInHand = await getDriverCashInHand(driverMobile);
+
+        if (!driver) {
+          return Response.json(
+            { error: "Driver Profile Not Found." },
+            { status: 404 },
+          );
+        }
+
+        if (!amount || amount < 1 || amount > cashInHand) {
+          return Response.json(
+            { error: "Withdrawal Amount Must Be Within Cash In Hand Balance." },
+            { status: 400 },
+          );
+        }
+
+        if (!bankName || !bankAccount || !bankIfsc) {
+          return Response.json(
+            { error: "Bank Name, Account Number And IFSC Are Required." },
+            { status: 400 },
+          );
+        }
+
+        const now = new Date().toISOString();
+        await env.DB.prepare(
+          `INSERT INTO driver_withdrawals (
+            created_at, updated_at, driver_name, driver_mobile, amount,
+            bank_name, bank_account, bank_ifsc, status, admin_note
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending', '')`,
+        )
+          .bind(
+            now,
+            now,
+            driver.driver_name,
+            driver.driver_mobile,
+            amount,
+            bankName,
+            bankAccount,
+            bankIfsc,
+          )
+          .run();
+
+        return Response.json({ success: true });
+      }
 
       if (customerMobile && paymentStatus === "Complete" && paymentAmount > 0) {
         await env.DB.prepare(
@@ -846,6 +1019,28 @@ export async function PATCH(request: Request) {
       }
 
       return Response.json({ error: "Invalid login mobile." }, { status: 401 });
+    }
+
+    if (action === "updateWithdrawal") {
+      const withdrawalId = Number(payload.withdrawalId);
+      const withdrawalStatus = clean(payload.withdrawalStatus);
+
+      if (!withdrawalId || !["Pending", "Completed", "Rejected"].includes(withdrawalStatus)) {
+        return Response.json(
+          { error: "Valid Withdrawal ID And Status Are Required." },
+          { status: 400 },
+        );
+      }
+
+      await env.DB.prepare(
+        `UPDATE driver_withdrawals
+         SET status = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+        .bind(withdrawalStatus, new Date().toISOString(), withdrawalId)
+        .run();
+
+      return Response.json({ success: true });
     }
 
     const existingBooking = await env.DB.prepare(
