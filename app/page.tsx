@@ -3324,6 +3324,22 @@ export default function Home() {
 
                   return (
                     <>
+                      {metricCards.map((card) => (
+                        <button
+                          className={`admin-metric metric-button ${
+                            activeAdminBreakup === card.id ? "is-active" : ""
+                          } ${card.className || ""}`}
+                          key={card.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveAdminBreakup(card.id);
+                            setActiveAdminTab("breakup");
+                          }}
+                        >
+                          <span>{card.label}</span>
+                          <strong>{card.value}</strong>
+                        </button>
+                      ))}
                       <div className="admin-tabs">
                         {(() => {
                           const taskCounts = getAdminTaskCounts(dashboard);
@@ -3409,22 +3425,6 @@ export default function Home() {
                           );
                         })()}
                       </div>
-                      {metricCards.map((card) => (
-                        <button
-                          className={`admin-metric metric-button ${
-                            activeAdminBreakup === card.id ? "is-active" : ""
-                          } ${card.className || ""}`}
-                          key={card.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveAdminBreakup(card.id);
-                            setActiveAdminTab("breakup");
-                          }}
-                        >
-                          <span>{card.label}</span>
-                          <strong>{card.value}</strong>
-                        </button>
-                      ))}
                     </>
                   );
                 })()}
