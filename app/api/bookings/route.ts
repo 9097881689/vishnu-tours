@@ -27,6 +27,7 @@ type BookingPayload = {
   date?: string;
   name?: string;
   mobile?: string;
+  email?: string;
   packageType?: string;
   paymentMode?: string;
 };
@@ -73,6 +74,7 @@ type BookingRow = {
   pickup_datetime: string;
   customer_name: string;
   customer_mobile: string;
+  customer_email: string;
   status: string;
   ride_status: string;
   refund_status: string;
@@ -100,7 +102,7 @@ type DriverVehicleRow = DriverRow;
 
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
-  estimated_fare, pickup_datetime, customer_name, customer_mobile, status,
+  estimated_fare, pickup_datetime, customer_name, customer_mobile, customer_email, status,
   ride_status, refund_status, driver_name, driver_mobile, vehicle_number,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
   cancel_reason, ride_started_at,
@@ -118,6 +120,16 @@ async function getRecentBookings(limit = 8) {
     .all<BookingRow>();
 
   return recent.results || [];
+}
+
+async function getBookingById(bookingId: string) {
+  return env.DB.prepare(
+    `${bookingSelectSql}
+     WHERE booking_id = ?
+     LIMIT 1`,
+  )
+    .bind(bookingId)
+    .first<BookingRow>();
 }
 
 async function getDrivers() {
@@ -239,6 +251,7 @@ async function ensureBookingsTable() {
         pickup_datetime TEXT NOT NULL,
         customer_name TEXT NOT NULL,
         customer_mobile TEXT NOT NULL,
+        customer_email TEXT NOT NULL DEFAULT '',
         package_type TEXT NOT NULL DEFAULT 'perKm',
         payment_mode TEXT NOT NULL,
         ride_status TEXT NOT NULL DEFAULT 'Booked',
@@ -264,6 +277,11 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN ride_status TEXT NOT NULL DEFAULT 'Booked'")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN customer_email TEXT NOT NULL DEFAULT ''")
     .run()
     .catch(() => undefined);
 
@@ -480,7 +498,7 @@ export async function GET(request: Request) {
       const booking = await env.DB.prepare(
         `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
           one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
-          customer_name, customer_mobile, status, ride_status, refund_status,
+          customer_name, customer_mobile, customer_email, status, ride_status, refund_status,
           driver_name, driver_mobile, vehicle_number, payment_status,
           payment_amount, payment_collection_mode, driver_cash_collected,
           cancel_reason, ride_started_at, ride_completed_at
@@ -658,6 +676,9 @@ export async function PATCH(request: Request) {
           )
           .run();
 
+        const updatedBooking = await getBookingById(bookingId);
+        await sendCustomerBookingEmail(updatedBooking, "driver_assigned");
+
         return Response.json({ success: true });
       }
 
@@ -779,6 +800,11 @@ export async function PATCH(request: Request) {
             driverMobile,
           )
           .run();
+
+        if (rideStatus === "Ride Complete") {
+          const updatedBooking = await getBookingById(bookingId);
+          await sendCustomerBookingEmail(updatedBooking, "ride_complete");
+        }
 
         return Response.json({ success: true });
       }
@@ -954,6 +980,16 @@ export async function PATCH(request: Request) {
       )
       .run();
 
+    if (requestedDriverMobile || requestedVehicleNumber) {
+      const updatedBooking = await getBookingById(bookingId);
+      await sendCustomerBookingEmail(updatedBooking, "driver_assigned");
+    }
+
+    if (requestedRideStatus === "Ride Complete") {
+      const updatedBooking = await getBookingById(bookingId);
+      await sendCustomerBookingEmail(updatedBooking, "ride_complete");
+    }
+
     return Response.json({ success: true });
   } catch (error) {
     const message =
@@ -1067,13 +1103,14 @@ export async function POST(request: Request) {
     const date = clean(payload.date);
     const name = clean(payload.name);
     const mobile = clean(payload.mobile);
+    const email = clean(payload.email).toLowerCase();
     const packageType = normalizePackage(payload.packageType);
     const paymentMode = clean(payload.paymentMode) || "Pay advance after booking";
     const oneSideKm = Number(payload.distanceKm);
 
-    if (!tripType || !vehicle || !destination || !date || !name || !mobile) {
+    if (!tripType || !vehicle || !destination || !date || !name || !mobile || !email) {
       return Response.json(
-        { error: "Please fill all booking fields." },
+        { error: "Please fill all booking fields including email." },
         { status: 400 },
       );
     }
@@ -1125,6 +1162,7 @@ export async function POST(request: Request) {
         pickup_datetime,
         customer_name,
         customer_mobile,
+        customer_email,
         package_type,
         payment_mode,
         ride_status,
@@ -1139,7 +1177,7 @@ export async function POST(request: Request) {
         cancel_reason,
         ride_started_at,
         ride_completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -1156,6 +1194,7 @@ export async function POST(request: Request) {
         date,
         name,
         mobile,
+        email,
         packageType,
         paymentMode,
         initialRideStatus,
@@ -1206,6 +1245,9 @@ export async function POST(request: Request) {
       customerMobile: mobile,
       paymentMode,
     });
+
+    const savedBooking = await getBookingById(bookingId);
+    await sendCustomerBookingEmail(savedBooking, "booking_confirmed");
 
     return Response.json(
       {
@@ -1293,6 +1335,135 @@ async function sendAdminWhatsAppNotification(booking: {
   ).catch((error) => {
     console.warn("Admin WhatsApp notification failed.", error);
   });
+}
+
+async function sendCustomerBookingEmail(
+  booking: BookingRow | null | undefined,
+  event: "booking_confirmed" | "driver_assigned" | "ride_complete",
+) {
+  if (!booking?.customer_email) {
+    return;
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY || "";
+  const fromEmail = process.env.CUSTOMER_EMAIL_FROM || "";
+
+  if (!resendApiKey || !fromEmail) {
+    return;
+  }
+
+  const totalWithGst = Math.round(Number(booking.estimated_fare || 0) * 1.05);
+  const balanceDue = Math.max(0, totalWithGst - Number(booking.payment_amount || 0));
+  const emailCopy = {
+    booking_confirmed: {
+      subject: `Booking Confirmed - ${booking.booking_id} | Vishnu Tours`,
+      title: "Your Booking Is Confirmed",
+      intro:
+        "Thank you for choosing Vishnu Tours. Your cab booking has been confirmed and saved successfully.",
+    },
+    driver_assigned: {
+      subject: `Driver Assigned - ${booking.booking_id} | Vishnu Tours`,
+      title: "Driver And Vehicle Assigned",
+      intro:
+        "Your driver and vehicle have been assigned for the journey. Please keep your phone available near pickup time.",
+    },
+    ride_complete: {
+      subject: `Ride Completed - ${booking.booking_id} | Vishnu Tours`,
+      title: "Your Ride Is Complete",
+      intro:
+        "Your ride has been marked complete. Thank you for travelling with Vishnu Tours.",
+    },
+  }[event];
+  const driverLine = booking.driver_name
+    ? `${booking.driver_name} | ${booking.driver_mobile || "Mobile Pending"} | ${
+        booking.vehicle_number || "Vehicle Number Pending"
+      }`
+    : "Driver Assignment Pending";
+  const rows = [
+    ["Booking ID", booking.booking_id],
+    ["Journey", `${booking.start_point} To ${booking.destination}`],
+    ["Trip Type", booking.trip_type],
+    ["Cab", booking.vehicle],
+    ["Pickup Date And Time", booking.pickup_datetime],
+    ["Customer", `${booking.customer_name} | ${booking.customer_mobile}`],
+    ["Driver / Vehicle", driverLine],
+    ["Total Fare Including GST 5%", `Rs ${totalWithGst}`],
+    ["Paid Amount", `Rs ${Number(booking.payment_amount || 0)}`],
+    ["Balance Due", `Rs ${balanceDue}`],
+    ["Ride Status", booking.ride_status || "Booked"],
+  ];
+  const htmlRows = rows
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#64748b;font-weight:700;">${escapeHtml(
+            label,
+          )}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#0f172a;font-weight:800;">${escapeHtml(
+            value,
+          )}</td>
+        </tr>`,
+    )
+    .join("");
+  const html = `
+    <div style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+        <div style="padding:22px 24px;background:#f6bd16;color:#111827;">
+          <h1 style="margin:0;font-size:24px;line-height:1.25;">${escapeHtml(
+            emailCopy.title,
+          )}</h1>
+          <p style="margin:8px 0 0;font-size:14px;font-weight:700;">Vishnu Tours - Premium Cab Booking From Mumbai</p>
+        </div>
+        <div style="padding:22px 24px;">
+          <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.6;">Dear ${escapeHtml(
+            booking.customer_name,
+          )}, ${escapeHtml(emailCopy.intro)}</p>
+          <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+            ${htmlRows}
+          </table>
+          <p style="margin:18px 0 0;color:#334155;font-size:14px;line-height:1.6;">
+            For any support, message Vishnu Tours on WhatsApp: +91 7004291529.
+          </p>
+          <p style="margin:16px 0 0;color:#0f172a;font-weight:800;">Regards,<br/>Vishnu Tours</p>
+        </div>
+      </div>
+    </div>`;
+  const text = [
+    emailCopy.title,
+    "",
+    `Dear ${booking.customer_name}, ${emailCopy.intro}`,
+    "",
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "Support WhatsApp: +91 7004291529",
+    "Regards, Vishnu Tours",
+  ].join("\n");
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: booking.customer_email,
+      subject: emailCopy.subject,
+      html,
+      text,
+    }),
+  }).catch((error) => {
+    console.warn("Customer email notification failed.", error);
+  });
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function normalizePackage(value: unknown): PackageType {

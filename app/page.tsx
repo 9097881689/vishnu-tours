@@ -1023,8 +1023,8 @@ export default function Home() {
       return;
     }
 
-    if (!drop || !numericDistance || !pickupDateTime || !name || !mobile) {
-      setBookingStatus("Please Fill From, To, KM, Date, Name And Mobile Number.");
+    if (!drop || !numericDistance || !pickupDateTime || !name || !mobile || !email) {
+      setBookingStatus("Please Fill From, To, KM, Date, Name, Mobile And Email.");
       return null;
     }
 
@@ -1048,6 +1048,7 @@ export default function Home() {
           date: pickupDateTime,
           name,
           mobile,
+          email,
           packageType,
           paymentMode,
         }),
