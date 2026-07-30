@@ -3397,11 +3397,12 @@ h4,
 .admin-tabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid #dbe4ee;
-  border-radius: 12px;
-  background: #f8fbff;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #0f172a;
+  border-radius: 10px;
+  background: #0f172a;
 }
 
 .admin-tabs button {
@@ -3409,11 +3410,11 @@ h4,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 42px;
+  min-height: 46px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
-  color: #334155;
+  color: #e2e8f0;
   cursor: pointer;
   font-size: 12px;
   font-weight: 900;
@@ -3421,10 +3422,10 @@ h4,
 }
 
 .admin-tabs button.is-active {
-  border-color: #075985;
-  background: #fff;
-  color: #075985;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #111827;
+  box-shadow: none;
 }
 
 .admin-tabs button span {
@@ -3438,8 +3439,8 @@ h4,
   min-width: 28px;
   min-height: 24px;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #075985;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
   font-size: 12px;
 }
 
@@ -3475,7 +3476,7 @@ h4,
 
 .ledger-row {
   display: grid;
-  grid-template-columns: 0.75fr 1fr 1.4fr repeat(3, minmax(110px, 0.8fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   align-items: center;
   padding: 10px;
@@ -3497,6 +3498,19 @@ h4,
   border-radius: 999px;
   background: #fef3c7;
   color: #92400e;
+}
+
+.ledger-progress-row {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.ledger-collected-amount {
+  color: #15803d;
+}
+
+.ledger-deducted-amount {
+  color: #b91c1c;
 }
 
 .withdrawal-completed b {

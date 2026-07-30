@@ -50,6 +50,8 @@ type BookingOperationPayload = {
   cancelReason?: string;
   driverName?: string;
   driverMobile?: string;
+  refundDriverName?: string;
+  refundDriverMobile?: string;
   amount?: number;
   bankName?: string;
   bankAccount?: string;
@@ -93,6 +95,10 @@ type BookingRow = {
   payment_amount: number;
   payment_collection_mode: string;
   driver_cash_collected: number;
+  refund_collection_mode: string;
+  driver_cash_refunded: number;
+  refund_driver_name: string;
+  refund_driver_mobile: string;
   cancel_reason: string;
   ride_started_at: string;
   ride_completed_at: string;
@@ -130,6 +136,8 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   estimated_fare, pickup_datetime, customer_name, customer_mobile, customer_email, status,
   ride_status, refund_status, refund_amount, driver_name, driver_mobile, vehicle_number,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
+  refund_collection_mode, driver_cash_refunded,
+  refund_driver_name, refund_driver_mobile,
   cancel_reason, ride_started_at,
   ride_completed_at
   FROM bookings`;
@@ -153,7 +161,7 @@ async function getAdminFinanceSummary() {
        COUNT(*) AS total_bookings,
        COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_booking_amount,
        COALESCE(SUM(payment_amount - refund_amount), 0) AS total_collected,
-       COALESCE(SUM(driver_cash_collected), 0) AS driver_cash_collected
+       COALESCE(SUM(driver_cash_collected - driver_cash_refunded), 0) AS driver_cash_collected
      FROM bookings
      WHERE booking_id NOT LIKE 'PENDING-%'`,
   ).first<{
@@ -275,11 +283,20 @@ async function getDriverCashInHand(driverMobile: string) {
   )
     .bind(driverMobile)
     .first<{ cash_amount: number }>();
+  const refunded = await env.DB.prepare(
+    `SELECT COALESCE(SUM(driver_cash_refunded), 0) AS refund_amount
+     FROM bookings
+     WHERE refund_driver_mobile = ?
+       AND driver_cash_refunded > 0
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  )
+    .bind(driverMobile)
+    .first<{ refund_amount: number }>();
   const deposited = await getDriverCashDeposited(driverMobile);
 
   return Math.max(
     0,
-    Number(cash?.cash_amount || 0) - deposited,
+    Number(cash?.cash_amount || 0) - Number(refunded?.refund_amount || 0) - deposited,
   );
 }
 
@@ -317,6 +334,22 @@ async function getDriverCashSummary() {
     cash_rides: number;
   }>();
 
+  const refunds = await env.DB.prepare(
+    `SELECT refund_driver_mobile AS driver_mobile,
+      COALESCE(SUM(driver_cash_refunded), 0) AS cash_refunded
+     FROM bookings
+     WHERE driver_cash_refunded > 0
+       AND COALESCE(refund_driver_mobile, '') != ''
+       AND booking_id NOT LIKE 'PENDING-%'
+     GROUP BY refund_driver_mobile`,
+  ).all<{ driver_mobile: string; cash_refunded: number }>();
+  const refundMap = new Map(
+    (refunds.results || []).map((row) => [
+      row.driver_mobile,
+      Number(row.cash_refunded || 0),
+    ]),
+  );
+
   const deposits = await env.DB.prepare(
     `SELECT driver_mobile, COALESCE(SUM(amount), 0) AS deposited_amount
      FROM driver_cash_deposits
@@ -335,9 +368,11 @@ async function getDriverCashSummary() {
     cash_amount: Math.max(
       0,
       Number(row.cash_collected || 0) -
+        Number(refundMap.get(row.driver_mobile) || 0) -
         Number(depositMap.get(row.driver_mobile) || 0),
     ),
     cash_collected: Number(row.cash_collected || 0),
+    cash_refunded: Number(refundMap.get(row.driver_mobile) || 0),
     cash_deposited: Number(depositMap.get(row.driver_mobile) || 0),
     cash_rides: row.cash_rides,
   }));
@@ -346,14 +381,14 @@ async function getDriverCashSummary() {
 async function getDriverLedger(driverMobile?: string) {
   const query = `${bookingSelectSql}
      WHERE booking_id NOT LIKE 'PENDING-%'
-       AND (ride_status = 'Ride Complete' OR driver_cash_collected > 0)
-       ${driverMobile ? "AND driver_mobile = ?" : ""}
+       AND (ride_status = 'Ride Complete' OR driver_cash_collected > 0 OR driver_cash_refunded > 0)
+       ${driverMobile ? "AND (driver_mobile = ? OR refund_driver_mobile = ?)" : ""}
      ORDER BY COALESCE(ride_completed_at, pickup_datetime, created_at) DESC
      LIMIT 80`;
 
   const statement = env.DB.prepare(query);
   const ledger = driverMobile
-    ? await statement.bind(driverMobile).all<BookingRow>()
+    ? await statement.bind(driverMobile, driverMobile).all<BookingRow>()
     : await statement.all<BookingRow>();
 
   return ledger.results || [];
@@ -426,6 +461,10 @@ async function ensureBookingsTable() {
         payment_amount INTEGER NOT NULL DEFAULT 0,
         payment_collection_mode TEXT NOT NULL DEFAULT '',
         driver_cash_collected INTEGER NOT NULL DEFAULT 0,
+        refund_collection_mode TEXT NOT NULL DEFAULT '',
+        driver_cash_refunded INTEGER NOT NULL DEFAULT 0,
+        refund_driver_name TEXT NOT NULL DEFAULT '',
+        refund_driver_mobile TEXT NOT NULL DEFAULT '',
         cancel_reason TEXT NOT NULL DEFAULT '',
         ride_started_at TEXT NOT NULL DEFAULT '',
         ride_completed_at TEXT NOT NULL DEFAULT ''
@@ -489,6 +528,22 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN driver_cash_collected INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN refund_collection_mode TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN driver_cash_refunded INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN refund_driver_name TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN refund_driver_mobile TEXT NOT NULL DEFAULT ''")
     .run()
     .catch(() => undefined);
 
@@ -733,6 +788,8 @@ export async function GET(request: Request) {
           refund_status, refund_amount,
           driver_name, driver_mobile, vehicle_number, payment_status,
           payment_amount, payment_collection_mode, driver_cash_collected,
+          refund_collection_mode, driver_cash_refunded,
+          refund_driver_name, refund_driver_mobile,
           cancel_reason, ride_started_at, ride_completed_at
          FROM bookings
          WHERE booking_id = ? AND customer_mobile = ?
@@ -1247,6 +1304,8 @@ export async function PATCH(request: Request) {
     const requestedDriverMobile = clean(payload.driverMobile);
     const requestedDriverName = clean(payload.driverName);
     const requestedVehicleNumber = clean(payload.vehicleNumber);
+    const requestedRefundDriverMobile = clean(payload.refundDriverMobile);
+    const requestedRefundDriverName = clean(payload.refundDriverName);
     const requestedCollectionMode = clean(payload.collectionMode);
     const requestedCashCollected = Math.max(
       0,
@@ -1260,6 +1319,13 @@ export async function PATCH(request: Request) {
     if (requestedCashCollected > 0 && !requestedDriverMobile) {
       return Response.json(
         { error: "Select Driver Who Received Cash." },
+        { status: 400 },
+      );
+    }
+
+    if (requestedRefundAmount > 0 && requestedCollectionMode === "refund_driver_cash" && !requestedRefundDriverMobile) {
+      return Response.json(
+        { error: "Select Driver Who Paid Refund." },
         { status: 400 },
       );
     }
@@ -1346,6 +1412,22 @@ export async function PATCH(request: Request) {
              WHEN ? > 0 THEN driver_cash_collected + ?
              ELSE driver_cash_collected
            END,
+           refund_collection_mode = CASE
+             WHEN ? LIKE 'refund_%' THEN ?
+             ELSE refund_collection_mode
+           END,
+           refund_driver_name = CASE
+             WHEN ? = 'refund_driver_cash' THEN ?
+             ELSE refund_driver_name
+           END,
+           refund_driver_mobile = CASE
+             WHEN ? = 'refund_driver_cash' THEN ?
+             ELSE refund_driver_mobile
+           END,
+           driver_cash_refunded = CASE
+             WHEN ? > 0 AND ? = 'refund_driver_cash' THEN driver_cash_refunded + ?
+             ELSE driver_cash_refunded
+           END,
            cancel_reason = COALESCE(NULLIF(?, ''), cancel_reason),
            ride_started_at = CASE
              WHEN NULLIF(?, '') IS NOT NULL AND ride_started_at = '' THEN ?
@@ -1373,6 +1455,15 @@ export async function PATCH(request: Request) {
         requestedCollectionMode,
         requestedCashCollected,
         requestedCashCollected,
+        requestedCollectionMode,
+        requestedCollectionMode,
+        requestedCollectionMode,
+        requestedRefundDriverName,
+        requestedCollectionMode,
+        requestedRefundDriverMobile,
+        requestedRefundAmount,
+        requestedCollectionMode,
+        requestedRefundAmount,
         clean(payload.cancelReason),
         rideStartedAt,
         rideStartedAt,

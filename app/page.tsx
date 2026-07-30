@@ -279,6 +279,10 @@ type DashboardBooking = {
   payment_amount?: number;
   payment_collection_mode?: string;
   driver_cash_collected?: number;
+  refund_collection_mode?: string;
+  driver_cash_refunded?: number;
+  refund_driver_name?: string;
+  refund_driver_mobile?: string;
   cancel_reason?: string;
   ride_started_at?: string;
   ride_completed_at?: string;
@@ -308,6 +312,7 @@ type DriverCashSummary = {
   cash_amount: number;
   cash_collected?: number;
   cash_deposited?: number;
+  cash_refunded?: number;
   cash_rides: number;
 };
 
@@ -708,6 +713,10 @@ export default function Home() {
   const [adminRefundType, setAdminRefundType] = useState<"full" | "partial">("full");
   const [adminRefundMode, setAdminRefundMode] = useState<"amount" | "percent">("amount");
   const [adminRefundValue, setAdminRefundValue] = useState("");
+  const [adminRefundSource, setAdminRefundSource] = useState<"online" | "driver_cash">(
+    "online",
+  );
+  const [adminRefundDriverMobile, setAdminRefundDriverMobile] = useState("");
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -1575,6 +1584,8 @@ export default function Home() {
       vehicle?: string;
       driverName?: string;
       driverMobile?: string;
+      refundDriverName?: string;
+      refundDriverMobile?: string;
       vehicleNumber?: string;
       cancelReason?: string;
     },
@@ -2052,6 +2063,8 @@ export default function Home() {
     setAdminRefundType("full");
     setAdminRefundMode("amount");
     setAdminRefundValue("");
+    setAdminRefundSource("online");
+    setAdminRefundDriverMobile(booking.driver_mobile || "");
   }
 
   async function submitAdminRefund() {
@@ -2080,9 +2093,19 @@ export default function Home() {
       return;
     }
 
+    const selectedRefundDriver = drivers.find(
+      (driver) => driver.mobile === adminRefundDriverMobile,
+    );
+
+    if (adminRefundSource === "driver_cash" && !selectedRefundDriver) {
+      setPortalStatus("Select Driver Who Paid Refund.");
+      return;
+    }
+
     const isRideComplete = (adminRefundPrompt.ride_status || "")
       .toLowerCase()
       .includes("complete");
+    const refundDriver = adminRefundSource === "driver_cash" ? selectedRefundDriver : undefined;
 
     await updateBookingOperation(adminRefundPrompt.booking_id, {
       refundStatus:
@@ -2090,6 +2113,9 @@ export default function Home() {
       refundAmount,
       rideStatus: isRideComplete ? "Ride Complete With Refund" : "Ride Cancelled",
       cancelReason: isRideComplete ? "" : "Cancelled After Refund",
+      collectionMode: adminRefundSource === "driver_cash" ? "refund_driver_cash" : "refund_online",
+      refundDriverName: refundDriver?.name,
+      refundDriverMobile: refundDriver?.mobile,
     });
     setAdminRefundPrompt(null);
   }
@@ -2268,19 +2294,35 @@ export default function Home() {
           bookings.map((booking) => {
             const totalFare = getInvoiceTotals(booking).total;
             const driverCash = Number(booking.driver_cash_collected || 0);
+            const driverRefund = Number(booking.driver_cash_refunded || 0);
             const onlineCollected = Math.max(
               0,
               Number(booking.payment_amount || 0) - driverCash,
             );
+            const isProgress = !(booking.ride_status || "")
+              .toLowerCase()
+              .includes("complete");
 
             return (
-              <div className="ledger-row" key={`ledger-${booking.booking_id}`}>
+              <div
+                className={`ledger-row ${isProgress ? "ledger-progress-row" : ""}`}
+                key={`ledger-${booking.booking_id}`}
+              >
                 <strong>{booking.booking_id}</strong>
                 <span>{formatDisplayDateTime(booking.ride_started_at || booking.pickup_datetime)}</span>
                 <span>{booking.start_point} To {booking.destination}</span>
                 <span>Fare {formatInr(totalFare)}</span>
-                <span>Online {formatPaymentAmount(onlineCollected)}</span>
-                <span>Driver Cash {formatPaymentAmount(driverCash)}</span>
+                <span className={onlineCollected > 0 ? "ledger-collected-amount" : ""}>
+                  Online {formatPaymentAmount(onlineCollected)}
+                </span>
+                <span className={driverCash > 0 ? "ledger-collected-amount" : ""}>
+                  Driver Cash {formatPaymentAmount(driverCash)}
+                </span>
+                {driverRefund > 0 ? (
+                  <span className="ledger-deducted-amount">
+                    Refund -{formatInr(driverRefund)}
+                  </span>
+                ) : null}
               </div>
             );
           })
@@ -2370,7 +2412,13 @@ export default function Home() {
       0,
     );
     const driverCashCollected = ledgerBookings.reduce(
-      (total, booking) => total + Number(booking.driver_cash_collected || 0),
+      (total, booking) =>
+        total +
+        Math.max(
+          0,
+          Number(booking.driver_cash_collected || 0) -
+            Number(booking.driver_cash_refunded || 0),
+        ),
       0,
     );
     const onlineCollected = Math.max(0, totalCollected - driverCashCollected);
@@ -2680,6 +2728,11 @@ export default function Home() {
           <b>
             {booking.refund_status || "None"}
             {booking.refund_amount ? ` | ${formatInr(booking.refund_amount)}` : ""}
+            {booking.refund_driver_name
+              ? ` | By ${booking.refund_driver_name}`
+              : booking.refund_collection_mode === "refund_online"
+                ? " | Online/Admin"
+                : ""}
           </b>
           <small>Driver</small>
           <b>
@@ -3680,6 +3733,37 @@ export default function Home() {
                 </label>
               </>
             ) : null}
+            <label className="admin-payment-field">
+              <span>Refund Paid By</span>
+              <select
+                value={adminRefundSource}
+                onChange={(event) =>
+                  setAdminRefundSource(event.target.value as "online" | "driver_cash")
+                }
+              >
+                <option value="online">Online / Admin</option>
+                <option value="driver_cash">Driver Cash</option>
+              </select>
+            </label>
+            {adminRefundSource === "driver_cash" ? (
+              <label className="admin-payment-field">
+                <span>Select Driver</span>
+                <select
+                  value={adminRefundDriverMobile}
+                  onChange={(event) => setAdminRefundDriverMobile(event.target.value)}
+                >
+                  <option value="">Select Driver Who Paid Refund</option>
+                  {getUniqueDriverOptions().map((driver) => (
+                    <option
+                      key={`refund-driver-${driver.mobile}-${driver.vehicleNumber}`}
+                      value={driver.mobile}
+                    >
+                      {driver.name} | {driver.mobile} | {driver.vehicle}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <div className="collection-actions">
               <button type="button" onClick={submitAdminRefund}>
                 Confirm Refund
@@ -4032,6 +4116,7 @@ export default function Home() {
                               <span>
                                 {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
                                 Collected {formatInr(Number(driver.cash_collected || 0))} |{" "}
+                                Refunded {formatInr(Number(driver.cash_refunded || 0))} |{" "}
                                 Deposited {formatInr(Number(driver.cash_deposited || 0))} |{" "}
                                 In Hand {formatInr(Number(driver.cash_amount || 0))} |{" "}
                                 {driver.cash_rides} Ride
@@ -4422,6 +4507,11 @@ export default function Home() {
                     {customerBooking.refund_amount
                       ? ` | ${formatInr(customerBooking.refund_amount)}`
                       : ""}
+                    {customerBooking.refund_driver_name
+                      ? ` | By ${customerBooking.refund_driver_name}`
+                      : customerBooking.refund_collection_mode === "refund_online"
+                        ? " | Online/Admin"
+                        : ""}
                   </b>
                   <small>Cancel Reason</small>
                   <b>{customerBooking.cancel_reason || "None"}</b>
