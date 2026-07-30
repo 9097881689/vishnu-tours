@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Vishnu Tours | Corporate Cab Service Mumbai",
   description:
-    "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Hycross, Ertiga, Rumion and Etios. Live fare, booking and Razorpay payment.",
+    "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Innova Hycross, Ertiga, Rumion and Etios. Live fare, booking and Razorpay payment.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

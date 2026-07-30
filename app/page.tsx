@@ -205,7 +205,7 @@ const rateTable: Record<
     vip: 7650,
     tag: "VIP",
   },
-  "Toyota Hycross": {
+  "Toyota Innova Hycross": {
     perKm: 39,
     local4hr: 2685,
     local8hr: 4881,
@@ -266,7 +266,7 @@ const vehicles = [
     photo: "/fleet/innova-crysta.png?v=52a12bf",
   },
   {
-    name: "Toyota Hycross",
+    name: "Toyota Innova Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 Seats",
     bestFor: "Executive Guests, Weddings And Long Routes",

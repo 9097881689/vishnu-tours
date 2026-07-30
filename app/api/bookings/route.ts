@@ -10,6 +10,7 @@ const rateTable: Record<
   "Maruti Ertiga": { perKm: 29, fullDay: 4200, halfDay: 2600, vip: 6200 },
   "Toyota Rumion": { perKm: 29, fullDay: 4300, halfDay: 2700, vip: 6500 },
   "Toyota Innova Crysta": { perKm: 32, fullDay: 5800, halfDay: 3600, vip: 8500 },
+  "Toyota Innova Hycross": { perKm: 39, fullDay: 7200, halfDay: 4600, vip: 11000 },
   "Toyota Hycross": { perKm: 39, fullDay: 7200, halfDay: 4600, vip: 11000 },
 };
 
