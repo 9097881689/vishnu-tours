@@ -2308,7 +2308,7 @@ export default function Home() {
     }
 
     const enteredAmount = window.prompt(
-      `Enter Cash Received From ${driver.driver_name || "Driver"}. Cash In Hand: ${formatInr(cashInHand)}`,
+      `Enter Cash Collected From ${driver.driver_name || "Driver"}. Cash In Hand: ${formatInr(cashInHand)}`,
       String(cashInHand),
     );
 
@@ -2319,7 +2319,7 @@ export default function Home() {
     const amount = Math.round(Number(enteredAmount || 0));
 
     if (!amount || amount < 1 || amount > cashInHand) {
-      setPortalStatus(`Cash Received Amount Must Be Between ₹1 And ${formatInr(cashInHand)}.`);
+      setPortalStatus(`Cash Collected Amount Must Be Between ₹1 And ${formatInr(cashInHand)}.`);
       return;
     }
 
@@ -2344,7 +2344,7 @@ export default function Home() {
       }
 
       await loadDashboard();
-      setPortalStatus("Driver Cash Received And Ledger Updated.");
+      setPortalStatus("Driver Cash Collected And Ledger Updated.");
     } catch {
       setPortalStatus("Driver Cash Ledger Could Not Be Updated.");
     }
@@ -2521,7 +2521,12 @@ export default function Home() {
                   <strong>{driver.driver_name || "Driver"}</strong>
                   <span>{driver.driver_mobile}</span>
                   <span>Collected {formatInr(Number(driver.cash_collected || 0))}</span>
-                  <span>In Hand {formatInr(Number(driver.cash_amount || 0))}</span>
+                  <span>
+                    In Hand{" "}
+                    <strong className="cash-in-hand-amount">
+                      {formatInr(Number(driver.cash_amount || 0))}
+                    </strong>
+                  </span>
                   <span>{driver.cash_rides} Cash Ride</span>
                 </div>
               ))
@@ -4172,7 +4177,11 @@ export default function Home() {
                                 Collected {formatInr(Number(driver.cash_collected || 0))} |{" "}
                                 Refunded {formatInr(Number(driver.cash_refunded || 0))} |{" "}
                                 Deposited {formatInr(Number(driver.cash_deposited || 0))} |{" "}
-                                In Hand {formatInr(Number(driver.cash_amount || 0))} |{" "}
+                                In Hand{" "}
+                                <strong className="cash-in-hand-amount">
+                                  {formatInr(Number(driver.cash_amount || 0))}
+                                </strong>{" "}
+                                |{" "}
                                 {driver.cash_rides} Ride
                               </span>
                               <button
@@ -4180,7 +4189,7 @@ export default function Home() {
                                 disabled={Number(driver.cash_amount || 0) < 1}
                                 onClick={() => recordDriverCashDeposit(driver)}
                               >
-                                Cash Received
+                                Cash Collected
                               </button>
                             </div>
                           ))

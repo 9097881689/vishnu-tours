@@ -3256,6 +3256,12 @@ h4,
   background: transparent;
 }
 
+.cash-in-hand-amount {
+  color: #15803d;
+  font-size: 1.08em;
+  font-weight: 1000;
+}
+
 .driver-cash-row button {
   min-height: 34px;
   border: 0;
