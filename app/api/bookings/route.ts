@@ -26,6 +26,8 @@ type BookingPayload = {
   distanceKm?: number;
   date?: string;
   returnDate?: string;
+  odometerStart?: number;
+  odometerEnd?: number;
   name?: string;
   mobile?: string;
   email?: string;
@@ -53,6 +55,8 @@ type BookingOperationPayload = {
   driverMobile?: string;
   refundDriverName?: string;
   refundDriverMobile?: string;
+  odometerStart?: number;
+  odometerEnd?: number;
   amount?: number;
   bankName?: string;
   bankAccount?: string;
@@ -84,6 +88,10 @@ type BookingRow = {
   estimated_fare: number;
   pickup_datetime: string;
   return_date?: string;
+  odometer_start?: number;
+  odometer_end?: number;
+  extra_km?: number;
+  extra_amount?: number;
   customer_name: string;
   customer_mobile: string;
   customer_email: string;
@@ -180,7 +188,7 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
   refund_collection_mode, driver_cash_refunded,
   refund_driver_name, refund_driver_mobile,
-  cancel_reason, ride_started_at,
+  cancel_reason, ride_started_at, odometer_start, odometer_end, extra_km, extra_amount,
   ride_completed_at
   FROM bookings`;
 
@@ -510,6 +518,10 @@ async function ensureBookingsTable() {
         refund_driver_mobile TEXT NOT NULL DEFAULT '',
         cancel_reason TEXT NOT NULL DEFAULT '',
         ride_started_at TEXT NOT NULL DEFAULT '',
+        odometer_start INTEGER NOT NULL DEFAULT 0,
+        odometer_end INTEGER NOT NULL DEFAULT 0,
+        extra_km INTEGER NOT NULL DEFAULT 0,
+        extra_amount INTEGER NOT NULL DEFAULT 0,
         ride_completed_at TEXT NOT NULL DEFAULT ''
       )`,
     )
@@ -517,6 +529,26 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN return_date TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN odometer_start INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN odometer_end INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN extra_km INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN extra_amount INTEGER NOT NULL DEFAULT 0")
     .run()
     .catch(() => undefined);
 
@@ -831,14 +863,15 @@ export async function GET(request: Request) {
     if (bookingId && mobile) {
       const booking = await env.DB.prepare(
         `SELECT booking_id, created_at, trip_type, vehicle, start_point, destination,
-          one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime,
+          one_side_km, billable_km, rate_per_km, estimated_fare, pickup_datetime, return_date,
           customer_name, customer_mobile, customer_email, status, ride_status,
           refund_status, refund_amount,
           driver_name, driver_mobile, vehicle_number, payment_status,
           payment_amount, payment_collection_mode, driver_cash_collected,
           refund_collection_mode, driver_cash_refunded,
           refund_driver_name, refund_driver_mobile,
-          cancel_reason, ride_started_at, ride_completed_at
+          cancel_reason, ride_started_at, odometer_start, odometer_end, extra_km,
+          extra_amount, ride_completed_at
          FROM bookings
          WHERE booking_id = ? AND customer_mobile = ?
          LIMIT 1`,
@@ -1099,7 +1132,7 @@ export async function PATCH(request: Request) {
 
         const assignedBooking = await env.DB.prepare(
           `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at,
-            estimated_fare, payment_amount
+            estimated_fare, payment_amount, billable_km, rate_per_km, odometer_start
            FROM bookings
            WHERE booking_id = ? AND driver_mobile = ?
            LIMIT 1`,
@@ -1112,6 +1145,9 @@ export async function PATCH(request: Request) {
             ride_completed_at: string;
             estimated_fare: number;
             payment_amount: number;
+            billable_km: number;
+            rate_per_km: number;
+            odometer_start: number;
           }>();
 
         if (!assignedBooking) {
@@ -1140,19 +1176,59 @@ export async function PATCH(request: Request) {
         const balanceDue = Math.max(0, totalWithGst - paidAmount);
         const collectionMode = clean(payload.collectionMode);
         const requestedPaymentAmount = Number(payload.paymentAmount);
+        const odometerStart = Math.round(Number(payload.odometerStart || 0));
+        const odometerEnd = Math.round(Number(payload.odometerEnd || 0));
+        const storedOdometerStart = Math.round(Number(assignedBooking.odometer_start || 0));
+        const activeOdometerStart =
+          rideStatus === "Ride Started" ? odometerStart : storedOdometerStart;
 
-        if (rideStatus === "Ride Complete" && balanceDue > 0) {
+        if (rideStatus === "Ride Started" && odometerStart < 1) {
+          return Response.json(
+            { error: "Enter start odometer reading before starting ride." },
+            { status: 400 },
+          );
+        }
+
+        if (rideStatus === "Ride Complete") {
+          if (activeOdometerStart < 1) {
+            return Response.json(
+              { error: "Start odometer reading is missing." },
+              { status: 400 },
+            );
+          }
+
+          if (odometerEnd <= activeOdometerStart) {
+            return Response.json(
+              { error: "End odometer reading must be greater than start reading." },
+              { status: 400 },
+            );
+          }
+        }
+
+        const actualKm =
+          rideStatus === "Ride Complete" ? Math.max(0, odometerEnd - activeOdometerStart) : 0;
+        const extraKm =
+          rideStatus === "Ride Complete"
+            ? Math.max(0, actualKm - Math.round(Number(assignedBooking.billable_km || 0)))
+            : 0;
+        const extraAmount =
+          rideStatus === "Ride Complete"
+            ? Math.round(extraKm * Number(assignedBooking.rate_per_km || 0) * 1.05)
+            : 0;
+        const totalCollectable = balanceDue + extraAmount;
+
+        if (rideStatus === "Ride Complete" && totalCollectable > 0) {
           const validCollectionMode =
             collectionMode === "cash" || collectionMode === "payment_gateway";
           const collectedFullAmount =
             Number.isFinite(requestedPaymentAmount) &&
-            requestedPaymentAmount >= totalWithGst;
+            requestedPaymentAmount >= totalWithGst + extraAmount;
 
           if (!validCollectionMode || !collectedFullAmount) {
             return Response.json(
               {
-                error: `Collect Rs ${balanceDue} Before Completing This Ride.`,
-                balanceDue,
+                error: `Collect Rs ${totalCollectable} Before Completing This Ride.`,
+                balanceDue: totalCollectable,
               },
               { status: 400 },
             );
@@ -1160,10 +1236,10 @@ export async function PATCH(request: Request) {
         }
 
         const completedWithCollection =
-          rideStatus === "Ride Complete" && balanceDue > 0;
-        const updatedPaymentAmount = completedWithCollection ? totalWithGst : 0;
+          rideStatus === "Ride Complete" && totalCollectable > 0;
+        const updatedPaymentAmount = completedWithCollection ? totalWithGst + extraAmount : 0;
         const driverCashCollected =
-          completedWithCollection && collectionMode === "cash" ? balanceDue : 0;
+          completedWithCollection && collectionMode === "cash" ? totalCollectable : 0;
 
         await env.DB.prepare(
           `UPDATE bookings
@@ -1184,6 +1260,22 @@ export async function PATCH(request: Request) {
                  WHEN ? > 0 THEN driver_cash_collected + ?
                  ELSE driver_cash_collected
                END,
+               odometer_start = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE odometer_start
+               END,
+               odometer_end = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE odometer_end
+               END,
+               extra_km = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE extra_km
+               END,
+               extra_amount = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE extra_amount
+               END,
                ${timestampColumn} = CASE
                  WHEN ${timestampColumn} = '' THEN ?
                  ELSE ${timestampColumn}
@@ -1199,6 +1291,14 @@ export async function PATCH(request: Request) {
             collectionMode,
             driverCashCollected,
             driverCashCollected,
+            activeOdometerStart,
+            activeOdometerStart,
+            odometerEnd,
+            odometerEnd,
+            extraKm,
+            extraKm,
+            extraAmount,
+            extraAmount,
             now,
             bookingId,
             driverMobile,

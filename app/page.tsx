@@ -251,6 +251,10 @@ type DashboardBooking = {
   rate_per_km?: number;
   pickup_datetime?: string;
   return_date?: string;
+  odometer_start?: number;
+  odometer_end?: number;
+  extra_km?: number;
+  extra_amount?: number;
   estimated_fare: number;
   customer_name: string;
   customer_mobile: string;
@@ -493,6 +497,15 @@ function getBalanceDue(booking: DashboardBooking) {
   const { total } = getInvoiceTotals(booking);
 
   return Math.max(0, total - Number(booking.payment_amount || 0));
+}
+
+function getOdometerExtra(booking: DashboardBooking, startReading: number, endReading: number) {
+  const actualKm = Math.max(0, endReading - startReading);
+  const billableKm = Math.round(Number(booking.billable_km || 0));
+  const extraKm = Math.max(0, actualKm - billableKm);
+  const extraAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+
+  return { actualKm, extraKm, extraAmount };
 }
 
 function sortDashboardBookings(bookings: DashboardBooking[]) {
@@ -1753,10 +1766,34 @@ export default function Home() {
     }
 
     const balanceDue = getBalanceDue(booking);
+    let odometerPayload:
+      | { odometerStart?: number; odometerEnd?: number; extraAmount?: number }
+      | null = null;
+
+    if (rideStatus === "Ride Started") {
+      const reading = window.prompt("Enter Start Odometer Reading Before Ride Start.");
+
+      if (reading === null) {
+        return;
+      }
+
+      const odometerStart = Math.round(Number(reading || 0));
+
+      if (odometerStart < 1) {
+        setPortalStatus("Enter Valid Start Odometer Reading.");
+        window.alert("Enter Valid Start Odometer Reading.");
+        return;
+      }
+
+      odometerPayload = { odometerStart };
+    }
 
     if (balanceDue > 0 && rideStatus === "Ride Started" && !booking.ride_started_at) {
       setCollectionPromptMode("start");
-      setCollectionPrompt(booking);
+      setCollectionPrompt({
+        ...booking,
+        odometer_start: odometerPayload?.odometerStart || booking.odometer_start,
+      });
       setCollectionStatus("");
       return;
     }
@@ -1768,16 +1805,19 @@ export default function Home() {
       return;
     }
 
-    await submitDriverRideStatus(booking, rideStatus);
+    await submitDriverRideStatus(booking, rideStatus, odometerPayload || undefined);
   }
 
   async function submitDriverRideStatus(
     booking: DashboardBooking,
     rideStatus: "Ride Started" | "Ride Complete",
     collection?: {
-      collectionMode: "cash" | "payment_gateway";
-      paymentAmount: number;
+      collectionMode?: "cash" | "payment_gateway";
+      paymentAmount?: number;
       cashCollected?: number;
+      odometerStart?: number;
+      odometerEnd?: number;
+      extraAmount?: number;
     },
   ) {
     setPortalStatus("Updating Ride Status...");
@@ -1845,26 +1885,77 @@ export default function Home() {
     }
   }
 
+  function promptCompletionOdometer(booking: DashboardBooking) {
+    const startReading = Math.round(Number(booking.odometer_start || 0));
+
+    if (startReading < 1) {
+      setPortalStatus("Start Odometer Reading Is Missing.");
+      window.alert("Start Odometer Reading Is Missing. Start The Ride First.");
+      return null;
+    }
+
+    const enteredReading = window.prompt(
+      `Enter End Odometer Reading. Start Reading: ${startReading}`,
+    );
+
+    if (enteredReading === null) {
+      return null;
+    }
+
+    const odometerEnd = Math.round(Number(enteredReading || 0));
+
+    if (odometerEnd <= startReading) {
+      setPortalStatus("End Odometer Reading Must Be Greater Than Start Reading.");
+      window.alert("End Odometer Reading Must Be Greater Than Start Reading.");
+      return null;
+    }
+
+    const extra = getOdometerExtra(booking, startReading, odometerEnd);
+
+    if (extra.extraKm > 0) {
+      window.alert(
+        `Extra ${extra.extraKm} KM Detected. Collect ${formatInr(extra.extraAmount)} Extra From Customer.`,
+      );
+    }
+
+    return { odometerEnd, extraAmount: extra.extraAmount };
+  }
+
   async function completeRideWithCash(booking: DashboardBooking) {
     const balanceDue = getBalanceDue(booking);
+    const odometer = promptCompletionOdometer(booking);
 
-    if (balanceDue <= 0) {
-      await submitDriverRideStatus(booking, "Ride Complete");
+    if (!odometer) {
+      return;
+    }
+
+    const cashToCollect = balanceDue + odometer.extraAmount;
+
+    if (cashToCollect <= 0) {
+      await submitDriverRideStatus(booking, "Ride Complete", odometer);
       return;
     }
 
     await submitDriverRideStatus(booking, "Ride Complete", {
       collectionMode: "cash",
-      paymentAmount: getInvoiceTotals(booking).total,
-      cashCollected: balanceDue,
+      paymentAmount: getInvoiceTotals(booking).total + odometer.extraAmount,
+      cashCollected: cashToCollect,
+      ...odometer,
     });
   }
 
   async function completeRideWithGateway(booking: DashboardBooking) {
     const balanceDue = getBalanceDue(booking);
+    const odometer = promptCompletionOdometer(booking);
 
-    if (balanceDue <= 0) {
-      await submitDriverRideStatus(booking, "Ride Complete");
+    if (!odometer) {
+      return;
+    }
+
+    const amountToCollect = balanceDue + odometer.extraAmount;
+
+    if (amountToCollect <= 0) {
+      await submitDriverRideStatus(booking, "Ride Complete", odometer);
       return;
     }
 
@@ -1878,12 +1969,12 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Math.round(balanceDue * 100),
+          amount: Math.round(amountToCollect * 100),
           receipt: `driver-${booking.booking_id}`,
           notes: {
             bookingId: booking.booking_id,
             collectionBy: driverProfileForm.mobile,
-            balanceDue: String(balanceDue),
+            balanceDue: String(amountToCollect),
             vehicle: booking.vehicle,
             pickup: booking.start_point,
             drop: booking.destination,
@@ -1927,7 +2018,7 @@ export default function Home() {
 
     const checkoutOptions: Record<string, unknown> = {
       key: order.keyId,
-      amount: Math.round(balanceDue * 100),
+      amount: Math.round(amountToCollect * 100),
       currency: "INR",
       name: "Vishnu Tours",
       description: `${booking.booking_id} Balance Collection`,
@@ -1937,7 +2028,7 @@ export default function Home() {
       },
       notes: {
         bookingId: booking.booking_id,
-        balanceDue: String(balanceDue),
+        balanceDue: String(amountToCollect),
         driverMobile: driverProfileForm.mobile,
       },
       theme: {
@@ -1948,7 +2039,8 @@ export default function Home() {
         playBookingConfirmSound();
         await submitDriverRideStatus(booking, "Ride Complete", {
           collectionMode: "payment_gateway",
-          paymentAmount: getInvoiceTotals(booking).total,
+          paymentAmount: getInvoiceTotals(booking).total + odometer.extraAmount,
+          ...odometer,
         });
       },
       modal: {
@@ -2763,6 +2855,24 @@ export default function Home() {
             <>
               <small>Return Date</small>
               <b>{formatDisplayDate(booking.return_date)}</b>
+            </>
+          ) : null}
+          {booking.odometer_start ? (
+            <>
+              <small>Start Odometer</small>
+              <b>{booking.odometer_start} KM</b>
+            </>
+          ) : null}
+          {booking.odometer_end ? (
+            <>
+              <small>End Odometer</small>
+              <b>{booking.odometer_end} KM</b>
+            </>
+          ) : null}
+          {booking.extra_km ? (
+            <>
+              <small>Extra KM</small>
+              <b>{booking.extra_km} KM | {formatInr(Number(booking.extra_amount || 0))}</b>
             </>
           ) : null}
           <small>Fare</small>
@@ -3623,7 +3733,9 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() =>
-                    submitDriverRideStatus(collectionPrompt, "Ride Started")
+                    submitDriverRideStatus(collectionPrompt, "Ride Started", {
+                      odometerStart: Number(collectionPrompt.odometer_start || 0),
+                    })
                   }
                 >
                   Start Ride Now

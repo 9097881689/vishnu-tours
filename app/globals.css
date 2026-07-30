@@ -4346,6 +4346,7 @@ body {
 }
 
 .savaari-booking-panel .trip-tabs {
+  display: flex;
   width: min(620px, 100%);
   flex-wrap: nowrap;
 }
@@ -4355,6 +4356,21 @@ body {
   min-width: 0;
   padding-inline: 7px;
   white-space: nowrap;
+}
+
+.savaari-booking-panel .route-form-row {
+  grid-template-columns: minmax(150px, 1.4fr) 34px minmax(150px, 1.4fr) repeat(4, minmax(92px, 0.82fr));
+  gap: 10px;
+}
+
+.savaari-booking-panel .route-form-row .route-swap {
+  width: 32px;
+  height: 32px;
+  font-size: 17px;
+}
+
+.savaari-booking-panel .route-form-row .booking-field input {
+  font-size: 12px;
 }
 
 @media (max-width: 640px) {
@@ -4391,6 +4407,10 @@ body {
     min-height: 32px;
     padding-inline: 3px;
     font-size: clamp(8px, 2.45vw, 10px);
+  }
+
+  .savaari-booking-panel .route-form-row {
+    grid-template-columns: 1fr;
   }
 
   .main-menu .header-actions {
