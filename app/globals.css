@@ -4637,6 +4637,14 @@ body {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 22px;
   align-items: stretch;
+  padding: 14px;
+  border: 1px solid rgba(7, 89, 133, 0.1);
+  border-radius: 18px;
+  background:
+    var(--homepage-pattern),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 249, 255, 0.84));
+  background-size: 420px 280px, auto;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
 }
 
 .homepage-story-copy,
@@ -4644,20 +4652,15 @@ body {
   display: grid;
   align-content: center;
   gap: 14px;
-  padding: clamp(22px, 4vw, 38px);
-  border: 1px solid rgba(7, 89, 133, 0.12);
+  padding: clamp(20px, 3.4vw, 34px);
   border-radius: 14px;
-  background:
-    var(--homepage-pattern),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 249, 255, 0.9));
-  background-size: 420px 280px, auto;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  background: transparent;
 }
 
 .homepage-story-copy > span,
 .homepage-ops-copy > span,
 .homepage-section-head span {
-  color: #075985;
+  color: #0f7da6;
   font-size: 12px;
   font-weight: 1000;
   text-transform: uppercase;
@@ -4667,9 +4670,9 @@ body {
 .homepage-ops-copy h2,
 .homepage-section-head h2 {
   margin: 0;
-  color: #0f172a;
+  color: #1f2937;
   font-size: clamp(24px, 3vw, 42px);
-  line-height: 1.08;
+  line-height: 1.1;
 }
 
 .homepage-story-copy p,
@@ -4677,10 +4680,10 @@ body {
 .homepage-step-card p,
 .homepage-service-card p {
   margin: 0;
-  color: #475569;
+  color: #5f6f82;
   font-size: 14px;
   font-weight: 750;
-  line-height: 1.58;
+  line-height: 1.66;
 }
 
 .homepage-story-image,
@@ -4689,7 +4692,7 @@ body {
   min-height: 340px;
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+  box-shadow: none;
 }
 
 .homepage-story-image img,
@@ -4710,9 +4713,9 @@ body {
 .homepage-proof-grid div,
 .homepage-step-card,
 .homepage-service-card {
-  border: 1px solid rgba(7, 89, 133, 0.12);
+  border: 1px solid rgba(7, 89, 133, 0.09);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .homepage-proof-grid div {
@@ -4722,12 +4725,12 @@ body {
 }
 
 .homepage-proof-grid strong {
-  color: #075985;
+  color: #176b8c;
   font-size: 16px;
 }
 
 .homepage-proof-grid small {
-  color: #64748b;
+  color: #687789;
   font-size: 11px;
   font-weight: 850;
   line-height: 1.35;
@@ -4769,7 +4772,7 @@ body {
 .homepage-step-card h3,
 .homepage-service-card h3 {
   margin: 0;
-  color: #0f172a;
+  color: #263342;
   font-size: 18px;
 }
 
@@ -4954,11 +4957,14 @@ body {
     grid-template-columns: 1fr;
     width: calc(100% - 28px);
     margin-top: 20px;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 14px;
   }
 
   .homepage-story-copy,
   .homepage-ops-copy {
-    padding: 20px;
+    padding: 14px 10px 16px;
     border-radius: 12px;
   }
 
