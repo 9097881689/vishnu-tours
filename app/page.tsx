@@ -1801,9 +1801,43 @@ export default function Home() {
     }
 
     if (balanceDue > 0 && rideStatus === "Ride Complete") {
+      const odometer = promptCompletionOdometer(booking);
+
+      if (!odometer) {
+        return;
+      }
+
       setCollectionPromptMode("complete");
-      setCollectionPrompt(booking);
+      setCollectionPrompt({
+        ...booking,
+        odometer_end: odometer.odometerEnd,
+        extra_km: odometer.extraKm,
+        extra_amount: odometer.extraAmount,
+      });
       setCollectionStatus("");
+      return;
+    }
+
+    if (rideStatus === "Ride Complete") {
+      const odometer = promptCompletionOdometer(booking);
+
+      if (!odometer) {
+        return;
+      }
+
+      if (odometer.extraAmount > 0) {
+        setCollectionPromptMode("complete");
+        setCollectionPrompt({
+          ...booking,
+          odometer_end: odometer.odometerEnd,
+          extra_km: odometer.extraKm,
+          extra_amount: odometer.extraAmount,
+        });
+        setCollectionStatus("");
+        return;
+      }
+
+      await submitDriverRideStatus(booking, rideStatus, odometer);
       return;
     }
 
@@ -1896,9 +1930,9 @@ export default function Home() {
       return null;
     }
 
-    const enteredReading = window.prompt(
-      `Enter End Odometer Reading. Start Reading: ${startReading}`,
-    );
+    const enteredReading = booking.odometer_end
+      ? String(booking.odometer_end)
+      : window.prompt(`Enter End Odometer Reading. Start Reading: ${startReading}`);
 
     if (enteredReading === null) {
       return null;
@@ -1934,16 +1968,6 @@ export default function Home() {
     }
 
     const cashToCollect = balanceDue + odometer.extraAmount;
-    window.alert(
-      [
-        `Booked KM: ${odometer.bookedKm}`,
-        `Actual Travel Distance: ${odometer.actualKm} KM`,
-        `Final Chargeable KM: ${odometer.finalChargeableKm} KM`,
-        `Final Fare With GST: ${formatInr(odometer.finalFareWithGst)}`,
-        `Already Paid: ${formatPaymentAmount(booking.payment_amount || 0)}`,
-        `Collect Now: ${formatInr(cashToCollect)}`,
-      ].join("\n"),
-    );
 
     if (cashToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -1967,16 +1991,6 @@ export default function Home() {
     }
 
     const amountToCollect = balanceDue + odometer.extraAmount;
-    window.alert(
-      [
-        `Booked KM: ${odometer.bookedKm}`,
-        `Actual Travel Distance: ${odometer.actualKm} KM`,
-        `Final Chargeable KM: ${odometer.finalChargeableKm} KM`,
-        `Final Fare With GST: ${formatInr(odometer.finalFareWithGst)}`,
-        `Already Paid: ${formatPaymentAmount(booking.payment_amount || 0)}`,
-        `Collect Now: ${formatInr(amountToCollect)}`,
-      ].join("\n"),
-    );
 
     if (amountToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -3748,21 +3762,53 @@ export default function Home() {
             <span className="collection-alert-label">
               {collectionPromptMode === "start"
                 ? "Pending Balance Reminder"
-                : "Collect Balance Before Complete"}
+                : "Final Collection Amount"}
             </span>
             <h2>{collectionPrompt.booking_id}</h2>
             <p>
-              {collectionPrompt.customer_name} Has Pending Balance For{" "}
+              {collectionPrompt.customer_name}{" "}
+              {collectionPromptMode === "complete"
+                ? "Has Final Collection For"
+                : "Has Pending Balance For"}{" "}
               {collectionPrompt.start_point} To {collectionPrompt.destination}.
             </p>
             <strong className="collection-due-amount">
-              {renderCollectionAmount(getBalanceDue(collectionPrompt))}
+              {renderCollectionAmount(
+                collectionPromptMode === "complete"
+                  ? getBalanceDue(collectionPrompt) + Number(collectionPrompt.extra_amount || 0)
+                  : getBalanceDue(collectionPrompt),
+              )}
             </strong>
             <div className="collection-meta-grid">
               <span>Total Fare With GST</span>
-              <b>{formatInr(getInvoiceTotals(collectionPrompt).total)}</b>
+              <b>
+                {formatInr(
+                  getInvoiceTotals(collectionPrompt).total +
+                    (collectionPromptMode === "complete"
+                      ? Number(collectionPrompt.extra_amount || 0)
+                      : 0),
+                )}
+              </b>
               <span>Already Paid</span>
               <b>{formatPaymentAmount(collectionPrompt.payment_amount || 0)}</b>
+              {collectionPromptMode === "complete" && collectionPrompt.odometer_end ? (
+                <>
+                  <span>Actual Distance</span>
+                  <b>
+                    {Math.max(
+                      0,
+                      Number(collectionPrompt.odometer_end || 0) -
+                        Number(collectionPrompt.odometer_start || 0),
+                    )}{" "}
+                    KM
+                  </b>
+                  <span>Extra KM Charge</span>
+                  <b>
+                    {Number(collectionPrompt.extra_km || 0)} KM |{" "}
+                    {formatInr(Number(collectionPrompt.extra_amount || 0))}
+                  </b>
+                </>
+              ) : null}
               <span>Cab</span>
               <b>{collectionPrompt.vehicle}</b>
             </div>
