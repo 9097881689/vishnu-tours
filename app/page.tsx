@@ -161,7 +161,7 @@ const rateTable: Record<
     vip: 5580,
     tag: "Family",
   },
-  "Maruti Rumion": {
+  "Toyota Rumion": {
     perKm: 29,
     local4hr: 2324,
     local8hr: 4226,
@@ -243,7 +243,7 @@ const vehicles = [
     photo: "/fleet/ertiga.png?v=52a12bf",
   },
   {
-    name: "Maruti Rumion",
+    name: "Toyota Rumion",
     type: "Spacious MUV",
     seats: "6-7 Seats",
     bestFor: "Local Booking, Outstation And Group Travel",

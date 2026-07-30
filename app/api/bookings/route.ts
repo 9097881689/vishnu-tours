@@ -8,7 +8,7 @@ const rateTable: Record<
 > = {
   "Toyota Etios": { perKm: 16, fullDay: 3200, halfDay: 1900, vip: 5200 },
   "Maruti Ertiga": { perKm: 18, fullDay: 4200, halfDay: 2600, vip: 6200 },
-  "Maruti Rumion": { perKm: 18, fullDay: 4300, halfDay: 2700, vip: 6500 },
+  "Toyota Rumion": { perKm: 18, fullDay: 4300, halfDay: 2700, vip: 6500 },
   "Toyota Innova Crysta": { perKm: 22, fullDay: 5800, halfDay: 3600, vip: 8500 },
   "Toyota Hycross": { perKm: 26, fullDay: 7200, halfDay: 4600, vip: 11000 },
 };
