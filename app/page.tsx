@@ -536,6 +536,37 @@ function isRideInProgress(booking: DashboardBooking) {
   );
 }
 
+const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
+
+function getAssignmentConflict(
+  booking: DashboardBooking,
+  driverMobile: string,
+  bookings: DashboardBooking[],
+) {
+  const requestedPickupTime = Date.parse(booking.pickup_datetime || "");
+  const normalizedDriverMobile = driverMobile.trim();
+
+  if (!normalizedDriverMobile || Number.isNaN(requestedPickupTime)) {
+    return null;
+  }
+
+  return (
+    bookings.find((currentBooking) => {
+      const status = (currentBooking.ride_status || "").toLowerCase();
+      const currentPickupTime = Date.parse(currentBooking.pickup_datetime || "");
+
+      return (
+        currentBooking.booking_id !== booking.booking_id &&
+        currentBooking.driver_mobile === normalizedDriverMobile &&
+        !status.includes("cancel") &&
+        !status.includes("complete") &&
+        !Number.isNaN(currentPickupTime) &&
+        Math.abs(currentPickupTime - requestedPickupTime) <= driverAssignmentConflictWindowMs
+      );
+    }) || null
+  );
+}
+
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
   const mumbaiAreas = [
@@ -1981,6 +2012,17 @@ export default function Home() {
       return;
     }
 
+    const conflict = dashboard
+      ? getAssignmentConflict(booking, availableDriver.mobile, dashboard.recentBookings)
+      : null;
+
+    if (conflict) {
+      const warning = `${availableDriver.name} Is Already Assigned For Booking ${conflict.booking_id} On ${formatDisplayDateTime(conflict.pickup_datetime)}.`;
+      setPortalStatus(warning);
+      window.alert(warning);
+      return;
+    }
+
     setDrivers((currentDrivers) =>
       currentDrivers.map((driver) =>
         driver.mobile === availableDriver.mobile
@@ -2007,6 +2049,16 @@ export default function Home() {
     }
 
     const selectedDriver = drivers.find((driver) => driver.mobile === form.driverMobile);
+    const conflict = dashboard
+      ? getAssignmentConflict(booking, form.driverMobile, dashboard.recentBookings)
+      : null;
+
+    if (conflict) {
+      const warning = `${selectedDriver?.name || form.driverName || "Driver"} Is Already Assigned For Booking ${conflict.booking_id} On ${formatDisplayDateTime(conflict.pickup_datetime)}.`;
+      setPortalStatus(warning);
+      window.alert(warning);
+      return;
+    }
 
     await updateBookingOperation(booking.booking_id, {
       rideStatus: "Driver Assigned",

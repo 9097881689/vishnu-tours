@@ -68,6 +68,7 @@ type DeleteBookingPayload = {
 const adminPin = "710529";
 const adminMobile = "7004291529";
 const adminWhatsappMobile = "917004291529";
+const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
 
 type BookingRow = {
   booking_id: string;
@@ -103,6 +104,45 @@ type BookingRow = {
   ride_started_at: string;
   ride_completed_at: string;
 };
+
+async function findNearbyDriverAssignmentConflict(
+  bookingId: string,
+  driverMobile: string,
+  pickupDatetime: string,
+) {
+  const requestedPickupTime = Date.parse(pickupDatetime || "");
+
+  if (!driverMobile || Number.isNaN(requestedPickupTime)) {
+    return null;
+  }
+
+  const conflictRows = await env.DB.prepare(
+    `SELECT booking_id, pickup_datetime, destination
+     FROM bookings
+     WHERE booking_id != ?
+       AND driver_mobile = ?
+       AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  )
+    .bind(bookingId, driverMobile)
+    .all<{
+      booking_id: string;
+      pickup_datetime: string;
+      destination: string;
+    }>();
+
+  return (
+    (conflictRows.results || []).find((booking) => {
+      const conflictPickupTime = Date.parse(booking.pickup_datetime || "");
+
+      return (
+        !Number.isNaN(conflictPickupTime) &&
+        Math.abs(conflictPickupTime - requestedPickupTime) <=
+          driverAssignmentConflictWindowMs
+      );
+    }) || null
+  );
+}
 
 type DriverRow = {
   driver_name: string;
@@ -999,18 +1039,11 @@ export async function PATCH(request: Request) {
           );
         }
 
-        const conflict = await env.DB.prepare(
-          `SELECT booking_id, pickup_datetime
-           FROM bookings
-           WHERE booking_id != ?
-             AND driver_mobile = ?
-             AND pickup_datetime = ?
-             AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
-             AND booking_id NOT LIKE 'PENDING-%'
-           LIMIT 1`,
-        )
-          .bind(bookingId, driverMobile, booking.pickup_datetime)
-          .first<{ booking_id: string; pickup_datetime: string }>();
+        const conflict = await findNearbyDriverAssignmentConflict(
+          bookingId,
+          driverMobile,
+          booking.pickup_datetime,
+        );
 
         if (conflict) {
           return Response.json(
@@ -1342,22 +1375,11 @@ export async function PATCH(request: Request) {
     }
 
     if (requestedDriverMobile) {
-      const conflict = await env.DB.prepare(
-        `SELECT booking_id, pickup_datetime, destination
-         FROM bookings
-         WHERE booking_id != ?
-           AND driver_mobile = ?
-           AND pickup_datetime = ?
-           AND ride_status NOT IN ('Ride Cancelled', 'Ride Complete')
-           AND booking_id NOT LIKE 'PENDING-%'
-         LIMIT 1`,
-      )
-        .bind(bookingId, requestedDriverMobile, existingBooking.pickup_datetime)
-        .first<{
-          booking_id: string;
-          pickup_datetime: string;
-          destination: string;
-        }>();
+      const conflict = await findNearbyDriverAssignmentConflict(
+        bookingId,
+        requestedDriverMobile,
+        existingBooking.pickup_datetime,
+      );
 
       if (conflict) {
         return Response.json(
