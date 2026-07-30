@@ -4041,11 +4041,6 @@ export default function Home() {
               Modify Booking
             </button>
           </div>
-          <div className="result-promise-band">
-            <strong>₹ Book Now At Zero Cost</strong>
-            <strong>Free Cancellations Up To 1 Hour</strong>
-            <strong>24/7 Customer Support</strong>
-          </div>
           <div className="vehicle-card-list" aria-live="polite">
             {vehicleRates.map((item) => {
               const tax = Math.round(item.estimatedFare * 0.05);
@@ -4099,6 +4094,11 @@ export default function Home() {
                 </article>
               );
             })}
+          </div>
+          <div className="result-promise-band result-promise-band-bottom">
+            <strong>₹ Book Now At Zero Cost</strong>
+            <strong>Free Cancellations Up To 1 Hour</strong>
+            <strong>24/7 Customer Support</strong>
           </div>
         </section>
       ) : null}

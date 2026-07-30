@@ -1120,11 +1120,15 @@ input[readonly] {
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   width: min(1100px, calc(100% - 36px));
-  margin: 10px auto 16px;
+  margin: 16px auto 0;
   padding: 20px 28px;
   border-radius: 6px;
   background: linear-gradient(100deg, #22a9d9, #1167aa);
   color: #fff;
+}
+
+.result-promise-band-bottom {
+  margin-top: 18px;
 }
 
 .vehicle-card-list {
