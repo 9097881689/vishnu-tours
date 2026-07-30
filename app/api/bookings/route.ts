@@ -4,14 +4,63 @@ const headOffice = "Mumbai Head Office";
 
 const rateTable: Record<
   string,
-  { perKm: number; fullDay: number; halfDay: number; vip: number }
+  {
+    perKm: number;
+    local4hr: number;
+    local8hr: number;
+    fullDay: number;
+    halfDay: number;
+    vip: number;
+  }
 > = {
-  "Toyota Etios": { perKm: 24, fullDay: 3200, halfDay: 1900, vip: 5200 },
-  "Maruti Ertiga": { perKm: 29, fullDay: 4200, halfDay: 2600, vip: 6200 },
-  "Toyota Rumion": { perKm: 29, fullDay: 4300, halfDay: 2700, vip: 6500 },
-  "Toyota Innova Crysta": { perKm: 32, fullDay: 5800, halfDay: 3600, vip: 8500 },
-  "Toyota Innova Hycross": { perKm: 39, fullDay: 7200, halfDay: 4600, vip: 11000 },
-  "Toyota Hycross": { perKm: 39, fullDay: 7200, halfDay: 4600, vip: 11000 },
+  "Toyota Etios": {
+    perKm: 24,
+    local4hr: 1921,
+    local8hr: 3492,
+    fullDay: 3492,
+    halfDay: 1921,
+    vip: 4680,
+  },
+  "Maruti Ertiga": {
+    perKm: 29,
+    local4hr: 2324,
+    local8hr: 4226,
+    fullDay: 4226,
+    halfDay: 2324,
+    vip: 5580,
+  },
+  "Toyota Rumion": {
+    perKm: 29,
+    local4hr: 2324,
+    local8hr: 4226,
+    fullDay: 4226,
+    halfDay: 2324,
+    vip: 5850,
+  },
+  "Toyota Innova Crysta": {
+    perKm: 32,
+    local4hr: 2324,
+    local8hr: 4226,
+    fullDay: 4226,
+    halfDay: 2324,
+    vip: 7650,
+  },
+  "Toyota Innova Hycross": {
+    perKm: 39,
+    local4hr: 2685,
+    local8hr: 4881,
+    fullDay: 4881,
+    halfDay: 2685,
+    vip: 9900,
+  },
+  "Toyota Hycross": {
+    perKm: 39,
+    local4hr: 2685,
+    local8hr: 4881,
+    fullDay: 4881,
+    halfDay: 2685,
+    vip: 9900,
+  },
 };
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
@@ -557,6 +606,8 @@ async function getEffectiveBookingRate(vehicle: string) {
   const selectedOverrides = vehicleRateOverrides[vehicle] || {};
   const manualRate = {
     perKm: selectedOverrides.perKm ?? selectedRate.perKm,
+    local4hr: selectedOverrides.local4hr ?? selectedRate.local4hr,
+    local8hr: selectedOverrides.local8hr ?? selectedRate.local8hr,
     fullDay: selectedOverrides.fullDay ?? selectedRate.fullDay,
     halfDay: selectedOverrides.halfDay ?? selectedRate.halfDay,
     vip: selectedOverrides.vip ?? selectedRate.vip,
@@ -564,6 +615,8 @@ async function getEffectiveBookingRate(vehicle: string) {
 
   return {
     perKm: applyPriceAdjustment(manualRate.perKm, priceAdjustmentPercent),
+    local4hr: applyPriceAdjustment(manualRate.local4hr, priceAdjustmentPercent),
+    local8hr: applyPriceAdjustment(manualRate.local8hr, priceAdjustmentPercent),
     fullDay: applyPriceAdjustment(manualRate.fullDay, priceAdjustmentPercent),
     halfDay: applyPriceAdjustment(manualRate.halfDay, priceAdjustmentPercent),
     vip: applyPriceAdjustment(manualRate.vip, priceAdjustmentPercent),
@@ -1925,10 +1978,16 @@ export async function POST(request: Request) {
 
     const adjustedRate = await getEffectiveBookingRate(vehicle);
     const isRoundTrip = tripType === "Round Trip";
-    const isLocalOrAirport =
-      tripType.includes("Airport") || tripType.includes("Local");
+    const isLocal = tripType.includes("Local");
+    const isAirport = tripType.includes("Airport");
+    const localPackageKm = tripType.includes("4 Hr") ? 45 : 90;
+    const localPackageRate = tripType.includes("4 Hr")
+      ? adjustedRate.local4hr
+      : adjustedRate.local8hr;
     const billableKm =
-      isLocalOrAirport
+      isLocal
+        ? Math.max(oneSideKm, localPackageKm)
+        : isAirport
         ? Math.max(oneSideKm, 40)
         : packageType === "perKm"
         ? isRoundTrip
@@ -1938,7 +1997,12 @@ export async function POST(request: Request) {
           ? 40
           : 80;
     const estimatedFare =
-      isLocalOrAirport || packageType === "perKm"
+      isLocal
+        ? Math.round(
+            localPackageRate +
+              Math.max(0, billableKm - localPackageKm) * adjustedRate.perKm,
+          )
+        : isAirport || packageType === "perKm"
         ? Math.round(billableKm * adjustedRate.perKm)
         : adjustedRate[packageType];
     const createdAt = new Date().toISOString();

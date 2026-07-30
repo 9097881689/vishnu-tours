@@ -128,8 +128,8 @@ const airportTripOptions = [
   },
 ] as const;
 const localPackageOptions = [
-  { id: "local4hr", label: "4 Hr / 40 KM", hours: 4, km: 40 },
-  { id: "local8hr", label: "8 Hr / 40 KM", hours: 8, km: 40 },
+  { id: "local4hr", label: "4 Hr / 45 KM", hours: 4, km: 45 },
+  { id: "local8hr", label: "8 Hr / 90 KM", hours: 8, km: 90 },
 ] as const;
 const roundTripDailyKm = 300;
 const minimumLocalAirportKm = 40;
@@ -907,7 +907,9 @@ export default function Home() {
     localPackageOptions.find((item) => item.id === localPackageType) ||
     localPackageOptions[1];
   const billableDistance =
-    tripType === "In-City" || tripType === "Airport"
+    tripType === "In-City"
+      ? Math.max(numericDistance || selectedLocalPackage.km, selectedLocalPackage.km)
+      : tripType === "Airport"
       ? Math.max(numericDistance || minimumLocalAirportKm, minimumLocalAirportKm)
       : tripType === "Outstation" && outstationTripType === "Round Trip"
         ? Math.max(numericDistance * 2, roundTripDays * roundTripDailyKm)
@@ -968,20 +970,31 @@ export default function Home() {
       vehicles
         .map((item) => {
           const rates = adjustedRateTable[item.name];
-          const estimatedFare = Math.round(billableDistance * rates.perKm);
+          const localBaseFare =
+            selectedLocalPackage.id === "local4hr" ? rates.local4hr : rates.local8hr;
+          const localExtraKm =
+            tripType === "In-City"
+              ? Math.max(0, billableDistance - selectedLocalPackage.km)
+              : 0;
+          const estimatedFare =
+            tripType === "In-City"
+              ? Math.round(localBaseFare + localExtraKm * rates.perKm)
+              : Math.round(billableDistance * rates.perKm);
 
           return {
             ...item,
             ...rates,
             estimatedFare,
             fareLabel:
-              tripType === "In-City" || tripType === "Airport"
+              tripType === "In-City"
+                ? `${selectedLocalPackage.label} | Extra Rs. ${rates.perKm}/KM`
+                : tripType === "Airport"
                 ? `Minimum 40 KM | Extra Rs. ${rates.perKm}/KM`
                 : `Rs. ${rates.perKm}/KM`,
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
-    [adjustedRateTable, billableDistance, tripType],
+    [adjustedRateTable, billableDistance, selectedLocalPackage, tripType],
   );
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
@@ -4889,9 +4902,9 @@ export default function Home() {
                               {rateKey === "perKm"
                                 ? "Per KM"
                                 : rateKey === "local4hr"
-                                  ? "4 Hr / 40 KM"
+                                  ? "4 Hr / 45 KM"
                                   : rateKey === "local8hr"
-                                    ? "8 Hr / 40 KM"
+                                    ? "8 Hr / 90 KM"
                                     : rateKey === "fullDay"
                                       ? "Full Day"
                                       : rateKey === "halfDay"
@@ -4945,8 +4958,8 @@ export default function Home() {
                           <div className="price-preview-row" key={item.name}>
                             <strong>{item.name}</strong>
                             <span>KM {formatInr(base.perKm)} → {formatInr(adjusted.perKm)}</span>
-                            <span>4 Hr {formatInr(base.local4hr)} → {formatInr(adjusted.local4hr)}</span>
-                            <span>8 Hr {formatInr(base.local8hr)} → {formatInr(adjusted.local8hr)}</span>
+                            <span>4 Hr / 45 KM {formatInr(base.local4hr)} → {formatInr(adjusted.local4hr)}</span>
+                            <span>8 Hr / 90 KM {formatInr(base.local8hr)} → {formatInr(adjusted.local8hr)}</span>
                             <span>Full Day {formatInr(base.fullDay)} → {formatInr(adjusted.fullDay)}</span>
                             <span>VIP {formatInr(base.vip)} → {formatInr(adjusted.vip)}</span>
                           </div>
