@@ -3069,7 +3069,7 @@ export default function Home() {
             <p>
               Premium Cab Booking From Mumbai For Corporate Guests, Airport
               Transfers, In-City Movement And Outstation Trips. Select Your
-              Cab, Review Fare Details And Pay Securely On The Website.
+              Cab, Review Fare Details And Enjoy A Comfortable Journey.
             </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
