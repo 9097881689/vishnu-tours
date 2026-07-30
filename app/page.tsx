@@ -3003,6 +3003,11 @@ export default function Home() {
         <div className="hero-content">
           <div className="hero-copy">
             <h1>VIP Luxury Cab Service</h1>
+            <p>
+              Premium Cab Booking From Mumbai For Corporate Guests, Airport
+              Transfers, In-City Movement And Outstation Trips. Select Your
+              Cab, Review Fare Details And Pay Securely On The Website.
+            </p>
             <div className="hero-actions">
               <a className="primary-action" href="#booking">
                 Book Cab Now

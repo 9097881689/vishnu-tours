@@ -4247,7 +4247,7 @@ body {
   z-index: 40;
   background:
     var(--homepage-pattern),
-    linear-gradient(135deg, rgba(255, 248, 223, 0.96) 0%, rgba(239, 249, 255, 0.96) 48%, rgba(255, 239, 184, 0.94) 100%);
+    linear-gradient(135deg, rgba(255, 232, 132, 0.98) 0%, rgba(213, 239, 249, 0.98) 48%, rgba(245, 209, 93, 0.96) 100%);
   background-size: 420px 280px, auto;
   color: #0f172a;
   border-bottom: 1px solid rgba(7, 89, 133, 0.14);
@@ -4310,14 +4310,7 @@ body {
 }
 
 .hero-content:has(.savaari-booking-panel) h1::after {
-  content: "";
-  display: block;
-  width: min(220px, 58%);
-  height: 5px;
-  margin-top: 10px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #075985, #0ea5e9 50%, #f59e0b);
-  box-shadow: 0 8px 18px rgba(7, 89, 133, 0.16);
+  display: none;
 }
 
 .hero {
@@ -4359,18 +4352,13 @@ body {
     padding-inline: 12px;
     background:
       var(--homepage-pattern),
-      linear-gradient(135deg, rgba(255, 248, 223, 0.96) 0%, rgba(239, 249, 255, 0.96) 48%, rgba(255, 239, 184, 0.94) 100%);
+      linear-gradient(135deg, rgba(255, 232, 132, 0.98) 0%, rgba(213, 239, 249, 0.98) 48%, rgba(245, 209, 93, 0.96) 100%);
     background-size: 300px 200px, auto;
   }
 
   .hero-content:has(.savaari-booking-panel) h1 {
     font-size: 25px;
     line-height: 1.16;
-  }
-
-  .hero-content:has(.savaari-booking-panel) h1::after {
-    height: 4px;
-    margin-top: 8px;
   }
 
   .main-menu .header-actions {
