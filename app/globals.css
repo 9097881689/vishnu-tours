@@ -4245,11 +4245,14 @@ body {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: #ffffff;
+  background:
+    var(--homepage-pattern),
+    linear-gradient(135deg, rgba(255, 248, 223, 0.96) 0%, rgba(239, 249, 255, 0.96) 48%, rgba(255, 239, 184, 0.94) 100%);
+  background-size: 420px 280px, auto;
   color: #0f172a;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.08);
-  backdrop-filter: none;
+  border-bottom: 1px solid rgba(7, 89, 133, 0.14);
+  box-shadow: 0 10px 28px rgba(7, 89, 133, 0.1);
+  backdrop-filter: blur(14px);
 }
 
 .top-strip span {
@@ -4273,11 +4276,11 @@ body {
 }
 
 .main-menu .brand strong {
-  color: #0f172a;
+  color: #075985;
 }
 
 .main-menu .header-actions a:not(.call-button) {
-  color: #075985;
+  color: #0f172a;
   font-weight: 900;
 }
 
@@ -4292,8 +4295,8 @@ body {
 }
 
 .main-menu .login-button {
-  background: #ffffff;
-  border-color: #dbe4ee;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(7, 89, 133, 0.18);
   color: #075985;
   box-shadow: 0 10px 22px rgba(7, 89, 133, 0.08);
 }
