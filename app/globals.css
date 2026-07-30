@@ -4245,14 +4245,11 @@ body {
   position: sticky;
   top: 0;
   z-index: 40;
-  background:
-    var(--homepage-pattern),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(239, 249, 255, 0.92) 52%, rgba(255, 247, 214, 0.92));
-  background-size: 420px 280px, auto;
-  color: #ffffff;
-  border-bottom: 1px solid rgba(7, 89, 133, 0.14);
-  box-shadow: 0 12px 32px rgba(7, 89, 133, 0.1);
-  backdrop-filter: blur(16px);
+  background: #ffffff;
+  color: #0f172a;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.08);
+  backdrop-filter: none;
 }
 
 .top-strip span {
@@ -4261,8 +4258,9 @@ body {
 
 .main-menu {
   justify-content: space-between;
-  min-height: 66px;
-  padding-block: 10px;
+  min-height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
   color: #0f172a;
 }
 
@@ -4294,10 +4292,28 @@ body {
 }
 
 .main-menu .login-button {
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(7, 89, 133, 0.18);
+  background: #ffffff;
+  border-color: #dbe4ee;
   color: #075985;
   box-shadow: 0 10px 22px rgba(7, 89, 133, 0.08);
+}
+
+.hero-content:has(.savaari-booking-panel) h1 {
+  display: inline-block;
+  width: fit-content;
+  color: #075985;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+.hero-content:has(.savaari-booking-panel) h1::after {
+  content: "";
+  display: block;
+  width: min(220px, 58%);
+  height: 5px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #075985, #0ea5e9 50%, #f59e0b);
+  box-shadow: 0 8px 18px rgba(7, 89, 133, 0.16);
 }
 
 .hero {
@@ -4335,12 +4351,9 @@ body {
 
   .top-strip {
     gap: 8px;
-    min-height: 58px;
+    min-height: auto;
     padding-inline: 12px;
-    background:
-      var(--homepage-pattern),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(239, 249, 255, 0.92));
-    background-size: 300px 200px, auto;
+    background: #ffffff;
   }
 
   .main-menu .header-actions {
