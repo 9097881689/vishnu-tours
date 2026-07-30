@@ -4089,7 +4089,7 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="promise-line">
-                    New Car Promise - Actual Owner Fleet, Clean VIP Service
+                    Verified Owner Fleet • Clean Cars • On-Time Pickup
                   </div>
                 </article>
               );
