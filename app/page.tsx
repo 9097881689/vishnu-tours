@@ -2967,14 +2967,7 @@ export default function Home() {
 
   return (
     <main>
-      <div className="top-strip">
-        <span>Welcome Guest</span>
-        <a href={whatsappUrl} target="_blank">WhatsApp: +91 7004291529</a>
-        <a href={whatsappUrl} target="_blank">
-          Request Help
-        </a>
-      </div>
-      <header className="site-header">
+      <header className="top-strip main-menu">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
           <span className="brand-mark">VT</span>
           <span>
@@ -2984,6 +2977,9 @@ export default function Home() {
         <div className="header-actions">
           <a className="call-button" href={whatsappUrl} target="_blank">
             WhatsApp 7004291529
+          </a>
+          <a href={whatsappUrl} target="_blank">
+            Request Help
           </a>
           <button
             className="login-button"
