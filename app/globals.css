@@ -4345,6 +4345,16 @@ body {
   background-size: 420px 280px, auto;
 }
 
+.savaari-booking-panel .trip-tabs {
+  width: min(620px, 100%);
+  flex-wrap: wrap;
+}
+
+.savaari-booking-panel .trip-tabs button {
+  flex: 1 1 118px;
+  min-width: 0;
+}
+
 @media (max-width: 640px) {
   body,
   .hero,
@@ -4365,6 +4375,18 @@ body {
   .hero-content:has(.savaari-booking-panel) h1 {
     font-size: 25px;
     line-height: 1.16;
+  }
+
+  .savaari-booking-panel .trip-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .savaari-booking-panel .trip-tabs button,
+  .savaari-booking-panel .trip-tabs button:first-child,
+  .savaari-booking-panel .trip-tabs button:last-child {
+    border-radius: 6px;
+    font-size: 11px;
   }
 
   .main-menu .header-actions {

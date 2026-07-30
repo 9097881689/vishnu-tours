@@ -99,22 +99,7 @@ const destinationSuggestions = [
   "Vapi",
 ];
 
-const bookingTypes = ["Airport", "In-City", "Outstation"];
-const popularPickupSuggestions = [
-  "Mumbai Airport",
-  "BKC Mumbai",
-  "Andheri Mumbai",
-  "Bandra Mumbai",
-  "Powai Mumbai",
-];
-const popularDestinationSuggestions = [
-  "Pune",
-  "Nashik",
-  "Surat",
-  "Goa",
-  "Delhi",
-  "Bangalore",
-];
+const bookingTypes = ["One Way", "Round Trip", "Airport", "In-City", "Outstation"];
 
 const packageOptions = [
   {
@@ -610,7 +595,7 @@ function getLocationTripType(origin: string, destination: string) {
   }
 
   if (dropLocation) {
-    return "Outstation";
+    return "One Way";
   }
 
   return null;
@@ -624,7 +609,7 @@ export default function Home() {
   const [bookingView, setBookingView] = useState<"home" | "cars" | "review">(
     "home",
   );
-  const [tripType, setTripType] = useState("Outstation");
+  const [tripType, setTripType] = useState("One Way");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
   const [startPoint, setStartPoint] = useState(headOffice);
   const [drop, setDrop] = useState("");
@@ -1024,7 +1009,7 @@ export default function Home() {
     setShowBookingTicket(false);
     const detectedTripType = getLocationTripType(startPoint, value);
 
-    if (detectedTripType && detectedTripType !== tripType) {
+    if (detectedTripType && tripType !== "Round Trip" && detectedTripType !== tripType) {
       setTripType(detectedTripType);
     }
 
@@ -1067,7 +1052,7 @@ export default function Home() {
     setBookingStatus("");
     const detectedTripType = getLocationTripType(value, drop);
 
-    if (detectedTripType && detectedTripType !== tripType) {
+    if (detectedTripType && tripType !== "Round Trip" && detectedTripType !== tripType) {
       setTripType(detectedTripType);
     }
   }
@@ -3250,32 +3235,6 @@ export default function Home() {
                   <small className="field-hint">Google distance checking...</small>
                 ) : null}
               </label>
-            </div>
-            <div className="quick-suggestions compact-suggestions" aria-label="Popular route">
-              <span>Popular</span>
-              <div>
-                {popularPickupSuggestions.slice(0, 3).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      setPickupFieldTouched(false);
-                      updateStartPoint(item);
-                    }}
-                  >
-                    {item}
-                  </button>
-                ))}
-                {popularDestinationSuggestions.slice(0, 4).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => updateDestination(item)}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
             </div>
             {bookingStatus && bookingView === "home" ? (
               <p className="booking-error">{bookingStatus}</p>
