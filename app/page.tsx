@@ -2356,7 +2356,7 @@ export default function Home() {
                     disabled={withdrawal.status === "Completed"}
                     onClick={() => updateWithdrawalStatus(withdrawal.id, "Completed")}
                   >
-                    Complete Withdrawal
+                    Approve Withdrawal
                   </button>
                   <button
                     type="button"
