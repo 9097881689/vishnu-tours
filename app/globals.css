@@ -4357,18 +4357,18 @@ body {
 
 .homepage-fleet-strip {
   display: grid;
-  gap: 18px;
-  padding: 34px clamp(18px, 4vw, 56px) 28px;
+  gap: 16px;
+  padding: 30px clamp(18px, 4vw, 56px) 28px;
   background:
-    var(--homepage-pattern),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(239, 249, 255, 0.86) 52%, rgba(255, 247, 214, 0.8));
-  background-size: 420px 280px, auto;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94));
 }
 
 .homepage-fleet-head {
   display: grid;
   gap: 5px;
-  max-width: 860px;
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .homepage-fleet-head span,
@@ -4382,14 +4382,14 @@ body {
 .homepage-fleet-head h2 {
   margin: 0;
   color: #0f172a;
-  font-size: clamp(22px, 2.4vw, 34px);
+  font-size: clamp(18px, 2vw, 26px);
   line-height: 1.15;
 }
 
 .homepage-fleet-head p {
   margin: 0;
   color: #475569;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -4406,8 +4406,8 @@ body {
   padding: 14px;
   border: 1px solid rgba(7, 89, 133, 0.12);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 14px 34px rgba(7, 89, 133, 0.08);
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
 }
 
 .homepage-fleet-photo {
@@ -4415,9 +4415,13 @@ body {
   min-height: 116px;
   place-items: center;
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.8), rgba(232, 247, 255, 0.9)),
-    repeating-linear-gradient(135deg, transparent 0 18px, rgba(7, 89, 133, 0.04) 18px 19px);
+  background: #ffffff;
+}
+
+.car-art,
+.fleet-photo-placeholder,
+.service-photo {
+  background: #ffffff;
 }
 
 .homepage-fleet-photo img {
