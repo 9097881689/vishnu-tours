@@ -504,8 +504,10 @@ function getOdometerExtra(booking: DashboardBooking, startReading: number, endRe
   const billableKm = Math.round(Number(booking.billable_km || 0));
   const extraKm = Math.max(0, actualKm - billableKm);
   const extraAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+  const finalChargeableKm = Math.max(billableKm, actualKm);
+  const finalFareWithGst = getInvoiceTotals(booking).total + extraAmount;
 
-  return { actualKm, extraKm, extraAmount };
+  return { actualKm, billableKm, extraKm, extraAmount, finalChargeableKm, finalFareWithGst };
 }
 
 function sortDashboardBookings(bookings: DashboardBooking[]) {
@@ -1912,13 +1914,15 @@ export default function Home() {
 
     const extra = getOdometerExtra(booking, startReading, odometerEnd);
 
-    if (extra.extraKm > 0) {
-      window.alert(
-        `Extra ${extra.extraKm} KM Detected. Collect ${formatInr(extra.extraAmount)} Extra From Customer.`,
-      );
-    }
-
-    return { odometerEnd, extraAmount: extra.extraAmount };
+    return {
+      odometerEnd,
+      actualKm: extra.actualKm,
+      bookedKm: extra.billableKm,
+      extraKm: extra.extraKm,
+      extraAmount: extra.extraAmount,
+      finalChargeableKm: extra.finalChargeableKm,
+      finalFareWithGst: extra.finalFareWithGst,
+    };
   }
 
   async function completeRideWithCash(booking: DashboardBooking) {
@@ -1930,6 +1934,16 @@ export default function Home() {
     }
 
     const cashToCollect = balanceDue + odometer.extraAmount;
+    window.alert(
+      [
+        `Booked KM: ${odometer.bookedKm}`,
+        `Actual Travel Distance: ${odometer.actualKm} KM`,
+        `Final Chargeable KM: ${odometer.finalChargeableKm} KM`,
+        `Final Fare With GST: ${formatInr(odometer.finalFareWithGst)}`,
+        `Already Paid: ${formatPaymentAmount(booking.payment_amount || 0)}`,
+        `Collect Now: ${formatInr(cashToCollect)}`,
+      ].join("\n"),
+    );
 
     if (cashToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -1953,6 +1967,16 @@ export default function Home() {
     }
 
     const amountToCollect = balanceDue + odometer.extraAmount;
+    window.alert(
+      [
+        `Booked KM: ${odometer.bookedKm}`,
+        `Actual Travel Distance: ${odometer.actualKm} KM`,
+        `Final Chargeable KM: ${odometer.finalChargeableKm} KM`,
+        `Final Fare With GST: ${formatInr(odometer.finalFareWithGst)}`,
+        `Already Paid: ${formatPaymentAmount(booking.payment_amount || 0)}`,
+        `Collect Now: ${formatInr(amountToCollect)}`,
+      ].join("\n"),
+    );
 
     if (amountToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -2869,10 +2893,24 @@ export default function Home() {
               <b>{booking.odometer_end} KM</b>
             </>
           ) : null}
+          {booking.odometer_start && booking.odometer_end ? (
+            <>
+              <small>Actual Travel Distance</small>
+              <b>
+                {Math.max(
+                  0,
+                  Number(booking.odometer_end || 0) - Number(booking.odometer_start || 0),
+                )}{" "}
+                KM
+              </b>
+            </>
+          ) : null}
           {booking.extra_km ? (
             <>
               <small>Extra KM</small>
               <b>{booking.extra_km} KM | {formatInr(Number(booking.extra_amount || 0))}</b>
+              <small>Final Fare</small>
+              <b>{formatInr(invoiceTotals.total + Number(booking.extra_amount || 0))}</b>
             </>
           ) : null}
           <small>Fare</small>
