@@ -99,7 +99,14 @@ const destinationSuggestions = [
   "Vapi",
 ];
 
-const bookingTypes = ["One Way", "Round Trip", "Airport", "In-City", "Outstation"];
+const bookingTypes = ["Outstation", "Airport", "In-City"];
+const outstationTripOptions = ["One Way", "Round Trip"];
+const airportTripOptions = ["Airport Pickup", "Airport Drop"];
+const localPackageOptions = [
+  { id: "local4hr", label: "4 Hr / 50 KM", hours: 4, km: 50 },
+  { id: "local8hr", label: "8 Hr / 100 KM", hours: 8, km: 100 },
+] as const;
+const roundTripDailyKm = 300;
 
 const packageOptions = [
   {
@@ -126,41 +133,59 @@ const packageOptions = [
 
 const rateTable: Record<
   string,
-  { perKm: number; fullDay: number; halfDay: number; vip: number; tag: string }
+  {
+    perKm: number;
+    local4hr: number;
+    local8hr: number;
+    fullDay: number;
+    halfDay: number;
+    vip: number;
+    tag: string;
+  }
 > = {
   "Toyota Etios": {
-    perKm: 16,
-    fullDay: 3200,
-    halfDay: 1900,
-    vip: 5200,
+    perKm: 24,
+    local4hr: 2017,
+    local8hr: 3667,
+    fullDay: 3667,
+    halfDay: 2017,
+    vip: 4680,
     tag: "Economy",
   },
   "Maruti Ertiga": {
-    perKm: 18,
-    fullDay: 4200,
-    halfDay: 2600,
-    vip: 6200,
+    perKm: 29,
+    local4hr: 2440,
+    local8hr: 4437,
+    fullDay: 4437,
+    halfDay: 2440,
+    vip: 5580,
     tag: "Family",
   },
   "Maruti Rumion": {
-    perKm: 18,
-    fullDay: 4300,
-    halfDay: 2700,
-    vip: 6500,
+    perKm: 29,
+    local4hr: 2440,
+    local8hr: 4437,
+    fullDay: 4437,
+    halfDay: 2440,
+    vip: 5850,
     tag: "Comfort",
   },
   "Toyota Innova Crysta": {
-    perKm: 22,
-    fullDay: 5800,
-    halfDay: 3600,
-    vip: 8500,
+    perKm: 32,
+    local4hr: 2440,
+    local8hr: 4437,
+    fullDay: 4437,
+    halfDay: 2440,
+    vip: 7650,
     tag: "VIP",
   },
   "Toyota Hycross": {
-    perKm: 26,
-    fullDay: 7200,
-    halfDay: 4600,
-    vip: 11000,
+    perKm: 39,
+    local4hr: 2819,
+    local8hr: 5125,
+    fullDay: 5125,
+    halfDay: 2819,
+    vip: 9900,
     tag: "Luxury VIP",
   },
 };
@@ -613,7 +638,7 @@ function getLocationTripType(origin: string, destination: string) {
   }
 
   if (dropLocation) {
-    return "One Way";
+    return "Outstation";
   }
 
   return null;
@@ -627,7 +652,11 @@ export default function Home() {
   const [bookingView, setBookingView] = useState<"home" | "cars" | "review">(
     "home",
   );
-  const [tripType, setTripType] = useState("One Way");
+  const [tripType, setTripType] = useState("Outstation");
+  const [outstationTripType, setOutstationTripType] = useState("One Way");
+  const [airportTripType, setAirportTripType] = useState("Airport Pickup");
+  const [localPackageType, setLocalPackageType] =
+    useState<(typeof localPackageOptions)[number]["id"]>("local8hr");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
   const [startPoint, setStartPoint] = useState(headOffice);
   const [drop, setDrop] = useState("");
@@ -783,35 +812,67 @@ export default function Home() {
     ratePerKm: number;
   } | null>(null);
   const numericDistance = Math.max(0, Number(distanceKm) || 0);
-  const billableDistance = tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
-  const selectedPackage =
-    packageOptions.find((item) => item.id === packageType) || packageOptions[0];
+  const roundTripDays =
+    tripType === "Outstation" && outstationTripType === "Round Trip" && date && returnDate
+      ? Math.max(
+          1,
+          Math.ceil(
+            (new Date(`${returnDate}T00:00:00`).getTime() -
+              new Date(`${date}T00:00:00`).getTime()) /
+              86400000,
+          ) + 1,
+        )
+      : 1;
+  const selectedLocalPackage =
+    localPackageOptions.find((item) => item.id === localPackageType) ||
+    localPackageOptions[1];
+  const billableDistance =
+    tripType === "In-City"
+      ? selectedLocalPackage.km
+      : tripType === "Outstation" && outstationTripType === "Round Trip"
+        ? Math.max(numericDistance * 2, roundTripDays * roundTripDailyKm)
+        : numericDistance;
+  const effectiveTripType =
+    tripType === "Outstation"
+      ? outstationTripType
+      : tripType === "Airport"
+        ? airportTripType
+        : `${selectedLocalPackage.label} Local`;
+  const selectedPackage = {
+    label:
+      tripType === "In-City"
+        ? selectedLocalPackage.label
+        : tripType === "Outstation" && outstationTripType === "Round Trip"
+          ? `${roundTripDays} Day Round Trip`
+          : tripType === "Airport"
+            ? airportTripType
+            : packageOptions.find((item) => item.id === packageType)?.label ||
+              packageOptions[0].label,
+  };
   const vehicleRates = useMemo(
     () =>
       vehicles
         .map((item) => {
           const rates = rateTable[item.name];
+          const baseLocalFare =
+            localPackageType === "local4hr" ? rates.local4hr : rates.local8hr;
           const estimatedFare =
-            packageType === "perKm"
-              ? Math.round(billableDistance * rates.perKm)
-              : rates[packageType];
+            tripType === "In-City"
+              ? baseLocalFare
+              : Math.round(billableDistance * rates.perKm);
 
           return {
             ...item,
             ...rates,
             estimatedFare,
             fareLabel:
-              packageType === "perKm"
-                ? `Rs. ${rates.perKm}/KM`
-                : packageType === "fullDay"
-                  ? "8 Hr / 80 KM"
-                  : packageType === "halfDay"
-                    ? "4 Hr / 40 KM"
-                    : "VIP Package",
+              tripType === "In-City"
+                ? `${selectedLocalPackage.label} | Extra Rs. ${rates.perKm}/KM`
+                : `Rs. ${rates.perKm}/KM`,
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
-    [billableDistance, packageType],
+    [billableDistance, localPackageType, selectedLocalPackage.label, tripType],
   );
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
@@ -982,7 +1043,7 @@ export default function Home() {
   const bookingText = useMemo(() => {
     return [
       "Hello Vishnu Tours, I Want To Book A Cab.",
-      `Trip: ${tripType}`,
+      `Trip: ${effectiveTripType}`,
       `Cab: ${vehicle}`,
       `Start Point: ${startPoint}`,
       `Destination: ${drop || "Please confirm"}`,
@@ -997,7 +1058,7 @@ export default function Home() {
       `Payment: ${paymentMode}`,
     ].join("\n");
   }, [
-    tripType,
+    effectiveTripType,
     vehicle,
     startPoint,
     drop,
@@ -1028,7 +1089,7 @@ export default function Home() {
     setShowBookingTicket(false);
     const detectedTripType = getLocationTripType(startPoint, value);
 
-    if (detectedTripType && tripType !== "Round Trip" && detectedTripType !== tripType) {
+    if (detectedTripType && detectedTripType !== tripType) {
       setTripType(detectedTripType);
     }
 
@@ -1072,7 +1133,7 @@ export default function Home() {
     setBookingStatus("");
     const detectedTripType = getLocationTripType(value, drop);
 
-    if (detectedTripType && tripType !== "Round Trip" && detectedTripType !== tripType) {
+    if (detectedTripType && detectedTripType !== tripType) {
       setTripType(detectedTripType);
     }
   }
@@ -1114,12 +1175,12 @@ export default function Home() {
       return;
     }
 
-    if (!startPoint || !drop || !numericDistance || !date || !pickupTime) {
+    if (!startPoint || !drop || !billableDistance || !date || !pickupTime) {
       setBookingStatus("Please Fill From, To, Date, Time And Distance.");
       return;
     }
 
-    if (tripType === "Round Trip" && !returnDate) {
+    if (tripType === "Outstation" && outstationTripType === "Round Trip" && !returnDate) {
       setBookingStatus("Please Select Return Date For Round Trip.");
       return;
     }
@@ -1147,7 +1208,7 @@ export default function Home() {
       return;
     }
 
-    if (!drop || !numericDistance || !pickupDateTime || !name || !mobile || !email) {
+    if (!drop || !billableDistance || !pickupDateTime || !name || !mobile || !email) {
       setBookingStatus("Please Fill From, To, KM, Date, Name, Mobile And Email.");
       return null;
     }
@@ -1164,17 +1225,20 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tripType,
+          tripType: effectiveTripType,
           vehicle: selectedCab,
           startPoint,
           destination: drop,
-          distanceKm: numericDistance,
+          distanceKm: billableDistance,
           date: pickupDateTime,
-          returnDate: tripType === "Round Trip" ? returnDate : "",
+          returnDate:
+            tripType === "Outstation" && outstationTripType === "Round Trip"
+              ? returnDate
+              : "",
           name,
           mobile,
           email,
-          packageType,
+          packageType: selectedPackage.label,
           paymentMode,
         }),
       });
@@ -1299,9 +1363,9 @@ export default function Home() {
             pickup: startPoint,
             drop,
             vehicle,
-            tripType,
-            distanceKm: String(numericDistance),
-            packageType,
+            tripType: effectiveTripType,
+            distanceKm: String(billableDistance),
+            packageType: selectedPackage.label,
             estimatedFare: String(activeBooking.estimatedFare),
           },
         }),
@@ -1346,7 +1410,7 @@ export default function Home() {
       amount: Math.round(amount * 100),
       currency: "INR",
       name: "Vishnu Tours",
-      description: `${activeBooking.bookingId} ${tripType} booking`,
+      description: `${activeBooking.bookingId} ${effectiveTripType} booking`,
       prefill: {
         name,
         contact: mobile,
@@ -1356,9 +1420,9 @@ export default function Home() {
         pickup: startPoint,
         drop,
         vehicle,
-        tripType,
-        distanceKm: String(numericDistance),
-        packageType,
+        tripType: effectiveTripType,
+        distanceKm: String(billableDistance),
+        packageType: selectedPackage.label,
         estimatedFare: String(activeBooking.estimatedFare),
       },
       theme: {
@@ -3263,8 +3327,14 @@ export default function Home() {
                   className={tripType === type ? "active" : ""}
                   onClick={() => {
                     setTripType(type);
-                    if (type !== "Round Trip") {
+                    if (type !== "Outstation") {
                       setReturnDate("");
+                    }
+                    if (type === "In-City") {
+                      setDistanceKm(String(selectedLocalPackage.km));
+                    }
+                    if (type === "Airport" && !distanceKm) {
+                      setDistanceKm("25");
                     }
                     setShowVehicleStep(false);
                     setBookingView("home");
@@ -3274,9 +3344,70 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            {tripType === "Outstation" ? (
+              <div className="booking-choice-row" aria-label="Choose Trip">
+                <span>Choose Trip</span>
+                {outstationTripOptions.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={outstationTripType === type ? "active" : ""}
+                    onClick={() => {
+                      setOutstationTripType(type);
+                      if (type !== "Round Trip") {
+                        setReturnDate("");
+                      }
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {tripType === "Airport" ? (
+              <div className="booking-choice-row" aria-label="Airport Booking Type">
+                <span>Airport Booking</span>
+                {airportTripOptions.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={airportTripType === type ? "active" : ""}
+                    onClick={() => {
+                      setAirportTripType(type);
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {tripType === "In-City" ? (
+              <div className="booking-choice-row" aria-label="Local Package">
+                <span>Local Package</span>
+                {localPackageOptions.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={localPackageType === item.id ? "active" : ""}
+                    onClick={() => {
+                      setLocalPackageType(item.id);
+                      setDistanceKm(String(item.km));
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className="route-form-row">
               <label className="place-field booking-field">
-                <span>From</span>
+                <span>{tripType === "Airport" && airportTripType === "Airport Drop" ? "Pickup Location" : "From"}</span>
                 <div className="location-input-wrap">
                   <input
                     ref={fromInputRef}
@@ -3337,7 +3468,7 @@ export default function Home() {
                 ⇄
               </button>
               <label className="place-field booking-field">
-                <span>To</span>
+                <span>{tripType === "Airport" && airportTripType === "Airport Pickup" ? "Drop Location" : "To"}</span>
                 <input
                   ref={toInputRef}
                   value={drop}
@@ -3392,7 +3523,7 @@ export default function Home() {
                   required
                 />
               </label>
-              {tripType === "Round Trip" ? (
+              {tripType === "Outstation" && outstationTripType === "Round Trip" ? (
                 <label className="booking-field">
                   <span>Return Date</span>
                   <input
@@ -3453,11 +3584,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-fleet-strip" aria-label="Vishnu Tours white car fleet">
+      <section className="homepage-fleet-strip" aria-label="Vishnu Tours car fleet">
         <div className="homepage-fleet-head">
           <span>Owner Fleet</span>
-          <h2>White Cars For Corporate, VIP And Family Travel</h2>
-          <p>Sedan And MUV Options Available From Mumbai For Airport, In-City, One Way, Round Trip And Outstation Travel.</p>
+          <h2>Cars For Corporate, VIP And Family Travel</h2>
+          <p>Sedan And MUV Options Available From Mumbai For Airport, In-City, Round Trip And Outstation Travel.</p>
         </div>
         <div className="homepage-fleet-list">
           {vehicles.map((item) => (
@@ -3487,13 +3618,13 @@ export default function Home() {
             </div>
             <div>
               <span>Trip Type</span>
-              <strong>{tripType}</strong>
+              <strong>{effectiveTripType}</strong>
             </div>
             <div>
               <span>Pick Up</span>
               <strong>{formatDisplayDate(date)}</strong>
             </div>
-            {tripType === "Round Trip" ? (
+            {tripType === "Outstation" && outstationTripType === "Round Trip" ? (
               <div>
                 <span>Return</span>
                 <strong>{formatDisplayDate(returnDate)}</strong>
@@ -3516,6 +3647,8 @@ export default function Home() {
             {vehicleRates.map((item) => {
               const tax = Math.round(item.estimatedFare * 0.05);
               const total = item.estimatedFare + tax;
+              const marketTotal = Math.round(total / 0.9);
+              const saving = Math.max(0, marketTotal - total);
 
               return (
                 <article className="select-car-card" key={item.name}>
@@ -3531,8 +3664,11 @@ export default function Home() {
                     <ul>
                       <li>Driver Allowance Included</li>
                       <li>
-                        {billableDistance || 0} KMs Included | Post Limit: Rs.{" "}
+                        {billableDistance || 0} KMs Included | Extra Distance: Rs.{" "}
                         {item.perKm}/KM
+                      </li>
+                      <li>
+                        {item.seats.startsWith("4") ? "4" : "6"} Passengers | 2 Suitcases
                       </li>
                       <li>{selectedPackage.label}</li>
                     </ul>
@@ -3542,7 +3678,9 @@ export default function Home() {
                   </div>
                   <div className="car-price-block">
                     <span className="discount-line">Direct Owner Rate</span>
+                    <del>{formatInr(marketTotal)}</del>
                     <strong>{formatInr(total)}</strong>
+                    <span className="saving-line">You Save {formatInr(saving)}</span>
                     <small>Including GST 5%: {formatInr(tax)}</small>
                     <button
                       className="book-cab-button select-car-button"
@@ -3576,7 +3714,7 @@ export default function Home() {
               <div className="confirmation-grid">
                 <div>
                   <small>Trip Type</small>
-                  <strong>{tripType}</strong>
+                  <strong>{effectiveTripType}</strong>
                 </div>
                 <div>
                   <small>Cab</small>
@@ -3594,7 +3732,7 @@ export default function Home() {
                   <small>Date And Time</small>
                   <strong>{formatDisplayDate(date)}, {pickupTime}</strong>
                 </div>
-                {tripType === "Round Trip" ? (
+                {tripType === "Outstation" && outstationTripType === "Round Trip" ? (
                   <div>
                     <small>Return Date</small>
                     <strong>{formatDisplayDate(returnDate)}</strong>

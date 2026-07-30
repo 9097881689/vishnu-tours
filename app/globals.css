@@ -4546,3 +4546,65 @@ body {
     display: none;
   }
 }
+
+.booking-choice-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -4px auto 12px;
+}
+
+.booking-choice-row span {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.booking-choice-row button {
+  min-height: 30px;
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.booking-choice-row button.active {
+  border-color: #075985;
+  background: #075985;
+  color: #fff;
+}
+
+.homepage-fleet-photo img {
+  width: min(245px, 98%);
+  max-height: 122px;
+  object-fit: contain;
+}
+
+.select-car-card .car-art {
+  background: #ffffff;
+}
+
+.select-car-card .car-art img {
+  width: min(280px, 98%);
+  max-height: 178px;
+  object-fit: contain;
+}
+
+.car-price-block del {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.saving-line {
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 1000;
+}
