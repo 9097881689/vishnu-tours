@@ -3197,7 +3197,7 @@ export default function Home() {
       <header className="top-strip main-menu">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src="/logo.svg" alt="Vishnu Tours logo" />
+          <img className="brand-logo" src="/logo.svg?v=fce5649" alt="Vishnu Tours logo" />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
