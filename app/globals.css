@@ -4581,6 +4581,44 @@ body {
   color: #fff;
 }
 
+.booking-choice-row select {
+  min-height: 32px;
+  padding: 6px 34px 6px 12px;
+  border: 1px solid #075985;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.local-duty-note {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.local-duty-note strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.local-duty-note span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.booking-field input[readonly] {
+  background: #f8fafc;
+  color: #334155;
+}
+
 .homepage-fleet-photo img {
   width: min(245px, 98%);
   max-height: 122px;
