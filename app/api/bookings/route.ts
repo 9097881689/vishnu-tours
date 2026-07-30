@@ -25,6 +25,7 @@ type BookingPayload = {
   destination?: string;
   distanceKm?: number;
   date?: string;
+  returnDate?: string;
   name?: string;
   mobile?: string;
   email?: string;
@@ -82,6 +83,7 @@ type BookingRow = {
   rate_per_km: number;
   estimated_fare: number;
   pickup_datetime: string;
+  return_date?: string;
   customer_name: string;
   customer_mobile: string;
   customer_email: string;
@@ -173,7 +175,7 @@ type WithdrawalRow = {
 
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   start_point, destination, one_side_km, billable_km, rate_per_km,
-  estimated_fare, pickup_datetime, customer_name, customer_mobile, customer_email, status,
+  estimated_fare, pickup_datetime, return_date, customer_name, customer_mobile, customer_email, status,
   ride_status, refund_status, refund_amount, driver_name, driver_mobile, vehicle_number,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
   refund_collection_mode, driver_cash_refunded,
@@ -486,6 +488,7 @@ async function ensureBookingsTable() {
         rate_per_km INTEGER NOT NULL,
         estimated_fare INTEGER NOT NULL,
         pickup_datetime TEXT NOT NULL,
+        return_date TEXT NOT NULL DEFAULT '',
         customer_name TEXT NOT NULL,
         customer_mobile TEXT NOT NULL,
         customer_email TEXT NOT NULL DEFAULT '',
@@ -511,6 +514,11 @@ async function ensureBookingsTable() {
       )`,
     )
     .run();
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN return_date TEXT NOT NULL DEFAULT ''")
+    .run()
+    .catch(() => undefined);
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN package_type TEXT NOT NULL DEFAULT 'perKm'")
@@ -1616,6 +1624,7 @@ export async function POST(request: Request) {
     const startPoint = clean(payload.startPoint) || headOffice;
     const destination = clean(payload.destination);
     const date = clean(payload.date);
+    const returnDate = clean(payload.returnDate);
     const name = clean(payload.name);
     const mobile = clean(payload.mobile);
     const email = clean(payload.email).toLowerCase();
@@ -1633,6 +1642,13 @@ export async function POST(request: Request) {
     if (!Number.isFinite(oneSideKm) || oneSideKm <= 0) {
       return Response.json(
         { error: "Please enter valid distance in KM." },
+        { status: 400 },
+      );
+    }
+
+    if (tripType === "Round Trip" && !returnDate) {
+      return Response.json(
+        { error: "Please select return date for round trip." },
         { status: 400 },
       );
     }
@@ -1675,6 +1691,7 @@ export async function POST(request: Request) {
         rate_per_km,
         estimated_fare,
         pickup_datetime,
+        return_date,
         customer_name,
         customer_mobile,
         customer_email,
@@ -1692,7 +1709,7 @@ export async function POST(request: Request) {
         cancel_reason,
         ride_started_at,
         ride_completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -1707,6 +1724,7 @@ export async function POST(request: Request) {
         selectedRate.perKm,
         estimatedFare,
         date,
+        tripType === "Round Trip" ? returnDate : "",
         name,
         mobile,
         email,
@@ -1742,6 +1760,7 @@ export async function POST(request: Request) {
       billableKm,
       ratePerKm: selectedRate.perKm,
       packageType,
+      returnDate: tripType === "Round Trip" ? returnDate : "",
       estimatedFare,
     };
 
@@ -1900,6 +1919,7 @@ async function sendCustomerBookingEmail(
     ["Trip Type", booking.trip_type],
     ["Cab", booking.vehicle],
     ["Pickup Date And Time", booking.pickup_datetime],
+    ...(booking.return_date ? [["Return Date", booking.return_date]] : []),
     ["Customer", `${booking.customer_name} | ${booking.customer_mobile}`],
     ["Driver / Vehicle", driverLine],
     ["Total Fare Including GST 5%", `Rs ${totalWithGst}`],

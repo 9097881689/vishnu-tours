@@ -250,6 +250,7 @@ type DashboardBooking = {
   billable_km?: number;
   rate_per_km?: number;
   pickup_datetime?: string;
+  return_date?: string;
   estimated_fare: number;
   customer_name: string;
   customer_mobile: string;
@@ -615,6 +616,7 @@ export default function Home() {
   const [drop, setDrop] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [date, setDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [pickupTime, setPickupTime] = useState("10:00");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -764,7 +766,7 @@ export default function Home() {
     ratePerKm: number;
   } | null>(null);
   const numericDistance = Math.max(0, Number(distanceKm) || 0);
-  const billableDistance = numericDistance;
+  const billableDistance = tripType === "Round Trip" ? numericDistance * 2 : numericDistance;
   const selectedPackage =
     packageOptions.find((item) => item.id === packageType) || packageOptions[0];
   const vehicleRates = useMemo(
@@ -1026,6 +1028,7 @@ export default function Home() {
     setDrop("");
     setDistanceKm("");
     setDate("");
+    setReturnDate("");
     setPickupTime("10:00");
     setName("");
     setMobile("");
@@ -1099,6 +1102,11 @@ export default function Home() {
       return;
     }
 
+    if (tripType === "Round Trip" && !returnDate) {
+      setBookingStatus("Please Select Return Date For Round Trip.");
+      return;
+    }
+
     setShowVehicleStep(true);
     setBookingView("cars");
   }
@@ -1145,6 +1153,7 @@ export default function Home() {
           destination: drop,
           distanceKm: numericDistance,
           date: pickupDateTime,
+          returnDate: tripType === "Round Trip" ? returnDate : "",
           name,
           mobile,
           email,
@@ -2750,6 +2759,12 @@ export default function Home() {
           </b>
           <small>Booking Date And Time</small>
           <b>{formatDisplayDateTime(booking.pickup_datetime || booking.created_at)}</b>
+          {booking.return_date ? (
+            <>
+              <small>Return Date</small>
+              <b>{formatDisplayDate(booking.return_date)}</b>
+            </>
+          ) : null}
           <small>Fare</small>
           <b>{formatInr(invoiceTotals.total)} Including GST 5%</b>
           <small>Payment</small>
@@ -3083,6 +3098,9 @@ export default function Home() {
                   className={tripType === type ? "active" : ""}
                   onClick={() => {
                     setTripType(type);
+                    if (type !== "Round Trip") {
+                      setReturnDate("");
+                    }
                     setShowVehicleStep(false);
                     setBookingView("home");
                   }}
@@ -3196,7 +3214,12 @@ export default function Home() {
                 <input
                   value={date}
                   onChange={(event) => {
-                    setDate(event.target.value);
+                    const selectedPickupDate = event.target.value;
+
+                    setDate(selectedPickupDate);
+                    if (returnDate && returnDate < selectedPickupDate) {
+                      setReturnDate("");
+                    }
                     setShowVehicleStep(false);
                     setBookingView("home");
                   }}
@@ -3204,6 +3227,22 @@ export default function Home() {
                   required
                 />
               </label>
+              {tripType === "Round Trip" ? (
+                <label className="booking-field">
+                  <span>Return Date</span>
+                  <input
+                    value={returnDate}
+                    onChange={(event) => {
+                      setReturnDate(event.target.value);
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                    min={date || undefined}
+                    type="date"
+                    required
+                  />
+                </label>
+              ) : null}
               <label className="booking-field">
                 <span>Pick Up Time</span>
                 <input
@@ -3266,6 +3305,12 @@ export default function Home() {
               <span>Pick Up</span>
               <strong>{formatDisplayDate(date)}</strong>
             </div>
+            {tripType === "Round Trip" ? (
+              <div>
+                <span>Return</span>
+                <strong>{formatDisplayDate(returnDate)}</strong>
+              </div>
+            ) : null}
             <div>
               <span>Time</span>
               <strong>{pickupTime}</strong>
@@ -3361,6 +3406,12 @@ export default function Home() {
                   <small>Date And Time</small>
                   <strong>{formatDisplayDate(date)}, {pickupTime}</strong>
                 </div>
+                {tripType === "Round Trip" ? (
+                  <div>
+                    <small>Return Date</small>
+                    <strong>{formatDisplayDate(returnDate)}</strong>
+                  </div>
+                ) : null}
                 <div>
                   <small>Billable Distance</small>
                   <strong>{confirmedBooking.billableKm} KM</strong>
