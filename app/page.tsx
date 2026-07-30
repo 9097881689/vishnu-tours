@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai, Maharashtra";
-const mumbaiAirport = "Mumbai Airport, Maharashtra";
 const perKmRate = 16;
 const fromSuggestions = [
   "Mumbai Head Office",
@@ -102,7 +101,32 @@ const destinationSuggestions = [
 
 const bookingTypes = ["Outstation", "Airport", "In-City"];
 const outstationTripOptions = ["One Way", "Round Trip"];
-const airportTripOptions = ["Airport Pickup", "Airport Drop"];
+const airportTripOptions = [
+  {
+    value: "Airport Pickup T1",
+    label: "Airport Pickup T1",
+    mode: "pickup",
+    location: "Mumbai Airport Terminal 1 (T1), Santacruz, Mumbai",
+  },
+  {
+    value: "Airport Pickup T2",
+    label: "Airport Pickup T2",
+    mode: "pickup",
+    location: "Mumbai Airport Terminal 2 (T2), Andheri East, Mumbai",
+  },
+  {
+    value: "Airport Drop T1",
+    label: "Airport Drop T1",
+    mode: "drop",
+    location: "Mumbai Airport Terminal 1 (T1), Santacruz, Mumbai",
+  },
+  {
+    value: "Airport Drop T2",
+    label: "Airport Drop T2",
+    mode: "drop",
+    location: "Mumbai Airport Terminal 2 (T2), Andheri East, Mumbai",
+  },
+] as const;
 const localPackageOptions = [
   { id: "local4hr", label: "4 Hr / 40 KM", hours: 4, km: 40 },
   { id: "local8hr", label: "8 Hr / 40 KM", hours: 8, km: 40 },
@@ -194,6 +218,13 @@ const rateTable: Record<
 
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
+}
+
+function getAirportOption(value: string) {
+  return (
+    airportTripOptions.find((option) => option.value === value) ||
+    airportTripOptions[0]
+  );
 }
 
 declare global {
@@ -661,7 +692,7 @@ export default function Home() {
   );
   const [tripType, setTripType] = useState("Outstation");
   const [outstationTripType, setOutstationTripType] = useState("One Way");
-  const [airportTripType, setAirportTripType] = useState("Airport Pickup");
+  const [airportTripType, setAirportTripType] = useState(airportTripOptions[0].value);
   const [localPackageType, setLocalPackageType] =
     useState<(typeof localPackageOptions)[number]["id"]>("local8hr");
   const [vehicle, setVehicle] = useState("Toyota Innova Crysta");
@@ -907,12 +938,15 @@ export default function Home() {
   const formattedFare = formatInr(fareTotal);
   const pickupDateTime = date && pickupTime ? `${date}T${pickupTime}` : "";
   const localRoute = "Mumbai, Maharashtra Local Duty";
+  const selectedAirportOption = getAirportOption(airportTripType);
+  const isAirportPickup = tripType === "Airport" && selectedAirportOption.mode === "pickup";
+  const isAirportDrop = tripType === "Airport" && selectedAirportOption.mode === "drop";
   const bookingStartPoint = tripType === "In-City" ? headOffice : startPoint;
   const bookingDropPoint = tripType === "In-City" ? localRoute : drop;
   const routeReady =
     tripType === "In-City"
       ? true
-      : tripType === "Airport" && airportTripType === "Airport Pickup"
+      : isAirportPickup
         ? Boolean(drop.trim())
         : Boolean(startPoint.trim() && drop.trim());
   const advanceBookingReady = pickupDateTime
@@ -3465,12 +3499,14 @@ export default function Home() {
                       setDistanceKm("40");
                     }
                     if (type === "Airport") {
-                      if (airportTripType === "Airport Pickup") {
-                        setStartPoint(mumbaiAirport);
+                      const selectedAirport = getAirportOption(airportTripType);
+
+                      if (selectedAirport.mode === "pickup") {
+                        setStartPoint(selectedAirport.location);
                         setDrop("");
                       } else {
                         setStartPoint(headOffice);
-                        setDrop(mumbaiAirport);
+                        setDrop(selectedAirport.location);
                       }
                     }
                     setShowVehicleStep(false);
@@ -3508,14 +3544,15 @@ export default function Home() {
                     value={airportTripType}
                     onChange={(event) => {
                       const type = event.target.value;
+                      const selectedAirport = getAirportOption(type);
 
                       setAirportTripType(type);
-                      if (type === "Airport Pickup") {
-                        setStartPoint(mumbaiAirport);
+                      if (selectedAirport.mode === "pickup") {
+                        setStartPoint(selectedAirport.location);
                         setDrop("");
                       } else {
                         setStartPoint(headOffice);
-                        setDrop(mumbaiAirport);
+                        setDrop(selectedAirport.location);
                       }
                       if (!distanceKm) {
                         setDistanceKm("40");
@@ -3524,9 +3561,9 @@ export default function Home() {
                       setBookingView("home");
                     }}
                   >
-                    {airportTripOptions.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
+                    {airportTripOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
@@ -3565,7 +3602,7 @@ export default function Home() {
               ) : (
               <>
               <label className="place-field booking-field">
-                <span>{tripType === "Airport" && airportTripType === "Airport Drop" ? "Pickup Location" : "From"}</span>
+                <span>{isAirportDrop ? "Pickup Location" : "From"}</span>
                 <div className="location-input-wrap">
                   <input
                     ref={fromInputRef}
@@ -3585,10 +3622,10 @@ export default function Home() {
                     }}
                     placeholder="Enter Pickup Location"
                     autoComplete="off"
-                    readOnly={tripType === "Airport" && airportTripType === "Airport Pickup"}
+                    readOnly={isAirportPickup}
                     required
                   />
-                  {!(tripType === "Airport" && airportTripType === "Airport Pickup") ? (
+                  {!isAirportPickup ? (
                     <button
                       className="current-location-button"
                       type="button"
@@ -3600,7 +3637,7 @@ export default function Home() {
                 </div>
                 {activeSuggestionField === "from" &&
                 visibleFromSuggestions.length &&
-                !(tripType === "Airport" && airportTripType === "Airport Pickup") ? (
+                !isAirportPickup ? (
                   <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
                     {visibleFromSuggestions.map((item) => (
                       <button
@@ -3631,7 +3668,7 @@ export default function Home() {
                 ⇄
               </button>
               <label className="place-field booking-field">
-                <span>{tripType === "Airport" && airportTripType === "Airport Pickup" ? "Drop Location" : "To"}</span>
+                <span>{isAirportPickup ? "Drop Location" : "To"}</span>
                 <input
                   ref={toInputRef}
                   value={drop}
@@ -3645,12 +3682,12 @@ export default function Home() {
                   }
                   placeholder="Enter Drop Location"
                   autoComplete="off"
-                  readOnly={tripType === "Airport" && airportTripType === "Airport Drop"}
+                  readOnly={isAirportDrop}
                   required
                 />
                 {activeSuggestionField === "to" &&
                 visibleDestinationSuggestions.length &&
-                !(tripType === "Airport" && airportTripType === "Airport Drop") ? (
+                !isAirportDrop ? (
                   <div className="place-suggestions" aria-label="India destination suggestions">
                     {visibleDestinationSuggestions.map((item) => (
                       <button
