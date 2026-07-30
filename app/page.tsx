@@ -488,9 +488,10 @@ function getCompletedWorkflowStages(booking: DashboardBooking) {
 function getInvoiceTotals(booking: DashboardBooking) {
   const baseFare = Number(booking.estimated_fare || 0);
   const tax = Math.round(baseFare * 0.05);
-  const total = baseFare + tax;
+  const extraAmount = Number(booking.extra_amount || 0);
+  const total = baseFare + tax + extraAmount;
 
-  return { baseFare, tax, total };
+  return { baseFare, tax, extraAmount, total };
 }
 
 function getBalanceDue(booking: DashboardBooking) {
@@ -505,7 +506,8 @@ function getOdometerExtra(booking: DashboardBooking, startReading: number, endRe
   const extraKm = Math.max(0, actualKm - billableKm);
   const extraAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
   const finalChargeableKm = Math.max(billableKm, actualKm);
-  const finalFareWithGst = getInvoiceTotals(booking).total + extraAmount;
+  const baseFare = Number(booking.estimated_fare || 0);
+  const finalFareWithGst = baseFare + Math.round(baseFare * 0.05) + extraAmount;
 
   return { actualKm, billableKm, extraKm, extraAmount, finalChargeableKm, finalFareWithGst };
 }
@@ -1967,7 +1969,7 @@ export default function Home() {
       return;
     }
 
-    const cashToCollect = balanceDue + odometer.extraAmount;
+    const cashToCollect = balanceDue;
 
     if (cashToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -1976,7 +1978,7 @@ export default function Home() {
 
     await submitDriverRideStatus(booking, "Ride Complete", {
       collectionMode: "cash",
-      paymentAmount: getInvoiceTotals(booking).total + odometer.extraAmount,
+      paymentAmount: getInvoiceTotals(booking).total,
       cashCollected: cashToCollect,
       ...odometer,
     });
@@ -1990,7 +1992,7 @@ export default function Home() {
       return;
     }
 
-    const amountToCollect = balanceDue + odometer.extraAmount;
+    const amountToCollect = balanceDue;
 
     if (amountToCollect <= 0) {
       await submitDriverRideStatus(booking, "Ride Complete", odometer);
@@ -2077,7 +2079,7 @@ export default function Home() {
         playBookingConfirmSound();
         await submitDriverRideStatus(booking, "Ride Complete", {
           collectionMode: "payment_gateway",
-          paymentAmount: getInvoiceTotals(booking).total + odometer.extraAmount,
+          paymentAmount: getInvoiceTotals(booking).total,
           ...odometer,
         });
       },
@@ -2924,7 +2926,7 @@ export default function Home() {
               <small>Extra KM</small>
               <b>{booking.extra_km} KM | {formatInr(Number(booking.extra_amount || 0))}</b>
               <small>Final Fare</small>
-              <b>{formatInr(invoiceTotals.total + Number(booking.extra_amount || 0))}</b>
+              <b>{formatInr(invoiceTotals.total)}</b>
             </>
           ) : null}
           <small>Fare</small>
@@ -3773,22 +3775,11 @@ export default function Home() {
               {collectionPrompt.start_point} To {collectionPrompt.destination}.
             </p>
             <strong className="collection-due-amount">
-              {renderCollectionAmount(
-                collectionPromptMode === "complete"
-                  ? getBalanceDue(collectionPrompt) + Number(collectionPrompt.extra_amount || 0)
-                  : getBalanceDue(collectionPrompt),
-              )}
+              {renderCollectionAmount(getBalanceDue(collectionPrompt))}
             </strong>
             <div className="collection-meta-grid">
               <span>Total Fare With GST</span>
-              <b>
-                {formatInr(
-                  getInvoiceTotals(collectionPrompt).total +
-                    (collectionPromptMode === "complete"
-                      ? Number(collectionPrompt.extra_amount || 0)
-                      : 0),
-                )}
-              </b>
+              <b>{formatInr(getInvoiceTotals(collectionPrompt).total)}</b>
               <span>Already Paid</span>
               <b>{formatPaymentAmount(collectionPrompt.payment_amount || 0)}</b>
               {collectionPromptMode === "complete" && collectionPrompt.odometer_end ? (
