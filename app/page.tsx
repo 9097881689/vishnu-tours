@@ -192,6 +192,10 @@ const rateTable: Record<
   },
 };
 
+function applyPriceAdjustment(amount: number, percent: number) {
+  return Math.max(0, Math.round(amount * (1 + percent / 100)));
+}
+
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
@@ -351,6 +355,7 @@ type PortalRole = "admin" | "driver" | "customer";
 type AdminPanelTab =
   | "breakup"
   | "bookings"
+  | "pricing"
   | "vehicles"
   | "ledger"
   | "withdrawals"
@@ -757,6 +762,7 @@ export default function Home() {
     driverCashSummary: DriverCashSummary[];
     driverLedger: DashboardBooking[];
     withdrawalRequests: DriverWithdrawal[];
+    priceAdjustmentPercent: number;
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -794,6 +800,9 @@ export default function Home() {
     "online",
   );
   const [adminRefundDriverMobile, setAdminRefundDriverMobile] = useState("");
+  const [priceAdjustmentPercent, setPriceAdjustmentPercent] = useState(0);
+  const [priceAdjustmentInput, setPriceAdjustmentInput] = useState("0");
+  const [priceAdjustmentStatus, setPriceAdjustmentStatus] = useState("");
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -851,11 +860,27 @@ export default function Home() {
             : packageOptions.find((item) => item.id === packageType)?.label ||
               packageOptions[0].label,
   };
+  const adjustedRateTable = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(rateTable).map(([vehicleName, rates]) => [
+        vehicleName,
+        {
+          ...rates,
+          perKm: applyPriceAdjustment(rates.perKm, priceAdjustmentPercent),
+          local4hr: applyPriceAdjustment(rates.local4hr, priceAdjustmentPercent),
+          local8hr: applyPriceAdjustment(rates.local8hr, priceAdjustmentPercent),
+          fullDay: applyPriceAdjustment(rates.fullDay, priceAdjustmentPercent),
+          halfDay: applyPriceAdjustment(rates.halfDay, priceAdjustmentPercent),
+          vip: applyPriceAdjustment(rates.vip, priceAdjustmentPercent),
+        },
+      ]),
+    ) as typeof rateTable;
+  }, [priceAdjustmentPercent]);
   const vehicleRates = useMemo(
     () =>
       vehicles
         .map((item) => {
-          const rates = rateTable[item.name];
+          const rates = adjustedRateTable[item.name];
           const estimatedFare = Math.round(billableDistance * rates.perKm);
 
           return {
@@ -869,7 +894,7 @@ export default function Home() {
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
-    [billableDistance, tripType],
+    [adjustedRateTable, billableDistance, tripType],
   );
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
@@ -916,6 +941,36 @@ export default function Home() {
           label: item,
           secondary: "Popular Destination",
         }));
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPriceSetting() {
+      try {
+        const response = await fetch("/api/bookings?settings=pricing");
+        const result = (await response.json()) as {
+          priceAdjustmentPercent?: number;
+        };
+        const percent = Number(result.priceAdjustmentPercent || 0);
+
+        if (mounted && Number.isFinite(percent)) {
+          setPriceAdjustmentPercent(percent);
+          setPriceAdjustmentInput(String(percent));
+        }
+      } catch {
+        if (mounted) {
+          setPriceAdjustmentPercent(0);
+          setPriceAdjustmentInput("0");
+        }
+      }
+    }
+
+    loadPriceSetting();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -1502,6 +1557,7 @@ export default function Home() {
         totalCollected?: number;
         onlineCollected?: number;
         driverCashInHand?: number;
+        priceAdjustmentPercent?: number;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
@@ -1547,6 +1603,10 @@ export default function Home() {
       }
 
       if (result.role === "admin") {
+        const currentPriceAdjustment = Number(result.priceAdjustmentPercent || 0);
+
+        setPriceAdjustmentPercent(currentPriceAdjustment);
+        setPriceAdjustmentInput(String(currentPriceAdjustment));
         setDashboard({
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
@@ -1554,6 +1614,7 @@ export default function Home() {
           totalCollected: result.totalCollected || 0,
           onlineCollected: result.onlineCollected || 0,
           driverCashInHand: result.driverCashInHand || 0,
+          priceAdjustmentPercent: currentPriceAdjustment,
           recentBookings: result.recentBookings || [],
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
@@ -1705,6 +1766,52 @@ export default function Home() {
     }
 
     openAdminLookupDashboard(mobile);
+  }
+
+  async function saveMasterPriceAdjustment() {
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+    const percent = Number(priceAdjustmentInput);
+
+    if (!Number.isFinite(percent) || percent < -90 || percent > 200) {
+      setPriceAdjustmentStatus("Enter A Valid Percentage Between -90 And 200.");
+      return;
+    }
+
+    setPriceAdjustmentStatus("Saving Master Price...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updatePriceAdjustment",
+          adminMobile: normalizedMobile,
+          priceAdjustmentPercent: percent,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        priceAdjustmentPercent?: number;
+      };
+
+      if (!response.ok) {
+        setPriceAdjustmentStatus(result.error || "Master Price Could Not Be Updated.");
+        return;
+      }
+
+      const savedPercent = Number(result.priceAdjustmentPercent || percent);
+
+      setPriceAdjustmentPercent(savedPercent);
+      setPriceAdjustmentInput(String(savedPercent));
+      setDashboard((currentDashboard) =>
+        currentDashboard
+          ? { ...currentDashboard, priceAdjustmentPercent: savedPercent }
+          : currentDashboard,
+      );
+      setPriceAdjustmentStatus("Master Price Updated Successfully.");
+    } catch {
+      setPriceAdjustmentStatus("Master Price Could Not Be Updated.");
+    }
   }
 
   async function updateBookingOperation(
@@ -4387,6 +4494,11 @@ export default function Home() {
                               count: taskCounts.bookings,
                             },
                             {
+                              id: "pricing",
+                              label: "Price Control",
+                              count: Math.round(priceAdjustmentPercent),
+                            },
+                            {
                               id: "vehicles",
                               label: "Registered Driver Vehicles",
                               count: taskCounts.vehicles,
@@ -4472,6 +4584,75 @@ export default function Home() {
                     ) : (
                       <p>No Bookings Yet.</p>
                     )}
+                  </div>
+                ) : null}
+                {activeAdminTab === "pricing" ? (
+                  <div className="admin-ops-panel admin-tab-panel price-control-panel">
+                    <div className="price-control-card">
+                      <h3>Master Price Increase Or Decrease</h3>
+                      <p>
+                        This Percentage Applies To All Cars, Per KM, Local Package,
+                        Per Day, Per Hour And VIP Package Fares.
+                      </p>
+                      <div className="price-control-form">
+                        <label>
+                          <span>Adjustment Percentage</span>
+                          <input
+                            value={priceAdjustmentInput}
+                            onChange={(event) => setPriceAdjustmentInput(event.target.value)}
+                            placeholder="Example 10 Or -10"
+                            inputMode="decimal"
+                          />
+                        </label>
+                        <button type="button" onClick={saveMasterPriceAdjustment}>
+                          Save Master Price
+                        </button>
+                        <button
+                          className="ghost-price-action"
+                          type="button"
+                          onClick={() => {
+                            setPriceAdjustmentInput("0");
+                            setPriceAdjustmentStatus("");
+                          }}
+                        >
+                          Reset Input
+                        </button>
+                      </div>
+                      <div className="price-adjustment-summary">
+                        <span>Current Master Adjustment</span>
+                        <strong
+                          className={
+                            priceAdjustmentPercent >= 0
+                              ? "price-positive"
+                              : "price-negative"
+                          }
+                        >
+                          {priceAdjustmentPercent > 0 ? "+" : ""}
+                          {priceAdjustmentPercent}%
+                        </strong>
+                      </div>
+                      {priceAdjustmentStatus ? (
+                        <p className="admin-status">{priceAdjustmentStatus}</p>
+                      ) : null}
+                    </div>
+                    <div className="price-preview-table">
+                      <h3>Adjusted Fare Preview</h3>
+                      {vehicles.map((item) => {
+                        const base = rateTable[item.name];
+                        const adjusted = adjustedRateTable[item.name];
+
+                        return (
+                          <div className="price-preview-row" key={item.name}>
+                            <strong>{item.name}</strong>
+                            <span>KM {formatInr(base.perKm)} → {formatInr(adjusted.perKm)}</span>
+                            <span>4 Hr {formatInr(base.local4hr)} → {formatInr(adjusted.local4hr)}</span>
+                            <span>8 Hr {formatInr(base.local8hr)} → {formatInr(adjusted.local8hr)}</span>
+                            <span>Full Day {formatInr(base.fullDay)} → {formatInr(adjusted.fullDay)}</span>
+                            <span>VIP {formatInr(base.vip)} → {formatInr(adjusted.vip)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
                 {activeAdminTab === "vehicles" ? (

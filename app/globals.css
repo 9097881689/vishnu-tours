@@ -3454,6 +3454,127 @@ h4,
   grid-column: 1 / -1;
 }
 
+.price-control-panel {
+  grid-template-columns: minmax(280px, 0.78fr) minmax(420px, 1.22fr);
+  align-items: start;
+}
+
+.price-control-card,
+.price-preview-table {
+  display: grid;
+  gap: 12px;
+}
+
+.price-control-card h3,
+.price-preview-table h3 {
+  margin: 0;
+}
+
+.price-control-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.price-control-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.price-control-form label {
+  gap: 6px;
+}
+
+.price-control-form label span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.price-control-form input {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.price-control-form button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #075985;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.price-control-form .ghost-price-action {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.price-adjustment-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.price-adjustment-summary span {
+  color: #475569;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.price-adjustment-summary strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.price-positive {
+  color: #15803d;
+}
+
+.price-negative {
+  color: #b91c1c;
+}
+
+.price-preview-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) repeat(5, minmax(105px, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.price-preview-row strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.price-preview-row span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .admin-lookup-row {
   margin: 0 0 10px;
 }
@@ -4211,6 +4332,9 @@ h4,
   .admin-dashboard,
   .admin-task-strip,
   .admin-tabs,
+  .price-control-panel,
+  .price-control-form,
+  .price-preview-row,
   .fleet-availability-strip,
   .admin-login-row,
   .admin-ops-panel,

@@ -63,6 +63,8 @@ type BookingOperationPayload = {
   bankIfsc?: string;
   withdrawalId?: number;
   withdrawalStatus?: string;
+  adminMobile?: string;
+  priceAdjustmentPercent?: number;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -474,11 +476,34 @@ async function getDriverSavedBankDetails(driverMobile: string) {
   return latestWithdrawal || { bank_name: "", bank_account: "", bank_ifsc: "" };
 }
 
+async function getPriceAdjustmentPercent() {
+  const setting = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'price_adjustment_percent' LIMIT 1",
+  ).first<{ value: string }>();
+  const percent = Number(setting?.value || 0);
+
+  return Number.isFinite(percent) ? percent : 0;
+}
+
+function applyPriceAdjustment(amount: number, percent: number) {
+  return Math.max(0, Math.round(amount * (1 + percent / 100)));
+}
+
 async function ensureBookingsTable() {
   const db = env.DB;
   if (!db) {
     throw new Error("D1 database binding DB is not configured.");
   }
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+    )
+    .run();
 
   await db
     .prepare(
@@ -742,6 +767,12 @@ export async function GET(request: Request) {
 
     await ensureBookingsTable();
 
+    if (url.searchParams.get("settings") === "pricing") {
+      return Response.json({
+        priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+      });
+    }
+
     if (loginMobile) {
       if (loginMobile === adminMobile) {
         const financeSummary = await getAdminFinanceSummary();
@@ -753,6 +784,7 @@ export async function GET(request: Request) {
 
         return Response.json({
           role: "admin",
+          priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           totalBookings: financeSummary.totalBookings,
           totalFare: financeSummary.totalBookingAmount,
           totalBookingAmount: financeSummary.totalBookingAmount,
@@ -921,12 +953,44 @@ export async function PATCH(request: Request) {
       !bookingId &&
       action !== "requestWithdrawal" &&
       action !== "updateWithdrawal" &&
-      action !== "recordCashDeposit"
+      action !== "recordCashDeposit" &&
+      action !== "updatePriceAdjustment"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
 
     await ensureBookingsTable();
+
+    if (action === "updatePriceAdjustment") {
+      if (clean(payload.adminMobile) !== adminMobile) {
+        return Response.json({ error: "Only Admin Can Update Master Price." }, { status: 401 });
+      }
+
+      const priceAdjustmentPercent = Number(payload.priceAdjustmentPercent);
+
+      if (
+        !Number.isFinite(priceAdjustmentPercent) ||
+        priceAdjustmentPercent < -90 ||
+        priceAdjustmentPercent > 200
+      ) {
+        return Response.json(
+          { error: "Price adjustment must be between -90% and 200%." },
+          { status: 400 },
+        );
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ('price_adjustment_percent', ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(String(priceAdjustmentPercent), new Date().toISOString())
+        .run();
+
+      return Response.json({ success: true, priceAdjustmentPercent });
+    }
 
     const isAdmin =
       clean(payload.pin) === adminPin || clean(payload.mobile) === adminMobile;
@@ -1754,6 +1818,13 @@ export async function POST(request: Request) {
     }
 
     const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
+    const priceAdjustmentPercent = await getPriceAdjustmentPercent();
+    const adjustedRate = {
+      perKm: applyPriceAdjustment(selectedRate.perKm, priceAdjustmentPercent),
+      fullDay: applyPriceAdjustment(selectedRate.fullDay, priceAdjustmentPercent),
+      halfDay: applyPriceAdjustment(selectedRate.halfDay, priceAdjustmentPercent),
+      vip: applyPriceAdjustment(selectedRate.vip, priceAdjustmentPercent),
+    };
     const isRoundTrip = tripType === "Round Trip";
     const isLocalOrAirport =
       tripType.includes("Airport") || tripType.includes("Local");
@@ -1769,8 +1840,8 @@ export async function POST(request: Request) {
           : 80;
     const estimatedFare =
       isLocalOrAirport || packageType === "perKm"
-        ? Math.round(billableKm * selectedRate.perKm)
-        : selectedRate[packageType];
+        ? Math.round(billableKm * adjustedRate.perKm)
+        : adjustedRate[packageType];
     const createdAt = new Date().toISOString();
     const initialRideStatus =
       paymentMode.toLowerCase().includes("zero") ||
@@ -1826,7 +1897,7 @@ export async function POST(request: Request) {
         destination,
         oneSideKm,
         billableKm,
-        selectedRate.perKm,
+        adjustedRate.perKm,
         estimatedFare,
         date,
         tripType === "Round Trip" ? returnDate : "",
@@ -1863,7 +1934,7 @@ export async function POST(request: Request) {
       destination,
       oneSideKm,
       billableKm,
-      ratePerKm: selectedRate.perKm,
+      ratePerKm: adjustedRate.perKm,
       packageType,
       returnDate: tripType === "Round Trip" ? returnDate : "",
       estimatedFare,
@@ -1877,7 +1948,7 @@ export async function POST(request: Request) {
       destination,
       oneSideKm,
       billableKm,
-      ratePerKm: selectedRate.perKm,
+      ratePerKm: adjustedRate.perKm,
       estimatedFare,
       pickupDatetime: date,
       customerName: name,
