@@ -3196,7 +3196,8 @@ export default function Home() {
     <main>
       <header className="top-strip main-menu">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
-          <span className="brand-mark">VT</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/logo.svg" alt="Vishnu Tours logo" />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
@@ -3449,6 +3450,29 @@ export default function Home() {
               24x7 Support | Free Cancellation Before Assignment | Mumbai Pickup Only
             </p>
           </form>
+        </div>
+      </section>
+
+      <section className="homepage-fleet-strip" aria-label="Vishnu Tours white car fleet">
+        <div className="homepage-fleet-head">
+          <span>Owner Fleet</span>
+          <h2>White Cars For Corporate, VIP And Family Travel</h2>
+          <p>Sedan And MUV Options Available From Mumbai For Airport, In-City, One Way, Round Trip And Outstation Travel.</p>
+        </div>
+        <div className="homepage-fleet-list">
+          {vehicles.map((item) => (
+            <article className="homepage-fleet-card" key={`home-${item.name}`}>
+              <div className="homepage-fleet-photo">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.photo} alt={`${item.name} white cab`} />
+              </div>
+              <div>
+                <small>{item.type}</small>
+                <h3>{item.name}</h3>
+                <p>{item.seats} | White AC Cab</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
