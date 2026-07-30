@@ -3378,60 +3378,56 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            {tripType === "Outstation" ? (
-              <div className="booking-choice-row" aria-label="Choose Trip">
-                <span>Choose Trip</span>
-                {outstationTripOptions.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={outstationTripType === type ? "active" : ""}
-                    onClick={() => {
-                      setOutstationTripType(type);
-                      if (type !== "Round Trip") {
-                        setReturnDate("");
-                      }
-                      setShowVehicleStep(false);
-                      setBookingView("home");
-                    }}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {tripType === "Airport" ? (
-              <div className="booking-choice-row" aria-label="Airport Booking Type">
-                <span>Airport Booking</span>
-                {airportTripOptions.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={airportTripType === type ? "active" : ""}
-                    onClick={() => {
-                      setAirportTripType(type);
-                      if (type === "Airport Pickup") {
-                        setStartPoint(mumbaiAirport);
-                        setDrop("");
-                      } else {
-                        setStartPoint(headOffice);
-                        setDrop(mumbaiAirport);
-                      }
-                      if (!distanceKm) {
-                        setDistanceKm("25");
-                      }
-                      setShowVehicleStep(false);
-                      setBookingView("home");
-                    }}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {tripType === "In-City" ? (
-              <div className="booking-choice-row" aria-label="Local Package">
-                <span>Local Package</span>
+            <div className="booking-choice-row" aria-label="Choose Trip">
+              <span>Choose Trip</span>
+              {tripType === "Outstation" ? (
+                <select
+                  value={outstationTripType}
+                  onChange={(event) => {
+                    setOutstationTripType(event.target.value);
+                    if (event.target.value !== "Round Trip") {
+                      setReturnDate("");
+                    }
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                >
+                  {outstationTripOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {tripType === "Airport" ? (
+                <select
+                  value={airportTripType}
+                  onChange={(event) => {
+                    const type = event.target.value;
+
+                    setAirportTripType(type);
+                    if (type === "Airport Pickup") {
+                      setStartPoint(mumbaiAirport);
+                      setDrop("");
+                    } else {
+                      setStartPoint(headOffice);
+                      setDrop(mumbaiAirport);
+                    }
+                    if (!distanceKm) {
+                      setDistanceKm("25");
+                    }
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
+                >
+                  {airportTripOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {tripType === "In-City" ? (
                 <select
                   value={localPackageType}
                   onChange={(event) => {
@@ -3455,8 +3451,8 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
             <div className="route-form-row">
               {tripType === "In-City" ? (
                 <div className="local-duty-note">
