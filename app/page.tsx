@@ -941,18 +941,18 @@ export default function Home() {
   const selectedAirportOption = getAirportOption(airportTripType);
   const isAirportPickup = tripType === "Airport" && selectedAirportOption.mode === "pickup";
   const isAirportDrop = tripType === "Airport" && selectedAirportOption.mode === "drop";
-  const bookingStartPoint = tripType === "In-City" ? headOffice : startPoint;
+  const bookingStartPoint = startPoint;
   const bookingDropPoint = tripType === "In-City" ? localRoute : drop;
   const routeReady =
     tripType === "In-City"
-      ? true
+      ? Boolean(startPoint.trim())
       : isAirportPickup
         ? Boolean(drop.trim())
         : Boolean(startPoint.trim() && drop.trim());
   const advanceBookingReady = pickupDateTime
     ? new Date(pickupDateTime).getTime() - Date.now() >= 8 * 60 * 60 * 1000
     : true;
-  const pickupAllowed = tripType === "In-City" ? true : isMumbaiPickup(startPoint);
+  const pickupAllowed = isMumbaiPickup(startPoint);
   const showPickupError =
     pickupFieldTouched &&
     !pickupAllowed &&
@@ -3517,7 +3517,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div className="route-form-row">
+            <div className={`route-form-row ${tripType === "In-City" ? "local-route-row" : ""}`}>
               <label className="booking-field choose-trip-field">
                 <span>Choose Trip</span>
                 {tripType === "Outstation" ? (
@@ -3579,7 +3579,9 @@ export default function Home() {
                       setLocalPackageType(
                         event.target.value as (typeof localPackageOptions)[number]["id"],
                       );
-                      setStartPoint(headOffice);
+                      if (!startPoint.trim()) {
+                        setStartPoint(headOffice);
+                      }
                       setDrop(localRoute);
                       setDistanceKm(String(selected?.km || selectedLocalPackage.km));
                       setShowVehicleStep(false);
@@ -3595,10 +3597,64 @@ export default function Home() {
                 ) : null}
               </label>
               {tripType === "In-City" ? (
-                <div className="local-duty-note">
-                  <strong>Mumbai, Maharashtra Local Duty</strong>
-                  <span>No From-To Required For Local Package Booking.</span>
-                </div>
+                <label className="place-field booking-field local-pickup-field">
+                  <span>Pickup Location</span>
+                  <div className="location-input-wrap">
+                    <input
+                      ref={fromInputRef}
+                      value={startPoint}
+                      onChange={(event) => {
+                        setPickupFieldTouched(false);
+                        setActiveSuggestionField("from");
+                        updateStartPoint(event.target.value);
+                      }}
+                      onFocus={() => {
+                        setPickupFieldTouched(false);
+                        setActiveSuggestionField("from");
+                      }}
+                      onBlur={() => {
+                        setPickupFieldTouched(true);
+                        window.setTimeout(() => setActiveSuggestionField(null), 140);
+                      }}
+                      placeholder="Enter Mumbai Pickup"
+                      autoComplete="off"
+                      required
+                    />
+                    <button
+                      className="current-location-button"
+                      type="button"
+                      onClick={useCurrentLocation}
+                    >
+                      Current
+                    </button>
+                  </div>
+                  {activeSuggestionField === "from" && visibleFromSuggestions.length ? (
+                    <div className="place-suggestions" aria-label="Mumbai pickup suggestions">
+                      {visibleFromSuggestions.map((item) => (
+                        <button
+                          key={`${item.label}-${item.secondary || "local-pickup"}`}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setPickupFieldTouched(false);
+                            updateStartPoint(item.label);
+                            setGoogleFromSuggestions([]);
+                            setGoogleFromQuery("");
+                            setActiveSuggestionField(null);
+                          }}
+                        >
+                          <span>{item.secondary || "Pickup"}</span>
+                          <strong>{item.label}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {showPickupError ? (
+                    <small className="field-error">
+                      Pickup Is Available Only From Mumbai And Nearby Mumbai Areas.
+                    </small>
+                  ) : null}
+                </label>
               ) : (
               <>
               <label className="place-field booking-field">

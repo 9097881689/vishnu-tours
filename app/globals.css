@@ -4599,6 +4599,19 @@ body {
   align-items: end;
 }
 
+.savaari-booking-panel .route-form-row.local-route-row {
+  grid-template-columns:
+    minmax(124px, 0.9fr)
+    minmax(220px, 1.65fr)
+    minmax(120px, 0.82fr)
+    minmax(105px, 0.74fr)
+    minmax(62px, 0.48fr);
+}
+
+.savaari-booking-panel .local-pickup-field {
+  min-width: 0;
+}
+
 .savaari-booking-panel .route-form-row .route-swap {
   width: 30px;
   height: 32px;
