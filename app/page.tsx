@@ -525,6 +525,17 @@ function sortDashboardBookings(bookings: DashboardBooking[]) {
   });
 }
 
+function isRideInProgress(booking: DashboardBooking) {
+  const status = (booking.ride_status || "").toLowerCase();
+
+  return (
+    Boolean(booking.ride_started_at) &&
+    status.includes("started") &&
+    !status.includes("complete") &&
+    !status.includes("cancel")
+  );
+}
+
 function isMumbaiPickup(value: string) {
   const pickup = value.trim().toLowerCase();
   const mumbaiAreas = [
@@ -2569,9 +2580,7 @@ export default function Home() {
       const status = (booking.ride_status || booking.status || "").toLowerCase();
       return !status.includes("cancel") && !status.includes("complete");
     });
-    const startedBookings = activeBookings.filter((booking) =>
-      (booking.ride_status || "").toLowerCase().includes("started"),
-    );
+    const startedBookings = activeBookings.filter((booking) => isRideInProgress(booking));
     const engagedVehicleNumbers = new Set(
       startedBookings
         .map((booking) => (booking.vehicle_number || "").trim().toLowerCase())
@@ -2635,11 +2644,8 @@ export default function Home() {
     }
 
     return bookings.some((booking) => {
-      const status = (booking.ride_status || "").toLowerCase();
       return (
-        status.includes("started") &&
-        !status.includes("complete") &&
-        !status.includes("cancel") &&
+        isRideInProgress(booking) &&
         (booking.vehicle_number || "").trim().toLowerCase() === normalizedVehicleNumber
       );
     });
