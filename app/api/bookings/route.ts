@@ -15,6 +15,8 @@ const rateTable: Record<
 };
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
+type VehicleRateOverride = Partial<Record<PackageType | "local4hr" | "local8hr", number>>;
+type VehicleRateOverrides = Record<string, VehicleRateOverride>;
 
 type BookingPayload = {
   action?: string;
@@ -66,6 +68,7 @@ type BookingOperationPayload = {
   withdrawalStatus?: string;
   adminMobile?: string;
   priceAdjustmentPercent?: number;
+  vehicleRateOverrides?: VehicleRateOverrides;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -486,8 +489,85 @@ async function getPriceAdjustmentPercent() {
   return Number.isFinite(percent) ? percent : 0;
 }
 
+function normalizeVehicleRateOverrides(value: unknown): VehicleRateOverrides {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const allowedRateKeys = new Set([
+    "perKm",
+    "local4hr",
+    "local8hr",
+    "fullDay",
+    "halfDay",
+    "vip",
+  ]);
+  const overrides: VehicleRateOverrides = {};
+
+  Object.entries(value as Record<string, unknown>).forEach(([vehicleName, rates]) => {
+    if (!rateTable[vehicleName] || !rates || typeof rates !== "object" || Array.isArray(rates)) {
+      return;
+    }
+
+    const normalizedRates: VehicleRateOverride = {};
+
+    Object.entries(rates as Record<string, unknown>).forEach(([rateKey, rateValue]) => {
+      if (!allowedRateKeys.has(rateKey)) {
+        return;
+      }
+
+      const numericRate = Number(rateValue);
+      if (Number.isFinite(numericRate) && numericRate >= 0 && numericRate <= 1000000) {
+        normalizedRates[rateKey as keyof VehicleRateOverride] = Math.round(numericRate);
+      }
+    });
+
+    if (Object.keys(normalizedRates).length > 0) {
+      overrides[vehicleName] = normalizedRates;
+    }
+  });
+
+  return overrides;
+}
+
+async function getVehicleRateOverrides() {
+  const setting = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'vehicle_rate_overrides' LIMIT 1",
+  ).first<{ value: string }>();
+
+  if (!setting?.value) {
+    return {};
+  }
+
+  try {
+    return normalizeVehicleRateOverrides(JSON.parse(setting.value));
+  } catch {
+    return {};
+  }
+}
+
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
+}
+
+async function getEffectiveBookingRate(vehicle: string) {
+  const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
+  const priceAdjustmentPercent = await getPriceAdjustmentPercent();
+  const vehicleRateOverrides = await getVehicleRateOverrides();
+  const selectedOverrides = vehicleRateOverrides[vehicle] || {};
+  const manualRate = {
+    perKm: selectedOverrides.perKm ?? selectedRate.perKm,
+    fullDay: selectedOverrides.fullDay ?? selectedRate.fullDay,
+    halfDay: selectedOverrides.halfDay ?? selectedRate.halfDay,
+    vip: selectedOverrides.vip ?? selectedRate.vip,
+  };
+
+  return {
+    perKm: applyPriceAdjustment(manualRate.perKm, priceAdjustmentPercent),
+    fullDay: applyPriceAdjustment(manualRate.fullDay, priceAdjustmentPercent),
+    halfDay: applyPriceAdjustment(manualRate.halfDay, priceAdjustmentPercent),
+    vip: applyPriceAdjustment(manualRate.vip, priceAdjustmentPercent),
+  };
 }
 
 async function ensureBookingsTable() {
@@ -771,6 +851,7 @@ export async function GET(request: Request) {
     if (url.searchParams.get("settings") === "pricing") {
       return Response.json({
         priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+        vehicleRateOverrides: await getVehicleRateOverrides(),
       });
     }
 
@@ -786,6 +867,7 @@ export async function GET(request: Request) {
         return Response.json({
           role: "admin",
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+          vehicleRateOverrides: await getVehicleRateOverrides(),
           totalBookings: financeSummary.totalBookings,
           totalFare: financeSummary.totalBookingAmount,
           totalBookingAmount: financeSummary.totalBookingAmount,
@@ -955,7 +1037,8 @@ export async function PATCH(request: Request) {
       action !== "requestWithdrawal" &&
       action !== "updateWithdrawal" &&
       action !== "recordCashDeposit" &&
-      action !== "updatePriceAdjustment"
+      action !== "updatePriceAdjustment" &&
+      action !== "updateVehicleRates"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
@@ -991,6 +1074,28 @@ export async function PATCH(request: Request) {
         .run();
 
       return Response.json({ success: true, priceAdjustmentPercent });
+    }
+
+    if (action === "updateVehicleRates") {
+      if (clean(payload.adminMobile) !== adminMobile) {
+        return Response.json({ error: "Only Admin Can Update Car Fares." }, { status: 401 });
+      }
+
+      const vehicleRateOverrides = normalizeVehicleRateOverrides(
+        payload.vehicleRateOverrides,
+      );
+
+      await env.DB.prepare(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ('vehicle_rate_overrides', ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(JSON.stringify(vehicleRateOverrides), new Date().toISOString())
+        .run();
+
+      return Response.json({ success: true, vehicleRateOverrides });
     }
 
     const isAdmin =
@@ -1818,14 +1923,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
-    const priceAdjustmentPercent = await getPriceAdjustmentPercent();
-    const adjustedRate = {
-      perKm: applyPriceAdjustment(selectedRate.perKm, priceAdjustmentPercent),
-      fullDay: applyPriceAdjustment(selectedRate.fullDay, priceAdjustmentPercent),
-      halfDay: applyPriceAdjustment(selectedRate.halfDay, priceAdjustmentPercent),
-      vip: applyPriceAdjustment(selectedRate.vip, priceAdjustmentPercent),
-    };
+    const adjustedRate = await getEffectiveBookingRate(vehicle);
     const isRoundTrip = tripType === "Round Trip";
     const isLocalOrAirport =
       tripType.includes("Airport") || tripType.includes("Local");

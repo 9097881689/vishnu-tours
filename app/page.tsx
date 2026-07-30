@@ -216,8 +216,34 @@ const rateTable: Record<
   },
 };
 
+const editableRateKeys = [
+  "perKm",
+  "local4hr",
+  "local8hr",
+  "fullDay",
+  "halfDay",
+  "vip",
+] as const;
+type EditableRateKey = (typeof editableRateKeys)[number];
+type VehicleRateOverrides = Record<string, Partial<Record<EditableRateKey, number>>>;
+
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
+}
+
+function buildEditableRateForm(
+  vehicleName: string,
+  overrides: VehicleRateOverrides = {},
+) {
+  const baseRates = rateTable[vehicleName] || rateTable["Toyota Innova Crysta"];
+  const manualRates = overrides[vehicleName] || {};
+
+  return Object.fromEntries(
+    editableRateKeys.map((rateKey) => [
+      rateKey,
+      String(manualRates[rateKey] ?? baseRates[rateKey]),
+    ]),
+  ) as Record<EditableRateKey, string>;
 }
 
 function getAirportOption(value: string) {
@@ -794,6 +820,7 @@ export default function Home() {
     driverLedger: DashboardBooking[];
     withdrawalRequests: DriverWithdrawal[];
     priceAdjustmentPercent: number;
+    vehicleRateOverrides: VehicleRateOverrides;
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -834,6 +861,17 @@ export default function Home() {
   const [priceAdjustmentPercent, setPriceAdjustmentPercent] = useState(0);
   const [priceAdjustmentInput, setPriceAdjustmentInput] = useState("0");
   const [priceAdjustmentStatus, setPriceAdjustmentStatus] = useState("");
+  const [vehicleRateOverrides, setVehicleRateOverrides] =
+    useState<VehicleRateOverrides>({});
+  const [rateEditorVehicle, setRateEditorVehicle] = useState("Toyota Innova Crysta");
+  const [rateEditorForm, setRateEditorForm] = useState<Record<EditableRateKey, string>>({
+    perKm: "",
+    local4hr: "",
+    local8hr: "",
+    fullDay: "",
+    halfDay: "",
+    vip: "",
+  });
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -897,16 +935,34 @@ export default function Home() {
         vehicleName,
         {
           ...rates,
-          perKm: applyPriceAdjustment(rates.perKm, priceAdjustmentPercent),
-          local4hr: applyPriceAdjustment(rates.local4hr, priceAdjustmentPercent),
-          local8hr: applyPriceAdjustment(rates.local8hr, priceAdjustmentPercent),
-          fullDay: applyPriceAdjustment(rates.fullDay, priceAdjustmentPercent),
-          halfDay: applyPriceAdjustment(rates.halfDay, priceAdjustmentPercent),
-          vip: applyPriceAdjustment(rates.vip, priceAdjustmentPercent),
+          perKm: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.perKm ?? rates.perKm,
+            priceAdjustmentPercent,
+          ),
+          local4hr: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.local4hr ?? rates.local4hr,
+            priceAdjustmentPercent,
+          ),
+          local8hr: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.local8hr ?? rates.local8hr,
+            priceAdjustmentPercent,
+          ),
+          fullDay: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.fullDay ?? rates.fullDay,
+            priceAdjustmentPercent,
+          ),
+          halfDay: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.halfDay ?? rates.halfDay,
+            priceAdjustmentPercent,
+          ),
+          vip: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.vip ?? rates.vip,
+            priceAdjustmentPercent,
+          ),
         },
       ]),
     ) as typeof rateTable;
-  }, [priceAdjustmentPercent]);
+  }, [priceAdjustmentPercent, vehicleRateOverrides]);
   const vehicleRates = useMemo(
     () =>
       vehicles
@@ -984,17 +1040,23 @@ export default function Home() {
         const response = await fetch("/api/bookings?settings=pricing");
         const result = (await response.json()) as {
           priceAdjustmentPercent?: number;
+          vehicleRateOverrides?: VehicleRateOverrides;
         };
         const percent = Number(result.priceAdjustmentPercent || 0);
 
         if (mounted && Number.isFinite(percent)) {
           setPriceAdjustmentPercent(percent);
           setPriceAdjustmentInput(String(percent));
+          const savedOverrides = result.vehicleRateOverrides || {};
+          setVehicleRateOverrides(savedOverrides);
+          setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", savedOverrides));
         }
       } catch {
         if (mounted) {
           setPriceAdjustmentPercent(0);
           setPriceAdjustmentInput("0");
+          setVehicleRateOverrides({});
+          setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", {}));
         }
       }
     }
@@ -1592,6 +1654,7 @@ export default function Home() {
         onlineCollected?: number;
         driverCashInHand?: number;
         priceAdjustmentPercent?: number;
+        vehicleRateOverrides?: VehicleRateOverrides;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
@@ -1641,6 +1704,9 @@ export default function Home() {
 
         setPriceAdjustmentPercent(currentPriceAdjustment);
         setPriceAdjustmentInput(String(currentPriceAdjustment));
+        const savedOverrides = result.vehicleRateOverrides || {};
+        setVehicleRateOverrides(savedOverrides);
+        setRateEditorForm(buildEditableRateForm(rateEditorVehicle, savedOverrides));
         setDashboard({
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
@@ -1653,6 +1719,7 @@ export default function Home() {
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
           withdrawalRequests: result.withdrawalRequests || [],
+          vehicleRateOverrides: savedOverrides,
         });
       }
 
@@ -1800,6 +1867,68 @@ export default function Home() {
     }
 
     openAdminLookupDashboard(mobile);
+  }
+
+  async function saveIndividualCarFare() {
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+    const nextRates: Partial<Record<EditableRateKey, number>> = {};
+
+    for (const rateKey of editableRateKeys) {
+      const rateValue = Number(rateEditorForm[rateKey]);
+
+      if (!Number.isFinite(rateValue) || rateValue < 0 || rateValue > 1000000) {
+        setPriceAdjustmentStatus("Enter Valid Car Fare Amounts.");
+        return;
+      }
+
+      nextRates[rateKey] = Math.round(rateValue);
+    }
+
+    const nextOverrides = {
+      ...vehicleRateOverrides,
+      [rateEditorVehicle]: nextRates,
+    };
+
+    setPriceAdjustmentStatus("Saving Individual Car Fare...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateVehicleRates",
+          adminMobile: normalizedMobile,
+          vehicleRateOverrides: nextOverrides,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        vehicleRateOverrides?: VehicleRateOverrides;
+      };
+
+      if (!response.ok) {
+        setPriceAdjustmentStatus(result.error || "Car Fare Could Not Be Updated.");
+        return;
+      }
+
+      const savedOverrides = result.vehicleRateOverrides || nextOverrides;
+
+      setVehicleRateOverrides(savedOverrides);
+      setRateEditorForm(buildEditableRateForm(rateEditorVehicle, savedOverrides));
+      setDashboard((currentDashboard) =>
+        currentDashboard
+          ? { ...currentDashboard, vehicleRateOverrides: savedOverrides }
+          : currentDashboard,
+      );
+      setPriceAdjustmentStatus("Individual Car Fare Updated Successfully.");
+    } catch {
+      setPriceAdjustmentStatus("Car Fare Could Not Be Updated.");
+    }
+  }
+
+  function resetIndividualCarFareInput() {
+    setRateEditorForm(buildEditableRateForm(rateEditorVehicle, vehicleRateOverrides));
+    setPriceAdjustmentStatus("");
   }
 
   async function saveMasterPriceAdjustment() {
@@ -4728,10 +4857,88 @@ export default function Home() {
                         <p className="admin-status">{priceAdjustmentStatus}</p>
                       ) : null}
                     </div>
+                    <div className="price-control-card individual-price-card">
+                      <h3>Individual Car Fare</h3>
+                      <p>
+                        Select One Car And Update Its Fare Manually. Master Percentage
+                        Will Apply On Top Of These Saved Car Rates.
+                      </p>
+                      <label className="individual-rate-select">
+                        <span>Select Car</span>
+                        <select
+                          value={rateEditorVehicle}
+                          onChange={(event) => {
+                            const selectedCar = event.target.value;
+                            setRateEditorVehicle(selectedCar);
+                            setRateEditorForm(
+                              buildEditableRateForm(selectedCar, vehicleRateOverrides),
+                            );
+                          }}
+                        >
+                          {vehicles.map((item) => (
+                            <option key={item.name} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="individual-rate-grid">
+                        {editableRateKeys.map((rateKey) => (
+                          <label key={rateKey}>
+                            <span>
+                              {rateKey === "perKm"
+                                ? "Per KM"
+                                : rateKey === "local4hr"
+                                  ? "4 Hr / 40 KM"
+                                  : rateKey === "local8hr"
+                                    ? "8 Hr / 40 KM"
+                                    : rateKey === "fullDay"
+                                      ? "Full Day"
+                                      : rateKey === "halfDay"
+                                        ? "Half Day"
+                                        : "VIP"}
+                            </span>
+                            <input
+                              value={rateEditorForm[rateKey]}
+                              onChange={(event) =>
+                                setRateEditorForm((currentForm) => ({
+                                  ...currentForm,
+                                  [rateKey]: event.target.value,
+                                }))
+                              }
+                              inputMode="numeric"
+                              placeholder="Amount"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="price-control-form individual-rate-actions">
+                        <button type="button" onClick={saveIndividualCarFare}>
+                          Save Car Fare
+                        </button>
+                        <button
+                          className="ghost-price-action"
+                          type="button"
+                          onClick={resetIndividualCarFareInput}
+                        >
+                          Reset Input
+                        </button>
+                      </div>
+                    </div>
                     <div className="price-preview-table">
                       <h3>Adjusted Fare Preview</h3>
                       {vehicles.map((item) => {
-                        const base = rateTable[item.name];
+                        const defaultBase = rateTable[item.name];
+                        const override = vehicleRateOverrides[item.name] || {};
+                        const base = {
+                          ...defaultBase,
+                          perKm: override.perKm ?? defaultBase.perKm,
+                          local4hr: override.local4hr ?? defaultBase.local4hr,
+                          local8hr: override.local8hr ?? defaultBase.local8hr,
+                          fullDay: override.fullDay ?? defaultBase.fullDay,
+                          halfDay: override.halfDay ?? defaultBase.halfDay,
+                          vip: override.vip ?? defaultBase.vip,
+                        };
                         const adjusted = adjustedRateTable[item.name];
 
                         return (
