@@ -6,11 +6,11 @@ const rateTable: Record<
   string,
   { perKm: number; fullDay: number; halfDay: number; vip: number }
 > = {
-  "Toyota Etios": { perKm: 16, fullDay: 3200, halfDay: 1900, vip: 5200 },
-  "Maruti Ertiga": { perKm: 18, fullDay: 4200, halfDay: 2600, vip: 6200 },
-  "Toyota Rumion": { perKm: 18, fullDay: 4300, halfDay: 2700, vip: 6500 },
-  "Toyota Innova Crysta": { perKm: 22, fullDay: 5800, halfDay: 3600, vip: 8500 },
-  "Toyota Hycross": { perKm: 26, fullDay: 7200, halfDay: 4600, vip: 11000 },
+  "Toyota Etios": { perKm: 24, fullDay: 3200, halfDay: 1900, vip: 5200 },
+  "Maruti Ertiga": { perKm: 29, fullDay: 4200, halfDay: 2600, vip: 6200 },
+  "Toyota Rumion": { perKm: 29, fullDay: 4300, halfDay: 2700, vip: 6500 },
+  "Toyota Innova Crysta": { perKm: 32, fullDay: 5800, halfDay: 3600, vip: 8500 },
+  "Toyota Hycross": { perKm: 39, fullDay: 7200, halfDay: 4600, vip: 11000 },
 };
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
@@ -1754,16 +1754,21 @@ export async function POST(request: Request) {
     }
 
     const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
+    const isRoundTrip = tripType === "Round Trip";
+    const isLocalOrAirport =
+      tripType.includes("Airport") || tripType.includes("Local");
     const billableKm =
-      packageType === "perKm"
-        ? tripType === "Round Trip"
+      isLocalOrAirport
+        ? Math.max(oneSideKm, 40)
+        : packageType === "perKm"
+        ? isRoundTrip
           ? oneSideKm * 2
           : oneSideKm
         : packageType === "halfDay"
           ? 40
           : 80;
     const estimatedFare =
-      packageType === "perKm"
+      isLocalOrAirport || packageType === "perKm"
         ? Math.round(billableKm * selectedRate.perKm)
         : selectedRate[packageType];
     const createdAt = new Date().toISOString();

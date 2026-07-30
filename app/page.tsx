@@ -104,10 +104,11 @@ const bookingTypes = ["Outstation", "Airport", "In-City"];
 const outstationTripOptions = ["One Way", "Round Trip"];
 const airportTripOptions = ["Airport Pickup", "Airport Drop"];
 const localPackageOptions = [
-  { id: "local4hr", label: "4 Hr / 50 KM", hours: 4, km: 50 },
-  { id: "local8hr", label: "8 Hr / 100 KM", hours: 8, km: 100 },
+  { id: "local4hr", label: "4 Hr / 40 KM", hours: 4, km: 40 },
+  { id: "local8hr", label: "8 Hr / 40 KM", hours: 8, km: 40 },
 ] as const;
 const roundTripDailyKm = 300;
+const minimumLocalAirportKm = 40;
 
 const packageOptions = [
   {
@@ -828,8 +829,8 @@ export default function Home() {
     localPackageOptions.find((item) => item.id === localPackageType) ||
     localPackageOptions[1];
   const billableDistance =
-    tripType === "In-City"
-      ? selectedLocalPackage.km
+    tripType === "In-City" || tripType === "Airport"
+      ? Math.max(numericDistance || minimumLocalAirportKm, minimumLocalAirportKm)
       : tripType === "Outstation" && outstationTripType === "Round Trip"
         ? Math.max(numericDistance * 2, roundTripDays * roundTripDailyKm)
         : numericDistance;
@@ -855,25 +856,20 @@ export default function Home() {
       vehicles
         .map((item) => {
           const rates = rateTable[item.name];
-          const baseLocalFare =
-            localPackageType === "local4hr" ? rates.local4hr : rates.local8hr;
-          const estimatedFare =
-            tripType === "In-City"
-              ? baseLocalFare
-              : Math.round(billableDistance * rates.perKm);
+          const estimatedFare = Math.round(billableDistance * rates.perKm);
 
           return {
             ...item,
             ...rates,
             estimatedFare,
             fareLabel:
-              tripType === "In-City"
-                ? `${selectedLocalPackage.label} | Extra Rs. ${rates.perKm}/KM`
+              tripType === "In-City" || tripType === "Airport"
+                ? `Minimum 40 KM | Extra Rs. ${rates.perKm}/KM`
                 : `Rs. ${rates.perKm}/KM`,
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
-    [billableDistance, localPackageType, selectedLocalPackage.label, tripType],
+    [billableDistance, tripType],
   );
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
@@ -883,7 +879,7 @@ export default function Home() {
   const partPayAmount = Math.max(500, Math.round(payableFare * 0.25));
   const selectedPaymentAmount =
     paymentChoice === "zero" ? 0 : paymentChoice === "part" ? partPayAmount : payableFare;
-  const formattedFare = fareTotal ? formatInr(fareTotal) : "Enter KM";
+  const formattedFare = formatInr(fareTotal);
   const pickupDateTime = date && pickupTime ? `${date}T${pickupTime}` : "";
   const localRoute = "Mumbai, Maharashtra Local Duty";
   const bookingStartPoint = tripType === "In-City" ? headOffice : startPoint;
@@ -3359,7 +3355,7 @@ export default function Home() {
                       setDistanceKm(String(selectedLocalPackage.km));
                     }
                     if (type === "Airport" && !distanceKm) {
-                      setDistanceKm("25");
+                      setDistanceKm("40");
                     }
                     if (type === "Airport") {
                       if (airportTripType === "Airport Pickup") {
@@ -3378,82 +3374,82 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div className="booking-choice-row" aria-label="Choose Trip">
-              <span>Choose Trip</span>
-              {tripType === "Outstation" ? (
-                <select
-                  value={outstationTripType}
-                  onChange={(event) => {
-                    setOutstationTripType(event.target.value);
-                    if (event.target.value !== "Round Trip") {
-                      setReturnDate("");
-                    }
-                    setShowVehicleStep(false);
-                    setBookingView("home");
-                  }}
-                >
-                  {outstationTripOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {tripType === "Airport" ? (
-                <select
-                  value={airportTripType}
-                  onChange={(event) => {
-                    const type = event.target.value;
-
-                    setAirportTripType(type);
-                    if (type === "Airport Pickup") {
-                      setStartPoint(mumbaiAirport);
-                      setDrop("");
-                    } else {
-                      setStartPoint(headOffice);
-                      setDrop(mumbaiAirport);
-                    }
-                    if (!distanceKm) {
-                      setDistanceKm("25");
-                    }
-                    setShowVehicleStep(false);
-                    setBookingView("home");
-                  }}
-                >
-                  {airportTripOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {tripType === "In-City" ? (
-                <select
-                  value={localPackageType}
-                  onChange={(event) => {
-                    const selected = localPackageOptions.find(
-                      (item) => item.id === event.target.value,
-                    );
-
-                    setLocalPackageType(
-                      event.target.value as (typeof localPackageOptions)[number]["id"],
-                    );
-                    setStartPoint(headOffice);
-                    setDrop(localRoute);
-                    setDistanceKm(String(selected?.km || selectedLocalPackage.km));
-                    setShowVehicleStep(false);
-                    setBookingView("home");
-                  }}
-                >
-                  {localPackageOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </div>
             <div className="route-form-row">
+              <label className="booking-field choose-trip-field">
+                <span>Choose Trip</span>
+                {tripType === "Outstation" ? (
+                  <select
+                    value={outstationTripType}
+                    onChange={(event) => {
+                      setOutstationTripType(event.target.value);
+                      if (event.target.value !== "Round Trip") {
+                        setReturnDate("");
+                      }
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {outstationTripOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {tripType === "Airport" ? (
+                  <select
+                    value={airportTripType}
+                    onChange={(event) => {
+                      const type = event.target.value;
+
+                      setAirportTripType(type);
+                      if (type === "Airport Pickup") {
+                        setStartPoint(mumbaiAirport);
+                        setDrop("");
+                      } else {
+                        setStartPoint(headOffice);
+                        setDrop(mumbaiAirport);
+                      }
+                      if (!distanceKm) {
+                        setDistanceKm("40");
+                      }
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {airportTripOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {tripType === "In-City" ? (
+                  <select
+                    value={localPackageType}
+                    onChange={(event) => {
+                      const selected = localPackageOptions.find(
+                        (item) => item.id === event.target.value,
+                      );
+
+                      setLocalPackageType(
+                        event.target.value as (typeof localPackageOptions)[number]["id"],
+                      );
+                      setStartPoint(headOffice);
+                      setDrop(localRoute);
+                      setDistanceKm(String(selected?.km || selectedLocalPackage.km));
+                      setShowVehicleStep(false);
+                      setBookingView("home");
+                    }}
+                  >
+                    {localPackageOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </label>
               {tripType === "In-City" ? (
                 <div className="local-duty-note">
                   <strong>Mumbai, Maharashtra Local Duty</strong>
