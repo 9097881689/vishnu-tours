@@ -4275,6 +4275,110 @@ export default function Home() {
           )}
         </section>
       ) : null}
+
+      <section className="homepage-story-section" aria-label="Corporate travel service">
+        <div className="homepage-story-copy">
+          <span>Corporate Travel Desk</span>
+          <h2>Reliable Mumbai Pickup For Business Guests And VIP Movement</h2>
+          <p>
+            Vishnu Tours Handles Airport Transfers, Office Visits, Hotel Pickup,
+            Local Duties And Outstation Travel With Verified Owner Fleet
+            Coordination, Fare Clarity And Driver Assignment Workflow.
+          </p>
+          <div className="homepage-proof-grid">
+            <div>
+              <strong>5 Fleet Types</strong>
+              <small>Etios, Ertiga, Rumion, Crysta And Innova Hycross</small>
+            </div>
+            <div>
+              <strong>GST Fare View</strong>
+              <small>Fare Details Shown Before Booking Confirmation</small>
+            </div>
+            <div>
+              <strong>Driver Workflow</strong>
+              <small>Assignment, Ride Start, Ride Complete And Ledger Tracking</small>
+            </div>
+          </div>
+        </div>
+        <div className="homepage-story-image">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/home/corporate-transfer.png?v=7a3d2c1" alt="Corporate cab pickup by Vishnu Tours" />
+        </div>
+      </section>
+
+      <section className="homepage-steps-section" aria-label="Booking process">
+        <div className="homepage-section-head">
+          <span>Simple Booking Flow</span>
+          <h2>Book, Select Cab, Confirm And Travel</h2>
+        </div>
+        <div className="homepage-steps-grid">
+          {[
+            {
+              title: "Enter Journey",
+              text: "Choose Outstation, Airport Or In-City And Add Pickup Date, Time And KM.",
+            },
+            {
+              title: "Compare Fleet",
+              text: "See Available Car Options With Fare, GST, Seating And Suitcase Details.",
+            },
+            {
+              title: "Confirm Booking",
+              text: "Save Booking On Website With Booking Number And Payment Choice.",
+            },
+            {
+              title: "Ride Managed",
+              text: "Admin And Driver Dashboards Track Driver, Vehicle, Payment And Ride Status.",
+            },
+          ].map((item, index) => (
+            <article className="homepage-step-card" key={item.title}>
+              <b>{String(index + 1).padStart(2, "0")}</b>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="homepage-services-section" aria-label="Important services">
+        <div className="homepage-section-head">
+          <span>Service Coverage</span>
+          <h2>Built For Corporate Guests, Airport Runs And Long Routes</h2>
+        </div>
+        <div className="homepage-service-grid">
+          {[
+            ["Airport T1 And T2", "Pickup Or Drop With Mumbai Airport Terminal Options."],
+            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support."],
+            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages."],
+            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel."],
+            ["Driver Cash Ledger", "Driver Cash Collection And Admin Ledger Tracking."],
+            ["Customer Booking View", "Customer Can Check Booking, Driver And Payment Status."],
+          ].map(([title, text]) => (
+            <article className="homepage-service-card" key={title}>
+              <span aria-hidden="true" />
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="homepage-ops-section" aria-label="Airport and outstation coordination">
+        <div className="homepage-ops-image">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/home/airport-coordination.png?v=7a3d2c1" alt="Airport cab coordination by Vishnu Tours" />
+        </div>
+        <div className="homepage-ops-copy">
+          <span>Owner-Side Operations</span>
+          <h2>Clear Fare, Clean Car And Assigned Driver Before Travel</h2>
+          <ul>
+            <li>Booking Number In VTT Format After Confirmation.</li>
+            <li>Admin Can Assign Driver, Vehicle Number And Ride Status.</li>
+            <li>Driver Can Accept, Start And Complete Ride From Dashboard.</li>
+            <li>Invoice And Payment Status Stay Visible For Customer And Admin.</li>
+          </ul>
+        </div>
+      </section>
+
       <section className="trust-strip" aria-label="Service highlights">
         <div>
           <strong>Best Rate Options</strong>
