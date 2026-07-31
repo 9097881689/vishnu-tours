@@ -77,6 +77,7 @@ type VehicleRateOverrides = Record<string, VehicleRateOverride>;
 type BookingPayload = {
   action?: string;
   requesterMobile?: string;
+  originalVehicleNumber?: string;
   tripType?: string;
   vehicle?: string;
   vehicleNumber?: string;
@@ -2057,6 +2058,181 @@ export async function POST(request: Request) {
           new Date().toISOString(),
         )
         .run();
+
+      return Response.json({ success: true });
+    }
+
+    if (action === "updateDriverVehicle") {
+      if (clean(payload.requesterMobile) !== adminMobile) {
+        return Response.json(
+          { error: "Only Admin Can Update Driver And Vehicle." },
+          { status: 401 },
+        );
+      }
+
+      const originalVehicleNumber = clean(payload.originalVehicleNumber);
+      const driverName = clean(payload.name);
+      const driverMobile = clean(payload.mobile);
+      const vehicleType = clean(payload.vehicle);
+      const vehicleNumber = clean(payload.vehicleNumber);
+
+      if (!originalVehicleNumber || !driverName || !driverMobile || !vehicleType || !vehicleNumber) {
+        return Response.json(
+          { error: "Original Vehicle, Driver Name, Mobile, Vehicle Type And Vehicle Number Are Required." },
+          { status: 400 },
+        );
+      }
+
+      const existingVehicle = await env.DB.prepare(
+        `SELECT vehicle_number, driver_mobile
+         FROM driver_vehicles
+         WHERE vehicle_number = ?
+         LIMIT 1`,
+      )
+        .bind(originalVehicleNumber)
+        .first<{ vehicle_number: string; driver_mobile: string }>();
+
+      if (!existingVehicle) {
+        return Response.json({ error: "Registered Vehicle Not Found." }, { status: 404 });
+      }
+
+      if (vehicleNumber !== originalVehicleNumber) {
+        const duplicateVehicle = await env.DB.prepare(
+          `SELECT vehicle_number
+           FROM driver_vehicles
+           WHERE vehicle_number = ?
+           LIMIT 1`,
+        )
+          .bind(vehicleNumber)
+          .first<{ vehicle_number: string }>();
+
+        if (duplicateVehicle) {
+          return Response.json(
+            { error: "This Vehicle Number Is Already Registered." },
+            { status: 409 },
+          );
+        }
+      }
+
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        `INSERT INTO drivers (
+          driver_mobile, driver_name, vehicle_type, vehicle_number, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(driver_mobile) DO UPDATE SET
+          driver_name = excluded.driver_name,
+          vehicle_type = excluded.vehicle_type,
+          vehicle_number = excluded.vehicle_number,
+          updated_at = excluded.updated_at`,
+      )
+        .bind(driverMobile, driverName, vehicleType, vehicleNumber, now)
+        .run();
+
+      await env.DB.prepare(
+        `UPDATE driver_vehicles
+         SET vehicle_number = ?,
+             driver_mobile = ?,
+             driver_name = ?,
+             vehicle_type = ?,
+             updated_at = ?
+         WHERE vehicle_number = ?`,
+      )
+        .bind(vehicleNumber, driverMobile, driverName, vehicleType, now, originalVehicleNumber)
+        .run();
+
+      const remainingOldDriverVehicles = await env.DB.prepare(
+        `SELECT COUNT(*) AS total
+         FROM driver_vehicles
+         WHERE driver_mobile = ?`,
+      )
+        .bind(existingVehicle.driver_mobile)
+        .first<{ total: number }>();
+
+      if (existingVehicle.driver_mobile !== driverMobile && !Number(remainingOldDriverVehicles?.total || 0)) {
+        await env.DB.prepare("DELETE FROM drivers WHERE driver_mobile = ?")
+          .bind(existingVehicle.driver_mobile)
+          .run();
+      }
+
+      return Response.json({ success: true });
+    }
+
+    if (action === "deleteDriverVehicle") {
+      if (clean(payload.requesterMobile) !== adminMobile) {
+        return Response.json(
+          { error: "Only Admin Can Delete Driver And Vehicle." },
+          { status: 401 },
+        );
+      }
+
+      const vehicleNumber = clean(payload.vehicleNumber || payload.originalVehicleNumber);
+
+      if (!vehicleNumber) {
+        return Response.json({ error: "Vehicle Number Is Required." }, { status: 400 });
+      }
+
+      const existingVehicle = await env.DB.prepare(
+        `SELECT vehicle_number, driver_mobile
+         FROM driver_vehicles
+         WHERE vehicle_number = ?
+         LIMIT 1`,
+      )
+        .bind(vehicleNumber)
+        .first<{ vehicle_number: string; driver_mobile: string }>();
+
+      if (!existingVehicle) {
+        return Response.json({ error: "Registered Vehicle Not Found." }, { status: 404 });
+      }
+
+      const activeRide = await env.DB.prepare(
+        `SELECT booking_id
+         FROM bookings
+         WHERE vehicle_number = ?
+           AND ride_status = 'Ride Started'
+         LIMIT 1`,
+      )
+        .bind(vehicleNumber)
+        .first<{ booking_id: string }>();
+
+      if (activeRide) {
+        return Response.json(
+          { error: `Vehicle Is Engaged In Active Ride ${activeRide.booking_id}. Complete Or Cancel Ride Before Delete.` },
+          { status: 409 },
+        );
+      }
+
+      await env.DB.prepare("DELETE FROM driver_vehicles WHERE vehicle_number = ?")
+        .bind(vehicleNumber)
+        .run();
+
+      const remainingVehicle = await env.DB.prepare(
+        `SELECT vehicle_number, vehicle_type
+         FROM driver_vehicles
+         WHERE driver_mobile = ?
+         ORDER BY updated_at DESC
+         LIMIT 1`,
+      )
+        .bind(existingVehicle.driver_mobile)
+        .first<{ vehicle_number: string; vehicle_type: string }>();
+
+      if (remainingVehicle) {
+        await env.DB.prepare(
+          `UPDATE drivers
+           SET vehicle_number = ?, vehicle_type = ?, updated_at = ?
+           WHERE driver_mobile = ?`,
+        )
+          .bind(
+            remainingVehicle.vehicle_number,
+            remainingVehicle.vehicle_type,
+            new Date().toISOString(),
+            existingVehicle.driver_mobile,
+          )
+          .run();
+      } else {
+        await env.DB.prepare("DELETE FROM drivers WHERE driver_mobile = ?")
+          .bind(existingVehicle.driver_mobile)
+          .run();
+      }
 
       return Response.json({ success: true });
     }

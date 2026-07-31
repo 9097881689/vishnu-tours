@@ -884,6 +884,7 @@ export default function Home() {
     vehicle: "Toyota Innova Crysta",
     vehicleNumber: "",
   });
+  const [editingVehicleNumber, setEditingVehicleNumber] = useState("");
   const [adminPaymentPrompt, setAdminPaymentPrompt] =
     useState<DashboardBooking | null>(null);
   const [adminPaymentSource, setAdminPaymentSource] = useState<"online" | "driver_cash">(
@@ -2577,10 +2578,44 @@ export default function Home() {
       return;
     }
 
-    const saved = await saveDriverProfile(driverForm);
+    if (editingVehicleNumber) {
+      setPortalStatus("Updating Driver Vehicle...");
 
-    if (!saved) {
-      return;
+      try {
+        const response = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "updateDriverVehicle",
+            requesterMobile: loginMobile.replace(/\D/g, ""),
+            originalVehicleNumber: editingVehicleNumber,
+            name: driverForm.name,
+            mobile: driverForm.mobile.replace(/\D/g, ""),
+            vehicle: driverForm.vehicle,
+            vehicleNumber: driverForm.vehicleNumber,
+          }),
+        });
+        const result = (await response.json()) as { error?: string };
+
+        if (!response.ok) {
+          setPortalStatus(result.error || "Driver Vehicle Could Not Be Updated.");
+          return;
+        }
+
+        await loadDashboard();
+        setPortalStatus("Driver Vehicle Updated.");
+      } catch {
+        setPortalStatus("Driver Vehicle Could Not Be Updated.");
+        return;
+      }
+    } else {
+      const saved = await saveDriverProfile(driverForm);
+
+      if (!saved) {
+        return;
+      }
+
+      setPortalStatus("Driver Onboarded.");
     }
 
     setDriverForm({
@@ -2589,7 +2624,57 @@ export default function Home() {
       vehicle: "Toyota Innova Crysta",
       vehicleNumber: "",
     });
-    setPortalStatus("Driver Onboarded.");
+    setEditingVehicleNumber("");
+  }
+
+  async function deleteDriverVehicle(driver: DriverProfile) {
+    if (!driver.vehicleNumber) {
+      setPortalStatus("Vehicle Number Missing.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${driver.name} | ${driver.vehicle} | ${driver.vehicleNumber}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPortalStatus("Deleting Driver Vehicle...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "deleteDriverVehicle",
+          requesterMobile: loginMobile.replace(/\D/g, ""),
+          vehicleNumber: driver.vehicleNumber,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Driver Vehicle Could Not Be Deleted.");
+        return;
+      }
+
+      if (editingVehicleNumber === driver.vehicleNumber) {
+        setDriverForm({
+          name: "",
+          mobile: "",
+          vehicle: "Toyota Innova Crysta",
+          vehicleNumber: "",
+        });
+        setEditingVehicleNumber("");
+      }
+
+      await loadDashboard();
+      setPortalStatus("Driver Vehicle Deleted.");
+    } catch {
+      setPortalStatus("Driver Vehicle Could Not Be Deleted.");
+    }
   }
 
   async function autoAssignDriver(booking: DashboardBooking) {
@@ -5248,9 +5333,14 @@ export default function Home() {
                 ) : null}
                 {activeAdminTab === "vehicles" ? (
                   <div className="admin-ops-panel admin-tab-panel vehicle-admin-panel">
-                    <div>
-                      <h3>Admin Driver And Vehicle Registration</h3>
-                      <div className="driver-form">
+	                    <div>
+	                      <h3>Admin Driver And Vehicle Registration</h3>
+                        {editingVehicleNumber ? (
+                          <p className="edit-mode-note">
+                            Editing Vehicle {editingVehicleNumber}
+                          </p>
+                        ) : null}
+	                      <div className="driver-form">
                         <input
                           value={driverForm.name}
                           onChange={(event) =>
@@ -5296,11 +5386,29 @@ export default function Home() {
                             </option>
                           ))}
                         </select>
-                        <button type="button" onClick={onboardDriver}>
-                          Register Driver Vehicle
-                        </button>
-                      </div>
-                    </div>
+	                        <button type="button" onClick={onboardDriver}>
+	                          {editingVehicleNumber ? "Update Driver Vehicle" : "Register Driver Vehicle"}
+	                        </button>
+                          {editingVehicleNumber ? (
+                            <button
+                              className="ghost-admin-action"
+                              type="button"
+                              onClick={() => {
+                                setEditingVehicleNumber("");
+                                setDriverForm({
+                                  name: "",
+                                  mobile: "",
+                                  vehicle: "Toyota Innova Crysta",
+                                  vehicleNumber: "",
+                                });
+                                setPortalStatus("");
+                              }}
+                            >
+                              Cancel Edit
+                            </button>
+                          ) : null}
+	                      </div>
+	                    </div>
                     <div>
                       <h3>Registered Driver Vehicles</h3>
                       {(() => {
@@ -5343,10 +5451,34 @@ export default function Home() {
                                 Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
                                 {driver.vehicleNumber || "Vehicle No. Pending"}
                               </span>
-                              <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
-                                {isEngaged ? "Engaged" : "Vacant"}
-                              </b>
-                            </div>
+	                              <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
+	                                {isEngaged ? "Engaged" : "Vacant"}
+	                              </b>
+                                <div className="driver-vehicle-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingVehicleNumber(driver.vehicleNumber);
+                                      setDriverForm({
+                                        name: driver.name,
+                                        mobile: driver.mobile,
+                                        vehicle: driver.vehicle || "Toyota Innova Crysta",
+                                        vehicleNumber: driver.vehicleNumber,
+                                      });
+                                      setPortalStatus("Edit Driver Vehicle Details And Click Update.");
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="danger-action"
+                                    type="button"
+                                    onClick={() => deleteDriverVehicle(driver)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+	                            </div>
                           );
                         })}
                       </div>

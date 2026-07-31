@@ -3160,7 +3160,7 @@ h4,
 
 .driver-form {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
   gap: 8px;
 }
 
@@ -3187,6 +3187,27 @@ h4,
   font-size: 12px;
   font-weight: 900;
   padding: 0 10px;
+}
+
+.driver-form .ghost-admin-action,
+.driver-vehicle-actions .danger-action {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.edit-mode-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  margin: 0 0 10px;
+  padding: 0 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .driver-list {
@@ -3229,12 +3250,13 @@ h4,
 }
 
 .driver-list .driver-vehicle-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   background: #f8fbff;
   color: #334155;
   font-size: 12px;
@@ -3245,6 +3267,25 @@ h4,
   min-width: 0;
   padding: 0;
   background: transparent;
+}
+
+.driver-vehicle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.driver-vehicle-actions button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #075985;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .driver-list .driver-cash-row {
