@@ -3844,15 +3844,19 @@ export default function Home() {
           </b>
           <small>Cab</small>
           <b>{booking.vehicle}</b>
-          <small>Pickup Date</small>
-          <b>
-            {formatDisplayDate((booking.pickup_datetime || booking.created_at).slice(0, 10))}
-          </b>
           <small>Booking Date And Time</small>
+          <b>{formatDisplayDateTime(booking.created_at)}</b>
+          <small>Pickup Date And Time</small>
           <b>{formatDisplayDateTime(booking.pickup_datetime || booking.created_at)}</b>
-          {booking.return_date ? (
+          {booking.ride_completed_at ? (
             <>
-              <small>Drop Date</small>
+              <small>Drop Date And Time</small>
+              <b>{formatDisplayDateTime(booking.ride_completed_at)}</b>
+            </>
+          ) : null}
+          {booking.return_date && !booking.ride_completed_at ? (
+            <>
+              <small>Planned Drop Date</small>
               <b>{formatDisplayDate(booking.return_date)}</b>
             </>
           ) : null}
@@ -6555,15 +6559,26 @@ export default function Home() {
                   </b>
                   <small>Cab</small>
                   <b>{customerBooking.vehicle}</b>
-                  <small>Date</small>
+                  <small>Booking Date And Time</small>
+                  <b>{formatDisplayDateTime(customerBooking.created_at)}</b>
+                  <small>Pickup Date And Time</small>
                   <b>
-                    {formatDisplayDate(
-                      (customerBooking.pickup_datetime || customerBooking.created_at).slice(
-                        0,
-                        10,
-                      ),
+                    {formatDisplayDateTime(
+                      customerBooking.pickup_datetime || customerBooking.created_at,
                     )}
                   </b>
+                  {customerBooking.ride_completed_at ? (
+                    <>
+                      <small>Drop Date And Time</small>
+                      <b>{formatDisplayDateTime(customerBooking.ride_completed_at)}</b>
+                    </>
+                  ) : null}
+                  {customerBooking.return_date && !customerBooking.ride_completed_at ? (
+                    <>
+                      <small>Planned Drop Date</small>
+                      <b>{formatDisplayDate(customerBooking.return_date)}</b>
+                    </>
+                  ) : null}
                   <small>Fare</small>
                   <b>{formatInr(customerBooking.estimated_fare)}</b>
                   <small>Payment</small>
