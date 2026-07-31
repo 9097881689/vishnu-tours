@@ -4283,7 +4283,7 @@ export default function Home() {
           <p>
             Vishnu Tours Handles Airport Transfers, Office Visits, Hotel Pickup,
             Local Duties And Outstation Travel With Verified Owner Fleet
-            Coordination, Fare Clarity And Driver Assignment Workflow.
+            Coordination, Fare Clarity And Premium Guest Support.
           </p>
           <div className="homepage-proof-grid">
             <div>
@@ -4295,14 +4295,14 @@ export default function Home() {
               <small>Fare Details Shown Before Booking Confirmation</small>
             </div>
             <div>
-              <strong>Driver Workflow</strong>
-              <small>Assignment, Ride Start, Ride Complete And Ledger Tracking</small>
+              <strong>VIP Ready</strong>
+              <small>Clean White Cars For Corporate Guests And Family Travel</small>
             </div>
           </div>
         </div>
         <div className="homepage-story-image">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/home/corporate-transfer.png?v=7a3d2c1" alt="Corporate cab pickup by Vishnu Tours" />
+          <img src="/home/innova-hycross-vip-pickup.jpg?v=7f31a1" alt="White Innova Hycross VIP pickup by Vishnu Tours" />
         </div>
       </section>
 
@@ -4327,7 +4327,7 @@ export default function Home() {
             },
             {
               title: "Ride Managed",
-              text: "Admin And Driver Dashboards Track Driver, Vehicle, Payment And Ride Status.",
+              text: "Your Cab, Pickup Time And Travel Status Stay Clearly Coordinated.",
             },
           ].map((item, index) => (
             <article className="homepage-step-card" key={item.title}>
@@ -4346,15 +4346,15 @@ export default function Home() {
         </div>
         <div className="homepage-service-grid">
           {[
-            ["Airport T1 And T2", "Pickup Or Drop With Mumbai Airport Terminal Options."],
-            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support."],
-            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages."],
-            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel."],
-            ["Driver Cash Ledger", "Driver Cash Collection And Admin Ledger Tracking."],
-            ["Customer Booking View", "Customer Can Check Booking, Driver And Payment Status."],
-          ].map(([title, text]) => (
+            ["Airport T1 And T2", "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", "airport"],
+            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support.", "office"],
+            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", "city"],
+            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel.", "route"],
+            ["VIP Event Movement", "Clean White Cars For Weddings, Events And Executive Guests.", "vip"],
+            ["Booking Support", "Clear Fare, Cab Selection And Confirmation Before Travel.", "support"],
+          ].map(([title, text, icon]) => (
             <article className="homepage-service-card" key={title}>
-              <span aria-hidden="true" />
+              <span className={`homepage-service-icon icon-${icon}`} aria-hidden="true" />
               <h3>{title}</h3>
               <p>{text}</p>
             </article>
@@ -4365,55 +4365,56 @@ export default function Home() {
       <section className="homepage-ops-section" aria-label="Airport and outstation coordination">
         <div className="homepage-ops-image">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/home/airport-coordination.png?v=7a3d2c1" alt="Airport cab coordination by Vishnu Tours" />
+          <img src="/home/innova-hycross-vip-pickup.jpg?v=7f31a1" alt="White Innova Hycross corporate pickup by Vishnu Tours" />
         </div>
         <div className="homepage-ops-copy">
-          <span>Owner-Side Operations</span>
+          <span>Trip Coordination</span>
           <h2>Clear Fare, Clean Car And Assigned Driver Before Travel</h2>
           <ul>
             <li>Booking Number In VTT Format After Confirmation.</li>
-            <li>Admin Can Assign Driver, Vehicle Number And Ride Status.</li>
-            <li>Driver Can Accept, Start And Complete Ride From Dashboard.</li>
-            <li>Invoice And Payment Status Stay Visible For Customer And Admin.</li>
+            <li>Cab And Driver Details Are Coordinated Before Pickup.</li>
+            <li>Customer Receives Fare, GST And Trip Details Clearly.</li>
+            <li>Airport, Local And Outstation Trips Stay Organized From Mumbai.</li>
           </ul>
         </div>
       </section>
 
       <section className="trust-strip" aria-label="Service highlights">
         <div>
-          <strong>Best Rate Options</strong>
-          <span>Corporate-Friendly Pricing</span>
+          <strong>Transparent Fare</strong>
+          <span>GST Included Before Confirmation</span>
         </div>
         <div>
-          <strong>Direct Owner Fleet</strong>
-          <span>No Middle Commission</span>
+          <strong>Owner Fleet</strong>
+          <span>Clean White Cars</span>
         </div>
         <div>
-          <strong>VIP Coordination</strong>
+          <strong>Corporate Ready</strong>
           <span>Guest Movement Support</span>
         </div>
         <div>
-          <strong>Online Payment</strong>
-          <span>Razorpay After Booking</span>
+          <strong>Flexible Payment</strong>
+          <span>Pay Online Or After Ride</span>
         </div>
       </section>
 
       <footer className="site-footer" id="contact">
-        <div>
+        <div className="footer-column">
           <strong>Vishnu Tours</strong>
-          <span>Visnu S Tours & Travels</span>
+          <span>Corporate Cab Booking From Mumbai</span>
         </div>
-        <nav className="footer-nav" aria-label="Footer navigation">
-          <a href="#home">Home</a>
-          <a href="#booking">Book Taxi</a>
-        </nav>
-        <div>
-          <a href={whatsappUrl} target="_blank">
-            WhatsApp: 7004291529
-          </a>
-          <a href={whatsappUrl} target="_blank">
-            WhatsApp Help
-          </a>
+        <div className="footer-column">
+          <strong>Contact Address</strong>
+          <span>Mumbai, Maharashtra, India</span>
+        </div>
+        <div className="footer-column">
+          <strong>Contact Email</strong>
+          <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
+        </div>
+        <div className="footer-column">
+          <strong>Phone And WhatsApp</strong>
+          <a href={whatsappUrl} target="_blank">+91 7004291529</a>
+          <a href={whatsappUrl} target="_blank">WhatsApp Booking Help</a>
         </div>
       </footer>
 
