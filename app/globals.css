@@ -2369,6 +2369,19 @@ nav a:hover {
 }
 
 @media (max-width: 640px) {
+  .driver-portal-dashboard,
+  .customer-portal-dashboard,
+  .driver-portal-dashboard > :not(.driver-earning-panel) {
+    grid-template-columns: 1fr;
+    grid-column: 1;
+  }
+
+  .driver-portal-dashboard .driver-earning-panel {
+    position: static;
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .site-header {
     align-items: center;
   }
@@ -3087,6 +3100,73 @@ h4,
   grid-template-columns: 1fr;
 }
 
+.portal-dashboard {
+  align-items: start;
+  border-color: rgba(203, 213, 225, 0.86);
+  border-radius: 18px;
+  background: #f8fafc;
+  box-shadow: 0 20px 54px rgba(15, 23, 42, 0.08);
+}
+
+.driver-portal-dashboard {
+  grid-template-columns: 238px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.customer-portal-dashboard {
+  grid-template-columns: 1fr;
+}
+
+.driver-portal-dashboard > :not(.driver-earning-panel) {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.driver-portal-dashboard .driver-earning-panel {
+  position: sticky;
+  top: 14px;
+  grid-column: 1;
+  grid-row: 1 / span 8;
+  align-self: start;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(21, 128, 61, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #f0fdf4, #ecfdf5);
+}
+
+.portal-dashboard .admin-ops-panel,
+.portal-dashboard .admin-recent,
+.portal-dashboard .next-ride-panel {
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.045);
+}
+
+.portal-dashboard .admin-ops-panel {
+  grid-template-columns: 1fr;
+}
+
+.portal-dashboard .admin-recent {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.portal-dashboard .admin-recent h3,
+.portal-dashboard .admin-ops-panel h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.customer-portal-dashboard .admin-recent {
+  width: 100%;
+}
+
 .admin-ops-panel {
   grid-column: 1 / -1;
   display: grid;
@@ -3118,6 +3198,7 @@ h4,
 .driver-earning-panel > div {
   display: grid;
   gap: 6px;
+  min-width: 0;
   padding: 14px;
   border: 1px solid #bbf7d0;
   border-radius: 10px;

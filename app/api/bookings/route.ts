@@ -451,7 +451,7 @@ async function getDriverNextRide(driverMobile: string) {
 async function getDriverEarning(driverMobile: string) {
   const summary = await env.DB.prepare(
     `SELECT COUNT(*) AS completed_rides,
-      COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_earning
+      COALESCE(SUM(ROUND(estimated_fare * 1.05) + COALESCE(extra_amount, 0)), 0) AS total_earning
      FROM bookings
      WHERE driver_mobile = ?
        AND ride_status = 'Ride Complete'

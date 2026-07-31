@@ -3429,6 +3429,7 @@ export default function Home() {
             const totalFare = getInvoiceTotals(booking).total;
             const driverCash = Number(booking.driver_cash_collected || 0);
             const driverRefund = Number(booking.driver_cash_refunded || 0);
+            const extraAmount = Number(booking.extra_amount || 0);
             const onlineCollected = Math.max(
               0,
               Number(booking.payment_amount || 0) - driverCash,
@@ -3446,6 +3447,11 @@ export default function Home() {
                 <span>{formatDisplayDateTime(booking.ride_started_at || booking.pickup_datetime)}</span>
                 <span>{booking.start_point} To {booking.destination}</span>
                 <span>Fare {formatInr(totalFare)}</span>
+                {extraAmount > 0 ? (
+                  <span className="ledger-collected-amount">
+                    Extra {formatInr(extraAmount)}
+                  </span>
+                ) : null}
                 <span className={onlineCollected > 0 ? "ledger-collected-amount" : ""}>
                   Online {formatPaymentAmount(onlineCollected)}
                 </span>
@@ -6331,7 +6337,13 @@ export default function Home() {
               </div>
             ) : null}
             {portalRole && portalRole !== "admin" ? (
-              <div className="admin-dashboard single-column-dashboard">
+              <div
+                className={`admin-dashboard portal-dashboard ${
+                  portalRole === "driver"
+                    ? "driver-portal-dashboard"
+                    : "customer-portal-dashboard"
+                }`}
+              >
                 {portalRole === "driver" ? (
                   <>
                   <div className="driver-earning-panel">
