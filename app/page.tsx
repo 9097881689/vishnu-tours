@@ -4945,50 +4945,37 @@ export default function Home() {
             >
               ×
             </button>
-            <h2>Vishnu Tours Login</h2>
-            <p>
-              Enter Mobile Number To Open Admin, Driver Or Customer Portal.
-            </p>
-            <div className="admin-login-row">
-              <input
-                value={loginMobile}
-                onChange={(event) => setLoginMobile(event.target.value)}
-                placeholder="Enter Mobile Number"
-                inputMode="tel"
-              />
-              <button type="button" onClick={loadDashboard}>
-                View
-              </button>
-            </div>
-            {portalStatus ? <p className="admin-status">{portalStatus}</p> : null}
-            {portalRole ? (
-              <div className="portal-role-chip">
-                {portalRole === "admin"
-                  ? "Admin Panel"
+	            {!portalRole ? (
+                <>
+                  <h2>Vishnu Tours Login</h2>
+                  <p>
+                    Enter Mobile Number To Open Admin, Driver Or Customer Portal.
+                  </p>
+                  <div className="admin-login-row">
+                    <input
+                      value={loginMobile}
+                      onChange={(event) => setLoginMobile(event.target.value)}
+                      placeholder="Enter Mobile Number"
+                      inputMode="tel"
+                    />
+                    <button type="button" onClick={loadDashboard}>
+                      View
+                    </button>
+                  </div>
+                </>
+              ) : null}
+	            {portalStatus && portalRole !== "admin" ? <p className="admin-status">{portalStatus}</p> : null}
+	            {portalRole && portalRole !== "admin" ? (
+	              <div className="portal-role-chip">
+	                {portalRole === "admin"
+	                  ? "Admin Panel"
                   : portalRole === "driver"
                     ? "Driver Panel"
-                    : "Customer Panel"}
-              </div>
-            ) : null}
-            {portalRole === "admin" && dashboard ? (
-              <div className="admin-switch-panel">
-                <strong>Switch Dashboard</strong>
-                <select
-                  value={adminLookupMobile}
-                  onChange={(event) => selectAdminLookupDashboard(event.target.value)}
-                >
-                  <option value="">Select Driver Or Customer Dashboard</option>
-                  {getAdminLookupOptions(dashboard).map((option) => (
-                    <option key={option.key} value={option.mobile}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <span>Select A Driver Or Customer To Open Their Dashboard Automatically.</span>
-              </div>
-            ) : null}
-            {portalRole === "admin" && dashboard ? (
-              <div className="admin-dashboard">
+	                    : "Customer Panel"}
+	              </div>
+	            ) : null}
+	            {portalRole === "admin" && dashboard ? (
+	              <div className="admin-dashboard">
                 {(() => {
                   const adminMetrics = getAdminFinanceMetrics(dashboard);
                   const metricCards: Array<{
@@ -5026,10 +5013,30 @@ export default function Home() {
                     },
                   ];
 
-                  return (
-                    <>
-                      {metricCards.map((card) => (
-                        <button
+	                  return (
+	                    <>
+                        <div className="admin-content-topbar">
+                          <div className="portal-role-chip admin-top-role-chip">
+                            Admin Panel
+                          </div>
+                          {portalStatus ? <p className="admin-status">{portalStatus}</p> : null}
+                          <div className="admin-switch-panel">
+                            <strong>Switch Dashboard</strong>
+                            <select
+                              value={adminLookupMobile}
+                              onChange={(event) => selectAdminLookupDashboard(event.target.value)}
+                            >
+                              <option value="">Select Driver Or Customer Dashboard</option>
+                              {getAdminLookupOptions(dashboard).map((option) => (
+                                <option key={option.key} value={option.mobile}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+	                      {metricCards.map((card) => (
+	                        <button
                           className={`admin-metric metric-button ${
                             activeAdminBreakup === card.id ? "is-active" : ""
                           } ${card.className || ""}`}
@@ -5089,58 +5096,61 @@ export default function Home() {
                             },
                           ];
 
-                          return tabs.map((tab) => (
-                            <button
-                              className={activeAdminTab === tab.id ? "is-active" : ""}
-                              key={tab.id}
-                              type="button"
-                              onClick={() => setActiveAdminTab(tab.id)}
-                            >
-                              <span>{tab.label}</span>
-                              <b>{tab.count}</b>
-                            </button>
-                          ));
-                        })()}
-                      </div>
-                      <div className="admin-task-strip">
-                        {(() => {
-                          const taskCounts = getAdminTaskCounts(dashboard);
-                          return (
-                            <>
-                              <span>
-                                <b>{taskCounts.assignmentPending}</b>
-                                Driver Assign Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.paymentPending}</b>
-                                Payment Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.ridePending}</b>
-                                Ride Pending
-                              </span>
-                              <span>
-                                <b>{taskCounts.rideInProgress}</b>
-                                In Progress
-                              </span>
-                              <span>
-                                <b>{taskCounts.totalCarsWithDriver}</b>
-                                Total Cars With Driver
-                              </span>
-                              <span>
-                                <b>{taskCounts.vacantCars}</b>
-                                Vacant Cars
-                              </span>
-                              <span>
-                                <b>{taskCounts.vacantDrivers}</b>
-                                Vacant Drivers
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  );
+	                          return (
+                              <>
+                                <div className="admin-sidebar-stat-group">
+                                  <strong>Admin Workload</strong>
+                                  <span>
+                                    <b>{taskCounts.assignmentPending}</b>
+                                    Driver Assign Pending
+                                  </span>
+                                  <span>
+                                    <b>{taskCounts.paymentPending}</b>
+                                    Payment Pending
+                                  </span>
+                                  <span>
+                                    <b>{taskCounts.ridePending}</b>
+                                    Ride Pending
+                                  </span>
+                                  <span>
+                                    <b>{taskCounts.rideInProgress}</b>
+                                    In Progress
+                                  </span>
+                                </div>
+                                <div className="admin-sidebar-stat-group fleet-stat-group">
+                                  <strong>Fleet Status</strong>
+                                  <span>
+                                    <b>{taskCounts.totalCarsWithDriver}</b>
+                                    Total Cars With Driver
+                                  </span>
+                                  <span>
+                                    <b>{taskCounts.vacantCars}</b>
+                                    Vacant Cars
+                                  </span>
+                                  <span>
+                                    <b>{taskCounts.vacantDrivers}</b>
+                                    Vacant Drivers
+                                  </span>
+                                </div>
+                                <div className="admin-sidebar-nav">
+                                  {tabs.map((tab) => (
+                                    <button
+                                      className={activeAdminTab === tab.id ? "is-active" : ""}
+                                      key={tab.id}
+                                      type="button"
+                                      onClick={() => setActiveAdminTab(tab.id)}
+                                    >
+                                      <span>{tab.label}</span>
+                                      <b>{tab.count}</b>
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            );
+	                        })()}
+	                      </div>
+	                    </>
+	                  );
                 })()}
                 {activeAdminTab === "breakup" ? renderAdminMetricBreakup(dashboard) : null}
                 {activeAdminTab === "bookings" ? (
@@ -5409,33 +5419,9 @@ export default function Home() {
                           ) : null}
 	                      </div>
 	                    </div>
-                    <div>
-                      <h3>Registered Driver Vehicles</h3>
-                      {(() => {
-                        const taskCounts = getAdminTaskCounts(dashboard);
-
-                        return (
-                          <div className="fleet-availability-strip">
-                            <span>
-                              <b>{taskCounts.totalCarsWithDriver}</b>
-                              Total Cars With Driver
-                            </span>
-                            <span>
-                              <b>{taskCounts.vacantCars}</b>
-                              Vacant Cars
-                            </span>
-                            <span>
-                              <b>{taskCounts.vacantDrivers}</b>
-                              Vacant Drivers
-                            </span>
-                            <span>
-                              <b>{taskCounts.rideInProgress}</b>
-                              Engaged Vehicles
-                            </span>
-                          </div>
-                        );
-                      })()}
-                      <div className="driver-list">
+	                    <div>
+	                      <h3>Registered Driver Vehicles</h3>
+	                      <div className="driver-list">
                         {drivers.map((driver) => {
                           const isEngaged = isStartedRideVehicle(
                             driver.vehicleNumber,
