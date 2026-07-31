@@ -137,6 +137,9 @@ const adminPin = "710529";
 const adminMobile = "7004291529";
 const adminWhatsappMobile = "917004291529";
 const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+};
 const allowedSiteFonts = new Set([
   "Plus Jakarta Sans",
   "Inter",
@@ -971,11 +974,14 @@ export async function GET(request: Request) {
     await ensureBookingsTable();
 
     if (url.searchParams.get("settings") === "pricing") {
-      return Response.json({
-        priceAdjustmentPercent: await getPriceAdjustmentPercent(),
-        vehicleRateOverrides: await getVehicleRateOverrides(),
-        siteFont: await getSiteFont(),
-      });
+      return Response.json(
+        {
+          priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+          vehicleRateOverrides: await getVehicleRateOverrides(),
+          siteFont: await getSiteFont(),
+        },
+        { headers: noStoreHeaders },
+      );
     }
 
     if (url.searchParams.get("settings") === "publicRates") {
@@ -989,11 +995,14 @@ export async function GET(request: Request) {
         })),
       );
 
-      return Response.json({
-        updatedAt: await getPricingUpdatedAt(),
-        priceAdjustmentPercent: await getPriceAdjustmentPercent(),
-        vehicles: rates,
-      });
+      return Response.json(
+        {
+          updatedAt: await getPricingUpdatedAt(),
+          priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+          vehicles: rates,
+        },
+        { headers: noStoreHeaders },
+      );
     }
 
     if (loginMobile) {
