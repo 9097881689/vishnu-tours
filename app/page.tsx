@@ -3563,17 +3563,11 @@ export default function Home() {
       <header className="top-strip main-menu">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src="/logo.svg?v=award-nav" alt="Vishnu Tours logo" />
+          <img className="brand-logo" src="/logo.svg?v=borderless" alt="Vishnu Tours logo" />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
         </a>
-        <nav className="main-nav" aria-label="Main navigation">
-          <a href="#home">Home</a>
-          <a href="#booking">Book Cab</a>
-          <a href="#fleet">Fleet</a>
-          <a href="#contact">Contact</a>
-        </nav>
         <div className="header-actions">
           <a className="call-button" href={whatsappUrl} target="_blank">
             WhatsApp 7004291529

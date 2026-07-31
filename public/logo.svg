@@ -1,22 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="236" height="58" viewBox="0 0 236 58" fill="none">
-  <rect x="1" y="1" width="234" height="56" rx="14" fill="#ffffff"/>
-  <rect x="1" y="1" width="234" height="56" rx="14" stroke="#DDE8F2" stroke-width="2"/>
-  <rect x="13" y="10" width="42" height="38" rx="11" fill="url(#markGradient)"/>
-  <path d="M22 34.5H44.8L49 39H18L22 34.5Z" fill="#ffffff"/>
-  <path d="M20 39H47V44H20V39Z" fill="#ffffff"/>
-  <circle cx="26" cy="44" r="2.6" fill="#0B3558"/>
-  <circle cx="42" cy="44" r="2.6" fill="#0B3558"/>
-  <path d="M26 27.5H39.8L44.2 34.5H21.8L26 27.5Z" fill="#F59E0B"/>
-  <path d="M21 21C28.5 13.5 42.5 13.5 50 21" stroke="#F8C94E" stroke-width="2.2" stroke-linecap="round"/>
-  <path d="M70 10H181" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="190" cy="10" r="3.2" fill="#F59E0B"/>
-  <text x="69" y="32" fill="#0B3558" font-family="Inter, Arial, Helvetica, sans-serif" font-size="21" font-weight="900" letter-spacing=".2">Vishnu Tours</text>
-  <text x="70" y="47" fill="#64748B" font-family="Inter, Arial, Helvetica, sans-serif" font-size="8.5" font-weight="800" letter-spacing="1.25">CORPORATE CABS FROM MUMBAI</text>
+  <rect x="4" y="7" width="46" height="42" rx="13" fill="url(#markGradient)"/>
+  <path d="M14.2 34.8H39.4L44.2 40H9.6L14.2 34.8Z" fill="#ffffff"/>
+  <path d="M11.8 40H42V45.4H11.8V40Z" fill="#ffffff"/>
+  <circle cx="18.6" cy="45.4" r="2.9" fill="#082F49"/>
+  <circle cx="36" cy="45.4" r="2.9" fill="#082F49"/>
+  <path d="M18.6 27H34.1L39.1 34.8H13.9L18.6 27Z" fill="#F59E0B"/>
+  <path d="M13.2 20.4C21.7 12 37.3 12 45.8 20.4" stroke="#F8C94E" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M63 10H174" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>
+  <circle cx="183" cy="10" r="3.3" fill="#F59E0B"/>
+  <text x="62" y="32" fill="#ffffff" font-family="Inter, Arial, Helvetica, sans-serif" font-size="22" font-weight="900" letter-spacing=".2">Vishnu Tours</text>
+  <text x="63" y="48" fill="#CFE8F7" font-family="Inter, Arial, Helvetica, sans-serif" font-size="8.6" font-weight="800" letter-spacing="1.3">CORPORATE CABS FROM MUMBAI</text>
   <defs>
-    <linearGradient id="markGradient" x1="13" y1="10" x2="55" y2="48" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#082F49"/>
-      <stop offset="0.58" stop-color="#075985"/>
-      <stop offset="1" stop-color="#0EA5E9"/>
+    <linearGradient id="markGradient" x1="4" y1="7" x2="50" y2="49" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#075985"/>
+      <stop offset="0.58" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#F59E0B"/>
     </linearGradient>
   </defs>
 </svg>
