@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
 
 const whatsappUrl = "https://wa.me/917004291529";
 const publicFontStacks: Record<string, string> = {
@@ -16,18 +17,62 @@ const publicFontStacks: Record<string, string> = {
   Lato: "var(--font-lato), Lato, sans-serif",
   "System UI": "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
+const defaultSiteBranding = {
+  iconUrl: "/logo-icon.png?v=20260731",
+  headerLogoSize: 58,
+  footerLogoSize: 88,
+  faviconSize: 32,
+};
 
-function SiteFontSync() {
+function normalizeSiteBranding(value?: Partial<typeof defaultSiteBranding> | null) {
+  return {
+    iconUrl: value?.iconUrl || defaultSiteBranding.iconUrl,
+    headerLogoSize: Number.isFinite(Number(value?.headerLogoSize))
+      ? Math.min(120, Math.max(38, Math.round(Number(value?.headerLogoSize))))
+      : defaultSiteBranding.headerLogoSize,
+    footerLogoSize: Number.isFinite(Number(value?.footerLogoSize))
+      ? Math.min(180, Math.max(48, Math.round(Number(value?.footerLogoSize))))
+      : defaultSiteBranding.footerLogoSize,
+    faviconSize: Number.isFinite(Number(value?.faviconSize))
+      ? Math.min(96, Math.max(16, Math.round(Number(value?.faviconSize))))
+      : defaultSiteBranding.faviconSize,
+  };
+}
+
+function useSiteBrandSync() {
+  const [branding, setBranding] = useState(defaultSiteBranding);
+
   useEffect(() => {
     let isMounted = true;
 
     fetch("/api/bookings?settings=pricing")
       .then((response) => response.json())
-      .then((result: { siteFont?: string }) => {
+      .then((result: { siteFont?: string; siteBranding?: typeof defaultSiteBranding }) => {
         if (!isMounted) return;
         const stack = publicFontStacks[result.siteFont || ""] || publicFontStacks["Plus Jakarta Sans"];
+        const nextBranding = normalizeSiteBranding(result.siteBranding);
+
         document.documentElement.style.setProperty("--brand-font", stack);
         document.documentElement.style.setProperty("--heading-font", stack);
+        document.documentElement.style.setProperty(
+          "--site-header-logo-size",
+          `${nextBranding.headerLogoSize}px`,
+        );
+        document.documentElement.style.setProperty(
+          "--site-footer-logo-size",
+          `${nextBranding.footerLogoSize}px`,
+        );
+
+        const existingIcon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+        const iconLink = existingIcon || document.createElement("link");
+        iconLink.rel = "icon";
+        iconLink.href = nextBranding.iconUrl;
+        iconLink.sizes = `${nextBranding.faviconSize}x${nextBranding.faviconSize}`;
+        if (!existingIcon) {
+          document.head.appendChild(iconLink);
+        }
+
+        setBranding(nextBranding);
       })
       .catch(() => undefined);
 
@@ -36,16 +81,23 @@ function SiteFontSync() {
     };
   }, []);
 
-  return null;
+  return {
+    branding,
+    style: {
+      "--site-header-logo-size": `${branding.headerLogoSize}px`,
+      "--site-footer-logo-size": `${branding.footerLogoSize}px`,
+    } as CSSProperties,
+  };
 }
 
 export function PublicHeader() {
+  const { branding, style } = useSiteBrandSync();
+
   return (
-    <header className="top-strip main-menu public-page-menu">
-      <SiteFontSync />
+    <header className="top-strip main-menu public-page-menu" style={style}>
       <Link className="brand" href="/" aria-label="Vishnu Tours home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="brand-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
+        <img className="brand-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
         <span>
           <strong>Vishnu Tours</strong>
         </span>
@@ -63,11 +115,13 @@ export function PublicHeader() {
 }
 
 export function PublicFooter() {
+  const { branding, style } = useSiteBrandSync();
+
   return (
-    <footer className="site-footer" id="contact">
+    <footer className="site-footer" id="contact" style={style}>
       <div className="footer-column footer-brand-column">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="footer-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
+        <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
           And Outstation Trips.

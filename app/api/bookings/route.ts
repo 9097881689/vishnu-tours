@@ -23,6 +23,13 @@ type FleetVehicle = {
   active: boolean;
 };
 
+type SiteBranding = {
+  iconUrl: string;
+  headerLogoSize: number;
+  footerLogoSize: number;
+  faviconSize: number;
+};
+
 const defaultFleetVehicles: FleetVehicle[] = [
   {
     name: "Toyota Innova Crysta",
@@ -180,6 +187,7 @@ type BookingOperationPayload = {
   vehicleRateOverrides?: VehicleRateOverrides;
   fleetVehicles?: FleetVehicle[];
   siteFont?: string;
+  siteBranding?: SiteBranding;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -206,6 +214,13 @@ const allowedSiteFonts = new Set([
   "Lato",
   "System UI",
 ]);
+
+const defaultSiteBranding: SiteBranding = {
+  iconUrl: "/logo-icon.png?v=20260731",
+  headerLogoSize: 58,
+  footerLogoSize: 88,
+  faviconSize: 32,
+};
 
 type BookingRow = {
   booking_id: string;
@@ -790,6 +805,79 @@ async function getSiteFont() {
   return normalizeSiteFont(setting?.value);
 }
 
+function clampLogoSize(value: unknown, fallback: number, min: number, max: number) {
+  const parsed = Math.round(Number(value));
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeBrandingIconUrl(value: unknown) {
+  const iconUrl = clean(value);
+
+  if (!iconUrl) {
+    return defaultSiteBranding.iconUrl;
+  }
+
+  if (
+    iconUrl.startsWith("/") ||
+    iconUrl.startsWith("https://") ||
+    iconUrl.startsWith("data:image/")
+  ) {
+    return iconUrl.slice(0, 900000);
+  }
+
+  return defaultSiteBranding.iconUrl;
+}
+
+function normalizeSiteBranding(value: unknown): SiteBranding {
+  const raw =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Partial<SiteBranding>)
+      : {};
+
+  return {
+    iconUrl: normalizeBrandingIconUrl(raw.iconUrl),
+    headerLogoSize: clampLogoSize(
+      raw.headerLogoSize,
+      defaultSiteBranding.headerLogoSize,
+      38,
+      120,
+    ),
+    footerLogoSize: clampLogoSize(
+      raw.footerLogoSize,
+      defaultSiteBranding.footerLogoSize,
+      48,
+      180,
+    ),
+    faviconSize: clampLogoSize(
+      raw.faviconSize,
+      defaultSiteBranding.faviconSize,
+      16,
+      96,
+    ),
+  };
+}
+
+async function getSiteBranding() {
+  const setting = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'site_branding' LIMIT 1",
+  ).first<{ value: string }>();
+
+  if (!setting?.value) {
+    return defaultSiteBranding;
+  }
+
+  try {
+    return normalizeSiteBranding(JSON.parse(setting.value));
+  } catch {
+    return defaultSiteBranding;
+  }
+}
+
 async function getPricingUpdatedAt() {
   const setting = await env.DB.prepare(
     `SELECT MAX(updated_at) AS updated_at
@@ -1123,6 +1211,7 @@ export async function GET(request: Request) {
           vehicleRateOverrides: await getVehicleRateOverrides(),
           fleetVehicles,
           siteFont: await getSiteFont(),
+          siteBranding: await getSiteBranding(),
         },
         { headers: noStoreHeaders },
       );
@@ -1150,6 +1239,7 @@ export async function GET(request: Request) {
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           fleetVehicles: publicVehicles,
           vehicles: rates,
+          siteBranding: await getSiteBranding(),
         },
         { headers: noStoreHeaders },
       );
@@ -1170,6 +1260,7 @@ export async function GET(request: Request) {
           vehicleRateOverrides: await getVehicleRateOverrides(),
           fleetVehicles: await getFleetVehicles(),
           siteFont: await getSiteFont(),
+          siteBranding: await getSiteBranding(),
           totalBookings: financeSummary.totalBookings,
           totalFare: financeSummary.totalBookingAmount,
           totalBookingAmount: financeSummary.totalBookingAmount,
@@ -1342,7 +1433,8 @@ export async function PATCH(request: Request) {
       action !== "updatePriceAdjustment" &&
       action !== "updateVehicleRates" &&
       action !== "updateFleetVehicles" &&
-      action !== "updateSiteFont"
+      action !== "updateSiteFont" &&
+      action !== "updateSiteBranding"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
@@ -1440,6 +1532,26 @@ export async function PATCH(request: Request) {
         .run();
 
       return Response.json({ success: true, siteFont });
+    }
+
+    if (action === "updateSiteBranding") {
+      if (clean(payload.adminMobile) !== adminMobile) {
+        return Response.json({ error: "Only Admin Can Update Site Branding." }, { status: 401 });
+      }
+
+      const siteBranding = normalizeSiteBranding(payload.siteBranding);
+
+      await env.DB.prepare(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ('site_branding', ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(JSON.stringify(siteBranding), new Date().toISOString())
+        .run();
+
+      return Response.json({ success: true, siteBranding });
     }
 
     const isAdmin =

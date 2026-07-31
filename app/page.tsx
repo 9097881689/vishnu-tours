@@ -260,6 +260,20 @@ type FleetVehicle = {
   active: boolean;
 };
 
+type SiteBranding = {
+  iconUrl: string;
+  headerLogoSize: number;
+  footerLogoSize: number;
+  faviconSize: number;
+};
+
+const defaultSiteBranding: SiteBranding = {
+  iconUrl: "/logo-icon.png?v=20260731",
+  headerLogoSize: 58,
+  footerLogoSize: 88,
+  faviconSize: 32,
+};
+
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
 }
@@ -329,6 +343,21 @@ function createVehicleForm(vehicle?: FleetVehicle) {
 }
 
 type VehicleForm = ReturnType<typeof createVehicleForm>;
+
+function normalizeSiteBranding(value?: Partial<SiteBranding> | null): SiteBranding {
+  return {
+    iconUrl: value?.iconUrl || defaultSiteBranding.iconUrl,
+    headerLogoSize: Number.isFinite(Number(value?.headerLogoSize))
+      ? Math.min(120, Math.max(38, Math.round(Number(value?.headerLogoSize))))
+      : defaultSiteBranding.headerLogoSize,
+    footerLogoSize: Number.isFinite(Number(value?.footerLogoSize))
+      ? Math.min(180, Math.max(48, Math.round(Number(value?.footerLogoSize))))
+      : defaultSiteBranding.footerLogoSize,
+    faviconSize: Number.isFinite(Number(value?.faviconSize))
+      ? Math.min(96, Math.max(16, Math.round(Number(value?.faviconSize))))
+      : defaultSiteBranding.faviconSize,
+  };
+}
 
 function getAirportOption(value: string) {
   return (
@@ -554,6 +583,7 @@ type AdminPanelTab =
   | "breakup"
   | "bookings"
   | "pricing"
+  | "customization"
   | "myVehicle"
   | "vehicles"
   | "ledger"
@@ -995,6 +1025,7 @@ export default function Home() {
     vehicleRateOverrides: VehicleRateOverrides;
     fleetVehicles: FleetVehicle[];
     siteFont: string;
+    siteBranding: SiteBranding;
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -1037,6 +1068,9 @@ export default function Home() {
   const [priceAdjustmentInput, setPriceAdjustmentInput] = useState("0");
   const [priceAdjustmentStatus, setPriceAdjustmentStatus] = useState("");
   const [siteFont, setSiteFont] = useState("Plus Jakarta Sans");
+  const [siteBranding, setSiteBranding] =
+    useState<SiteBranding>(defaultSiteBranding);
+  const [brandingStatus, setBrandingStatus] = useState("");
   const [vehicleRateOverrides, setVehicleRateOverrides] =
     useState<VehicleRateOverrides>({});
   const [rateEditorVehicle, setRateEditorVehicle] = useState("Toyota Innova Crysta");
@@ -1245,6 +1279,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const existingIcon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    const iconLink = existingIcon || document.createElement("link");
+
+    iconLink.rel = "icon";
+    iconLink.href = siteBranding.iconUrl;
+    iconLink.sizes = `${siteBranding.faviconSize}x${siteBranding.faviconSize}`;
+
+    if (!existingIcon) {
+      document.head.appendChild(iconLink);
+    }
+  }, [siteBranding.faviconSize, siteBranding.iconUrl]);
+
+  useEffect(() => {
     let mounted = true;
 
     async function loadPriceSetting() {
@@ -1255,6 +1302,7 @@ export default function Home() {
           vehicleRateOverrides?: VehicleRateOverrides;
           fleetVehicles?: FleetVehicle[];
           siteFont?: string;
+          siteBranding?: SiteBranding;
         };
         const percent = Number(result.priceAdjustmentPercent || 0);
 
@@ -1266,6 +1314,7 @@ export default function Home() {
             ? result.fleetVehicles
             : defaultFleetVehicles;
           setSiteFont(result.siteFont || "Plus Jakarta Sans");
+          setSiteBranding(normalizeSiteBranding(result.siteBranding));
           setFleetVehicles(savedFleetVehicles);
           setVehicle((currentVehicle) =>
             savedFleetVehicles.some((item) => item.name === currentVehicle)
@@ -1888,6 +1937,7 @@ export default function Home() {
         vehicleRateOverrides?: VehicleRateOverrides;
         fleetVehicles?: FleetVehicle[];
         siteFont?: string;
+        siteBranding?: SiteBranding;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
@@ -1943,8 +1993,10 @@ export default function Home() {
           ? result.fleetVehicles
           : defaultFleetVehicles;
         const savedSiteFont = result.siteFont || "Plus Jakarta Sans";
+        const savedSiteBranding = normalizeSiteBranding(result.siteBranding);
 
         setSiteFont(savedSiteFont);
+        setSiteBranding(savedSiteBranding);
         setFleetVehicles(savedFleetVehicles);
         setVehicleRateOverrides(savedOverrides);
         setRateEditorForm(
@@ -1963,6 +2015,7 @@ export default function Home() {
           driverCashInHand: result.driverCashInHand || 0,
           priceAdjustmentPercent: currentPriceAdjustment,
           siteFont: savedSiteFont,
+          siteBranding: savedSiteBranding,
           recentBookings: result.recentBookings || [],
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
@@ -2482,6 +2535,83 @@ export default function Home() {
       setPriceAdjustmentStatus("Site Font Updated Successfully.");
     } catch {
       setPriceAdjustmentStatus("Site Font Could Not Be Updated.");
+    }
+  }
+
+  function updateSiteBrandingField<Key extends keyof SiteBranding>(
+    key: Key,
+    value: SiteBranding[Key],
+  ) {
+    setSiteBranding((currentBranding) =>
+      normalizeSiteBranding({ ...currentBranding, [key]: value }),
+    );
+    setBrandingStatus("");
+  }
+
+  function handleSiteIconUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setBrandingStatus("Please Upload A Valid Image File.");
+      return;
+    }
+
+    if (file.size > 850 * 1024) {
+      setBrandingStatus("Image Is Too Large. Please Upload An Icon Under 850 KB.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      updateSiteBrandingField("iconUrl", String(reader.result || defaultSiteBranding.iconUrl));
+      setBrandingStatus("Icon Ready For Preview. Click Save Customization.");
+    };
+    reader.onerror = () => setBrandingStatus("Icon Upload Could Not Be Read.");
+    reader.readAsDataURL(file);
+  }
+
+  async function saveSiteBranding() {
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+    const nextBranding = normalizeSiteBranding(siteBranding);
+
+    setBrandingStatus("Saving Site Customization...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateSiteBranding",
+          adminMobile: normalizedMobile,
+          siteBranding: nextBranding,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        siteBranding?: SiteBranding;
+      };
+
+      if (!response.ok) {
+        setBrandingStatus(result.error || "Site Customization Could Not Be Updated.");
+        return;
+      }
+
+      const savedBranding = normalizeSiteBranding(result.siteBranding || nextBranding);
+
+      setSiteBranding(savedBranding);
+      setDashboard((currentDashboard) =>
+        currentDashboard
+          ? { ...currentDashboard, siteBranding: savedBranding }
+          : currentDashboard,
+      );
+      setBrandingStatus("Site Customization Updated Successfully.");
+    } catch {
+      setBrandingStatus("Site Customization Could Not Be Updated.");
     }
   }
 
@@ -4168,12 +4298,18 @@ export default function Home() {
   return (
     <main
       className="site-font-shell"
-      style={{ "--active-site-font": activeSiteFontStack } as CSSProperties}
+      style={
+        {
+          "--active-site-font": activeSiteFontStack,
+          "--site-header-logo-size": `${siteBranding.headerLogoSize}px`,
+          "--site-footer-logo-size": `${siteBranding.footerLogoSize}px`,
+        } as CSSProperties
+      }
     >
       <header className="top-strip main-menu">
         <Link className="brand" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
+          <img className="brand-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
@@ -5014,7 +5150,7 @@ export default function Home() {
       <footer className="site-footer" id="contact">
         <div className="footer-column footer-brand-column">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="footer-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
+          <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
@@ -5492,6 +5628,11 @@ export default function Home() {
                               count: Math.round(priceAdjustmentPercent),
                             },
                             {
+                              id: "customization",
+                              label: "Customization",
+                              count: siteBranding.headerLogoSize,
+                            },
+                            {
                               id: "myVehicle",
                               label: "My Vehicle",
                               count: fleetVehicles.length,
@@ -5799,6 +5940,108 @@ export default function Home() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                ) : null}
+                {activeAdminTab === "customization" ? (
+                  <div className="admin-ops-panel admin-tab-panel customization-panel">
+                    <div className="price-control-card customization-card">
+                      <h3>Site Icon And Logo Size</h3>
+                      <p>
+                        Upload The Main Site Icon And Adjust Header, Footer And Browser
+                        Tab Icon Size From One Place.
+                      </p>
+                      <div className="customization-preview">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={siteBranding.iconUrl} alt="Vishnu Tours site icon preview" />
+                        <div>
+                          <strong>Live Logo Preview</strong>
+                          <span>Saved Icon Applies On Homepage, Footer And Browser Tab.</span>
+                        </div>
+                      </div>
+                      <div className="customization-grid">
+                        <label className="custom-upload-field">
+                          <span>Upload Site Icon Image</span>
+                          <input
+                            accept="image/*"
+                            onChange={handleSiteIconUpload}
+                            type="file"
+                          />
+                        </label>
+                        <label>
+                          <span>Icon Image URL</span>
+                          <input
+                            value={siteBranding.iconUrl}
+                            onChange={(event) =>
+                              updateSiteBrandingField("iconUrl", event.target.value)
+                            }
+                            placeholder="/logo-icon.png"
+                          />
+                        </label>
+                        <label>
+                          <span>Header Logo Size: {siteBranding.headerLogoSize}px</span>
+                          <input
+                            min="38"
+                            max="120"
+                            value={siteBranding.headerLogoSize}
+                            onChange={(event) =>
+                              updateSiteBrandingField(
+                                "headerLogoSize",
+                                Number(event.target.value),
+                              )
+                            }
+                            type="range"
+                          />
+                        </label>
+                        <label>
+                          <span>Footer Logo Size: {siteBranding.footerLogoSize}px</span>
+                          <input
+                            min="48"
+                            max="180"
+                            value={siteBranding.footerLogoSize}
+                            onChange={(event) =>
+                              updateSiteBrandingField(
+                                "footerLogoSize",
+                                Number(event.target.value),
+                              )
+                            }
+                            type="range"
+                          />
+                        </label>
+                        <label>
+                          <span>Browser Tab Icon Size: {siteBranding.faviconSize}px</span>
+                          <input
+                            min="16"
+                            max="96"
+                            value={siteBranding.faviconSize}
+                            onChange={(event) =>
+                              updateSiteBrandingField(
+                                "faviconSize",
+                                Number(event.target.value),
+                              )
+                            }
+                            type="range"
+                          />
+                        </label>
+                      </div>
+                      <div className="price-control-form individual-rate-actions">
+                        <button type="button" onClick={saveSiteBranding}>
+                          Save Customization
+                        </button>
+                        <button
+                          className="ghost-price-action"
+                          type="button"
+                          onClick={() => {
+                            setSiteBranding(defaultSiteBranding);
+                            setBrandingStatus("");
+                          }}
+                        >
+                          Reset To Default
+                        </button>
+                      </div>
+                      {brandingStatus ? (
+                        <p className="admin-status">{brandingStatus}</p>
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
