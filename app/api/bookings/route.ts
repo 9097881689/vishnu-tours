@@ -118,6 +118,7 @@ type BookingOperationPayload = {
   adminMobile?: string;
   priceAdjustmentPercent?: number;
   vehicleRateOverrides?: VehicleRateOverrides;
+  siteFont?: string;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -129,6 +130,15 @@ const adminPin = "710529";
 const adminMobile = "7004291529";
 const adminWhatsappMobile = "917004291529";
 const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
+const allowedSiteFonts = new Set([
+  "Plus Jakarta Sans",
+  "Inter",
+  "Poppins",
+  "Montserrat",
+  "Roboto",
+  "Lato",
+  "System UI",
+]);
 
 type BookingRow = {
   booking_id: string;
@@ -595,6 +605,19 @@ async function getVehicleRateOverrides() {
   }
 }
 
+function normalizeSiteFont(value: unknown) {
+  const fontName = clean(String(value || ""));
+  return allowedSiteFonts.has(fontName) ? fontName : "Plus Jakarta Sans";
+}
+
+async function getSiteFont() {
+  const setting = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'site_font' LIMIT 1",
+  ).first<{ value: string }>();
+
+  return normalizeSiteFont(setting?.value);
+}
+
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
 }
@@ -905,6 +928,7 @@ export async function GET(request: Request) {
       return Response.json({
         priceAdjustmentPercent: await getPriceAdjustmentPercent(),
         vehicleRateOverrides: await getVehicleRateOverrides(),
+        siteFont: await getSiteFont(),
       });
     }
 
@@ -939,6 +963,7 @@ export async function GET(request: Request) {
           role: "admin",
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           vehicleRateOverrides: await getVehicleRateOverrides(),
+          siteFont: await getSiteFont(),
           totalBookings: financeSummary.totalBookings,
           totalFare: financeSummary.totalBookingAmount,
           totalBookingAmount: financeSummary.totalBookingAmount,
@@ -1109,7 +1134,8 @@ export async function PATCH(request: Request) {
       action !== "updateWithdrawal" &&
       action !== "recordCashDeposit" &&
       action !== "updatePriceAdjustment" &&
-      action !== "updateVehicleRates"
+      action !== "updateVehicleRates" &&
+      action !== "updateSiteFont"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
@@ -1167,6 +1193,26 @@ export async function PATCH(request: Request) {
         .run();
 
       return Response.json({ success: true, vehicleRateOverrides });
+    }
+
+    if (action === "updateSiteFont") {
+      if (clean(payload.adminMobile) !== adminMobile) {
+        return Response.json({ error: "Only Admin Can Update Site Font." }, { status: 401 });
+      }
+
+      const siteFont = normalizeSiteFont(payload.siteFont);
+
+      await env.DB.prepare(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ('site_font', ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(siteFont, new Date().toISOString())
+        .run();
+
+      return Response.json({ success: true, siteFont });
     }
 
     const isAdmin =

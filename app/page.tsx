@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai, Maharashtra";
 const perKmRate = 16;
+const siteFontOptions = [
+  { label: "Plus Jakarta Sans", value: "Plus Jakarta Sans", stack: "var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif" },
+  { label: "Inter", value: "Inter", stack: "var(--font-inter), Inter, sans-serif" },
+  { label: "Poppins", value: "Poppins", stack: "var(--font-poppins), Poppins, sans-serif" },
+  { label: "Montserrat", value: "Montserrat", stack: "var(--font-montserrat), Montserrat, sans-serif" },
+  { label: "Roboto", value: "Roboto", stack: "var(--font-roboto), Roboto, sans-serif" },
+  { label: "Lato", value: "Lato", stack: "var(--font-lato), Lato, sans-serif" },
+  { label: "System UI", value: "System UI", stack: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+];
 const fromSuggestions = [
   "Mumbai Head Office",
   "Mumbai Airport",
@@ -822,6 +832,7 @@ export default function Home() {
     withdrawalRequests: DriverWithdrawal[];
     priceAdjustmentPercent: number;
     vehicleRateOverrides: VehicleRateOverrides;
+    siteFont: string;
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
     {
@@ -862,6 +873,7 @@ export default function Home() {
   const [priceAdjustmentPercent, setPriceAdjustmentPercent] = useState(0);
   const [priceAdjustmentInput, setPriceAdjustmentInput] = useState("0");
   const [priceAdjustmentStatus, setPriceAdjustmentStatus] = useState("");
+  const [siteFont, setSiteFont] = useState("Plus Jakarta Sans");
   const [vehicleRateOverrides, setVehicleRateOverrides] =
     useState<VehicleRateOverrides>({});
   const [rateEditorVehicle, setRateEditorVehicle] = useState("Toyota Innova Crysta");
@@ -1066,6 +1078,7 @@ export default function Home() {
         const result = (await response.json()) as {
           priceAdjustmentPercent?: number;
           vehicleRateOverrides?: VehicleRateOverrides;
+          siteFont?: string;
         };
         const percent = Number(result.priceAdjustmentPercent || 0);
 
@@ -1073,6 +1086,7 @@ export default function Home() {
           setPriceAdjustmentPercent(percent);
           setPriceAdjustmentInput(String(percent));
           const savedOverrides = result.vehicleRateOverrides || {};
+          setSiteFont(result.siteFont || "Plus Jakarta Sans");
           setVehicleRateOverrides(savedOverrides);
           setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", savedOverrides));
         }
@@ -1680,6 +1694,7 @@ export default function Home() {
         driverCashInHand?: number;
         priceAdjustmentPercent?: number;
         vehicleRateOverrides?: VehicleRateOverrides;
+        siteFont?: string;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
         driverVehicles?: DriverRow[];
@@ -1730,6 +1745,9 @@ export default function Home() {
         setPriceAdjustmentPercent(currentPriceAdjustment);
         setPriceAdjustmentInput(String(currentPriceAdjustment));
         const savedOverrides = result.vehicleRateOverrides || {};
+        const savedSiteFont = result.siteFont || "Plus Jakarta Sans";
+
+        setSiteFont(savedSiteFont);
         setVehicleRateOverrides(savedOverrides);
         setRateEditorForm(buildEditableRateForm(rateEditorVehicle, savedOverrides));
         setDashboard({
@@ -1740,6 +1758,7 @@ export default function Home() {
           onlineCollected: result.onlineCollected || 0,
           driverCashInHand: result.driverCashInHand || 0,
           priceAdjustmentPercent: currentPriceAdjustment,
+          siteFont: savedSiteFont,
           recentBookings: result.recentBookings || [],
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
@@ -1999,6 +2018,43 @@ export default function Home() {
       setPriceAdjustmentStatus("Master Price Updated Successfully.");
     } catch {
       setPriceAdjustmentStatus("Master Price Could Not Be Updated.");
+    }
+  }
+
+  async function saveSiteFont() {
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+
+    setPriceAdjustmentStatus("Saving Site Font...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateSiteFont",
+          adminMobile: normalizedMobile,
+          siteFont,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        siteFont?: string;
+      };
+
+      if (!response.ok) {
+        setPriceAdjustmentStatus(result.error || "Site Font Could Not Be Updated.");
+        return;
+      }
+
+      const savedSiteFont = result.siteFont || siteFont;
+
+      setSiteFont(savedSiteFont);
+      setDashboard((currentDashboard) =>
+        currentDashboard ? { ...currentDashboard, siteFont: savedSiteFont } : currentDashboard,
+      );
+      setPriceAdjustmentStatus("Site Font Updated Successfully.");
+    } catch {
+      setPriceAdjustmentStatus("Site Font Could Not Be Updated.");
     }
   }
 
@@ -3570,8 +3626,15 @@ export default function Home() {
     );
   }
 
+  const activeSiteFontStack =
+    siteFontOptions.find((option) => option.value === siteFont)?.stack ||
+    siteFontOptions[0].stack;
+
   return (
-    <main>
+    <main
+      className="site-font-shell"
+      style={{ "--active-site-font": activeSiteFontStack } as CSSProperties}
+    >
       <header className="top-strip main-menu">
         <a className="brand" href="#home" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -5088,6 +5151,31 @@ export default function Home() {
                           onClick={resetIndividualCarFareInput}
                         >
                           Reset Input
+                        </button>
+                      </div>
+                    </div>
+                    <div className="price-control-card site-font-card">
+                      <h3>Site Font</h3>
+                      <p>
+                        Select One Font For The Complete Public Website, Booking Flow
+                        And Footer.
+                      </p>
+                      <div className="price-control-form">
+                        <label>
+                          <span>Font Family</span>
+                          <select
+                            value={siteFont}
+                            onChange={(event) => setSiteFont(event.target.value)}
+                          >
+                            {siteFontOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button type="button" onClick={saveSiteFont}>
+                          Save Site Font
                         </button>
                       </div>
                     </div>
