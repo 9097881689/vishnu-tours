@@ -2642,9 +2642,9 @@ export default function Home() {
         return;
       }
 
-      const odometerStart = Math.round(Number(reading || 0));
+      const odometerStart = Math.round(Number(reading));
 
-      if (odometerStart < 1) {
+      if (!Number.isFinite(odometerStart) || odometerStart < 0) {
         setPortalStatus("Enter Valid Start Odometer Reading.");
         window.alert("Enter Valid Start Odometer Reading.");
         return;
@@ -2657,7 +2657,7 @@ export default function Home() {
       setCollectionPromptMode("start");
       setCollectionPrompt({
         ...booking,
-        odometer_start: odometerPayload?.odometerStart || booking.odometer_start,
+        odometer_start: odometerPayload?.odometerStart ?? booking.odometer_start,
       });
       setCollectionStatus("");
       return;
@@ -2787,7 +2787,7 @@ export default function Home() {
   function promptCompletionOdometer(booking: DashboardBooking) {
     const startReading = Math.round(Number(booking.odometer_start || 0));
 
-    if (startReading < 1) {
+    if (!booking.ride_started_at) {
       setPortalStatus("Start Odometer Reading Is Missing.");
       window.alert("Start Odometer Reading Is Missing. Start The Ride First.");
       return null;
@@ -2801,9 +2801,9 @@ export default function Home() {
       return null;
     }
 
-    const odometerEnd = Math.round(Number(enteredReading || 0));
+    const odometerEnd = Math.round(Number(enteredReading));
 
-    if (odometerEnd <= startReading) {
+    if (!Number.isFinite(odometerEnd) || odometerEnd <= startReading) {
       setPortalStatus("End Odometer Reading Must Be Greater Than Start Reading.");
       window.alert("End Odometer Reading Must Be Greater Than Start Reading.");
       return null;
@@ -3856,19 +3856,19 @@ export default function Home() {
               <b>{formatDisplayDate(booking.return_date)}</b>
             </>
           ) : null}
-          {booking.odometer_start ? (
+          {booking.ride_started_at ? (
             <>
               <small>Start Odometer</small>
               <b>{booking.odometer_start} KM</b>
             </>
           ) : null}
-          {booking.odometer_end ? (
+          {booking.ride_completed_at ? (
             <>
               <small>End Odometer</small>
               <b>{booking.odometer_end} KM</b>
             </>
           ) : null}
-          {booking.odometer_start && booking.odometer_end ? (
+          {booking.ride_started_at && booking.ride_completed_at ? (
             <>
               <small>Actual Travel Distance</small>
               <b>

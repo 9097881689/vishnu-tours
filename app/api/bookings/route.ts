@@ -1696,7 +1696,10 @@ export async function PATCH(request: Request) {
         const activeOdometerStart =
           rideStatus === "Ride Started" ? odometerStart : storedOdometerStart;
 
-        if (rideStatus === "Ride Started" && odometerStart < 1) {
+        if (
+          rideStatus === "Ride Started" &&
+          (!Number.isFinite(odometerStart) || odometerStart < 0)
+        ) {
           return Response.json(
             { error: "Enter start odometer reading before starting ride." },
             { status: 400 },
@@ -1704,14 +1707,17 @@ export async function PATCH(request: Request) {
         }
 
         if (rideStatus === "Ride Complete") {
-          if (activeOdometerStart < 1) {
+          if (!assignedBooking.ride_started_at) {
             return Response.json(
               { error: "Start odometer reading is missing." },
               { status: 400 },
             );
           }
 
-          if (odometerEnd <= activeOdometerStart) {
+          if (
+            !Number.isFinite(odometerEnd) ||
+            odometerEnd <= activeOdometerStart
+          ) {
             return Response.json(
               { error: "End odometer reading must be greater than start reading." },
               { status: 400 },
