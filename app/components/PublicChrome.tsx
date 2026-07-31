@@ -45,7 +45,7 @@ export function PublicHeader() {
       <SiteFontSync />
       <Link className="brand" href="/" aria-label="Vishnu Tours home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="brand-logo" src="/logo.svg?v=wide" alt="Vishnu Tours logo" />
+        <img className="brand-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
         <span>
           <strong>Vishnu Tours</strong>
         </span>
@@ -67,7 +67,7 @@ export function PublicFooter() {
     <footer className="site-footer" id="contact">
       <div className="footer-column footer-brand-column">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="footer-logo" src="/logo.svg?v=wide" alt="Vishnu Tours logo" />
+        <img className="footer-logo" src="/logo-icon.png?v=20260731" alt="Vishnu Tours logo" />
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
           And Outstation Trips.

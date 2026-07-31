@@ -71,8 +71,8 @@ export const metadata: Metadata = {
   description:
     "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Innova Hycross, Ertiga, Rumion and Etios. Live fare, booking and Razorpay payment.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
   },
   openGraph: {
     title: "Vishnu Tours | Corporate Cab Service Mumbai",

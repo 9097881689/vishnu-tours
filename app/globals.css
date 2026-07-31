@@ -6683,8 +6683,42 @@ h6,
   flex: 0 0 auto;
 }
 
+.top-strip.main-menu .brand {
+  gap: 10px;
+}
+
+.brand .brand-logo,
+.top-strip.main-menu .brand-logo {
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(2, 6, 23, 0.16));
+}
+
+.brand .brand-logo + span {
+  display: grid;
+  gap: 1px;
+}
+
+.brand .brand-logo + span strong {
+  color: #075985;
+  font-size: 20px;
+  line-height: 1;
+}
+
 .site-footer {
   width: 100%;
+}
+
+.footer-logo {
+  width: 88px;
+  max-width: 100%;
+  border: 0;
+  border-radius: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.2));
 }
 
 .price-page-card .simple-page-button {
@@ -6764,12 +6798,16 @@ h6,
 
   .brand-logo,
   .top-strip.main-menu .brand-logo {
-    width: 146px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
   }
 
   .brand .brand-logo + span {
-    display: none;
+    display: grid;
+  }
+
+  .brand .brand-logo + span strong {
+    font-size: 16px;
   }
 
   .top-strip.main-menu .header-actions {
