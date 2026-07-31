@@ -4937,7 +4937,7 @@ export default function Home() {
 
       {showLogin ? (
         <div className="admin-modal" role="dialog" aria-modal="true">
-          <div className="admin-card">
+          <div className={`admin-card ${!portalRole ? "login-card" : ""}`}>
             <button
               className="admin-close"
               type="button"

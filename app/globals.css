@@ -5848,6 +5848,59 @@ h6,
     linear-gradient(180deg, rgba(254, 249, 195, 0.98), rgba(254, 240, 138, 0.92));
 }
 
+.admin-card.login-card {
+  width: min(390px, calc(100vw - 32px));
+  min-height: 390px;
+  max-height: calc(100vh - 36px);
+  display: grid;
+  align-content: center;
+  padding: 34px 28px 28px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.admin-card.login-card > h2,
+.admin-card.login-card > p,
+.admin-card.login-card .admin-login-row,
+.admin-card.login-card .admin-status {
+  margin-right: 0;
+  margin-left: 0;
+  text-align: center;
+}
+
+.admin-card.login-card > h2 {
+  padding-top: 0;
+  font-size: 24px;
+}
+
+.admin-card.login-card > p {
+  max-width: 270px;
+  margin-right: auto;
+  margin-left: auto;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-card.login-card .admin-login-row {
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.admin-card.login-card .admin-login-row input,
+.admin-card.login-card .admin-login-row button {
+  min-height: 48px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.admin-card.login-card .admin-login-row button {
+  background: linear-gradient(135deg, #f97316, #f59e0b);
+  box-shadow: 0 16px 30px rgba(249, 115, 22, 0.24);
+}
+
 .price-conditions ul {
   display: grid;
   gap: 10px;
