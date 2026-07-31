@@ -297,7 +297,7 @@ async function getAdminFinanceSummary() {
              AND COALESCE(payment_amount, 0) > 0
              AND COALESCE(refund_amount, 0) >= COALESCE(payment_amount, 0)
              THEN 0
-           ELSE ROUND(estimated_fare * 1.05)
+          ELSE ROUND(estimated_fare * 1.05) + COALESCE(extra_amount, 0)
          END
        ), 0) AS total_booking_amount,
        COALESCE(SUM(

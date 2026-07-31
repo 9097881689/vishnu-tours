@@ -3182,7 +3182,7 @@ export default function Home() {
     const metrics = getAdminFinanceMetrics(activeDashboard);
     const titleMap: Record<AdminBreakupType, string> = {
       bookings: "Total Booking Breakup",
-      bookingAmount: "Total Booking Amount Breakup",
+      bookingAmount: "Total Ride Amount Breakup",
       collected: "Amount Collected Breakup",
       online: "Online Collection Breakup",
       driverCash: "Driver Cash In Hand Breakup",
@@ -5004,7 +5004,7 @@ export default function Home() {
                     },
                     {
                       id: "bookingAmount",
-                      label: "Total Booking Amount",
+                      label: "Total Ride Amount",
                       value: formatInr(adminMetrics.totalBookingAmount),
                     },
                     {
