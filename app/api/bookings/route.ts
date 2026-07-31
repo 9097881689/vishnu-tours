@@ -274,9 +274,32 @@ async function getAdminFinanceSummary() {
   const summary = await env.DB.prepare(
     `SELECT
        COUNT(*) AS total_bookings,
-       COALESCE(SUM(ROUND(estimated_fare * 1.05)), 0) AS total_booking_amount,
-       COALESCE(SUM(payment_amount - refund_amount), 0) AS total_collected,
-       COALESCE(SUM(driver_cash_collected - driver_cash_refunded), 0) AS driver_cash_collected
+       COALESCE(SUM(
+         CASE
+           WHEN LOWER(COALESCE(ride_status, '')) LIKE '%cancel%'
+             AND COALESCE(payment_amount, 0) <= 0
+             THEN 0
+           WHEN LOWER(COALESCE(ride_status, '')) LIKE '%cancel%'
+             AND COALESCE(payment_amount, 0) > 0
+             AND COALESCE(refund_amount, 0) >= COALESCE(payment_amount, 0)
+             THEN 0
+           ELSE ROUND(estimated_fare * 1.05)
+         END
+       ), 0) AS total_booking_amount,
+       COALESCE(SUM(
+         CASE
+           WHEN COALESCE(payment_amount, 0) - COALESCE(refund_amount, 0) > 0
+             THEN COALESCE(payment_amount, 0) - COALESCE(refund_amount, 0)
+           ELSE 0
+         END
+       ), 0) AS total_collected,
+       COALESCE(SUM(
+         CASE
+           WHEN COALESCE(driver_cash_collected, 0) - COALESCE(driver_cash_refunded, 0) > 0
+             THEN COALESCE(driver_cash_collected, 0) - COALESCE(driver_cash_refunded, 0)
+           ELSE 0
+         END
+       ), 0) AS driver_cash_collected
      FROM bookings
      WHERE booking_id NOT LIKE 'PENDING-%'`,
   ).first<{

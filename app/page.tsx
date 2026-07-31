@@ -594,6 +594,24 @@ function getInvoiceTotals(booking: DashboardBooking) {
   return { baseFare, tax, extraAmount, total };
 }
 
+function getAccountingBookingAmount(booking: DashboardBooking) {
+  const rideStatus = (booking.ride_status || booking.status || "").toLowerCase();
+  const paidAmount = Number(booking.payment_amount || 0);
+  const refundAmount = Number(booking.refund_amount || 0);
+
+  if (rideStatus.includes("cancel")) {
+    if (paidAmount <= 0) {
+      return 0;
+    }
+
+    if (refundAmount >= paidAmount) {
+      return 0;
+    }
+  }
+
+  return getInvoiceTotals(booking).total;
+}
+
 function getBalanceDue(booking: DashboardBooking) {
   const { total } = getInvoiceTotals(booking);
 
@@ -3022,7 +3040,7 @@ export default function Home() {
     const allBookings = activeDashboard.recentBookings || [];
     const ledgerBookings = activeDashboard.driverLedger || [];
     const totalBookingAmount = allBookings.reduce(
-      (total, booking) => total + getInvoiceTotals(booking).total,
+      (total, booking) => total + getAccountingBookingAmount(booking),
       0,
     );
     const totalCollected = allBookings.reduce(
@@ -3114,7 +3132,7 @@ export default function Home() {
         <div className="ledger-table">
           {rows.length ? (
             rows.map((booking) => {
-              const totalFare = getInvoiceTotals(booking).total;
+              const totalFare = getAccountingBookingAmount(booking);
               const driverCash = Number(booking.driver_cash_collected || 0);
               const online = Math.max(0, Number(booking.payment_amount || 0) - driverCash);
               const valueMap: Record<Exclude<AdminBreakupType, "driverCash">, string> = {
