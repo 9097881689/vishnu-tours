@@ -6780,16 +6780,17 @@ h6,
 
 .brand .brand-logo,
 .top-strip.main-menu .brand-logo {
-  width: var(--site-header-logo-size, 58px);
-  height: var(--site-header-logo-size, 58px);
+  width: auto;
+  height: var(--site-header-logo-size, 42px);
+  max-width: min(360px, 42vw);
   border: 0;
-  border-radius: 14px;
+  border-radius: 0;
   object-fit: contain;
   filter: drop-shadow(0 8px 16px rgba(2, 6, 23, 0.16));
 }
 
 .brand .brand-logo + span {
-  display: grid;
+  display: none;
   gap: 1px;
 }
 
@@ -6804,11 +6805,11 @@ h6,
 }
 
 .footer-logo {
-  width: var(--site-footer-logo-size, 88px);
-  height: var(--site-footer-logo-size, 88px);
+  width: auto;
+  height: var(--site-footer-logo-size, 62px);
   max-width: 100%;
   border: 0;
-  border-radius: 18px;
+  border-radius: 0;
   object-fit: contain;
   filter: drop-shadow(0 10px 18px rgba(2, 6, 23, 0.2));
 }
@@ -6890,12 +6891,13 @@ h6,
 
   .brand-logo,
   .top-strip.main-menu .brand-logo {
-    width: min(var(--site-header-logo-size, 48px), 54px);
-    height: min(var(--site-header-logo-size, 48px), 54px);
+    width: auto;
+    height: min(var(--site-header-logo-size, 42px), 44px);
+    max-width: 170px;
   }
 
   .brand .brand-logo + span {
-    display: grid;
+    display: none;
   }
 
   .brand .brand-logo + span strong {

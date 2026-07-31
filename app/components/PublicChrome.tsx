@@ -18,9 +18,9 @@ const publicFontStacks: Record<string, string> = {
   "System UI": "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 const defaultSiteBranding = {
-  iconUrl: "/logo-icon.png?v=20260731",
-  headerLogoSize: 58,
-  footerLogoSize: 88,
+  iconUrl: "/logo-wide.png?v=20260731",
+  headerLogoSize: 42,
+  footerLogoSize: 62,
   faviconSize: 32,
 };
 

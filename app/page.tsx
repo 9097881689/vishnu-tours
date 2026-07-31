@@ -268,9 +268,9 @@ type SiteBranding = {
 };
 
 const defaultSiteBranding: SiteBranding = {
-  iconUrl: "/logo-icon.png?v=20260731",
-  headerLogoSize: 58,
-  footerLogoSize: 88,
+  iconUrl: "/logo-wide.png?v=20260731",
+  headerLogoSize: 42,
+  footerLogoSize: 62,
   faviconSize: 32,
 };
 
