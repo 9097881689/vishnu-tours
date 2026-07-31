@@ -10,15 +10,15 @@
   --gold: #d7b35a;
   --rose: #e84b3c;
   --sky: #fff8df;
-  --brand-font: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --heading-font: var(--font-poppins), "Poppins", var(--brand-font);
+  --brand-font: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --heading-font: var(--brand-font);
 }
 
 @theme inline {
   --color-background: var(--soft);
   --color-foreground: var(--ink);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-inter);
+  --font-sans: var(--font-plus-jakarta);
+  --font-mono: var(--font-plus-jakarta);
 }
 
 * {
