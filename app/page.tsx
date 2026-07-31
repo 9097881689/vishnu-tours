@@ -393,6 +393,7 @@ type DriverProfile = {
   mobile: string;
   vehicle: string;
   vehicleNumber: string;
+  updatedAt?: string;
   status: "Available" | "Assigned";
 };
 
@@ -401,6 +402,7 @@ type DriverRow = {
   driver_mobile: string;
   vehicle_type: string;
   vehicle_number: string;
+  updated_at?: string;
   bank_name?: string;
   bank_account?: string;
   bank_ifsc?: string;
@@ -568,7 +570,11 @@ function getCompletedWorkflowStages(booking: DashboardBooking) {
     completed.add("confirmed");
   }
 
-  if (rideStatus.includes("confirmed")) {
+  if (
+    booking.booking_id?.startsWith("VTT") ||
+    rideStatus.includes("confirmed") ||
+    rideStatus.includes("booked")
+  ) {
     completed.add("confirmed");
   }
 
@@ -800,6 +806,7 @@ export default function Home() {
   const [activeAdminBreakup, setActiveAdminBreakup] =
     useState<AdminBreakupType>("bookings");
   const [activeAdminTab, setActiveAdminTab] = useState<AdminPanelTab>("bookings");
+  const [adminBookingSearch, setAdminBookingSearch] = useState("");
   const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
@@ -1768,6 +1775,7 @@ export default function Home() {
             mobile: driver.driver_mobile,
             vehicle: driver.vehicle_type,
             vehicleNumber: driver.vehicle_number,
+            updatedAt: driver.updated_at,
             status: "Available",
           })),
         );
@@ -3386,6 +3394,20 @@ export default function Home() {
     });
   }
 
+  function getDriverVehicleCompletedRideCount(driver: DriverProfile) {
+    const driverMobile = driver.mobile.trim();
+    const vehicleNumber = driver.vehicleNumber.trim().toLowerCase();
+
+    return (dashboard?.recentBookings || []).filter((booking) => {
+      const status = (booking.ride_status || "").toLowerCase();
+      const sameDriver = driverMobile && booking.driver_mobile === driverMobile;
+      const sameVehicle =
+        vehicleNumber && (booking.vehicle_number || "").trim().toLowerCase() === vehicleNumber;
+
+      return status.includes("complete") && (sameDriver || sameVehicle);
+    }).length;
+  }
+
   function renderPortalBookingCard(booking: DashboardBooking, canManage: boolean) {
     const normalizedStatus = (booking.ride_status || "").toLowerCase();
     const cardStatusClass = normalizedStatus.includes("cancel")
@@ -3513,14 +3535,14 @@ export default function Home() {
                 ? " | Online/Admin"
                 : ""}
           </b>
-          <small>Driver</small>
-          <b>
-            {booking.driver_name
-              ? `${booking.driver_name} | ${booking.driver_mobile}`
-              : "Not Assigned"}
-          </b>
-          <small>Vehicle No.</small>
-          <b>{booking.vehicle_number || "Not Assigned"}</b>
+	          <small>Driver</small>
+	          <b>
+	            {booking.driver_name
+	              ? `${booking.driver_name} | ${booking.driver_mobile}`
+	              : "Will Assign Soon"}
+	          </b>
+	          <small>Vehicle No.</small>
+	          <b>{booking.vehicle_number || "Will Assign Soon"}</b>
           <small>Cancel Reason</small>
           <b>{booking.cancel_reason || "None"}</b>
         </div>
@@ -5153,18 +5175,50 @@ export default function Home() {
 	                  );
                 })()}
                 {activeAdminTab === "breakup" ? renderAdminMetricBreakup(dashboard) : null}
-                {activeAdminTab === "bookings" ? (
-                  <div className="admin-recent admin-tab-panel">
-                    <h3>Booking Details And Operations</h3>
-                    {dashboard.recentBookings.length ? (
-                      dashboard.recentBookings.map((booking) =>
-                        renderPortalBookingCard(booking, true),
-                      )
-                    ) : (
-                      <p>No Bookings Yet.</p>
-                    )}
-                  </div>
-                ) : null}
+	                {activeAdminTab === "bookings" ? (
+	                  <div className="admin-recent admin-tab-panel">
+	                    <h3>Booking Details And Operations</h3>
+                      <div className="admin-booking-search">
+                        <input
+                          value={adminBookingSearch}
+                          onChange={(event) => setAdminBookingSearch(event.target.value)}
+                          placeholder="Search Booking No. Or Mobile No."
+                          inputMode="search"
+                        />
+                      </div>
+	                    {dashboard.recentBookings.filter((booking) => {
+                        const query = adminBookingSearch.trim().toLowerCase();
+
+                        if (!query) {
+                          return true;
+                        }
+
+                        return (
+                          booking.booking_id.toLowerCase().includes(query) ||
+                          booking.customer_mobile.toLowerCase().includes(query) ||
+                          (booking.driver_mobile || "").toLowerCase().includes(query)
+                        );
+                      }).length ? (
+	                      dashboard.recentBookings.filter((booking) => {
+                          const query = adminBookingSearch.trim().toLowerCase();
+
+                          if (!query) {
+                            return true;
+                          }
+
+                          return (
+                            booking.booking_id.toLowerCase().includes(query) ||
+                            booking.customer_mobile.toLowerCase().includes(query) ||
+                            (booking.driver_mobile || "").toLowerCase().includes(query)
+                          );
+                        }).map((booking) =>
+	                        renderPortalBookingCard(booking, true),
+	                      )
+	                    ) : (
+	                      <p>No Booking Found.</p>
+	                    )}
+	                  </div>
+	                ) : null}
                 {activeAdminTab === "pricing" ? (
                   <div className="admin-ops-panel admin-tab-panel price-control-panel">
                     <div className="price-control-card">
@@ -5419,31 +5473,56 @@ export default function Home() {
                           ) : null}
 	                      </div>
 	                    </div>
-	                    <div>
-	                      <h3>Registered Driver Vehicles</h3>
-	                      <div className="driver-list">
-                        {drivers.map((driver) => {
-                          const isEngaged = isStartedRideVehicle(
-                            driver.vehicleNumber,
-                            dashboard.recentBookings,
-                          );
-
-                          return (
-                            <div
-                              className="driver-vehicle-row"
-                              key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}
-                            >
-                              <span>
-                                Owner {driver.name} | {driver.mobile} | {driver.vehicle} |{" "}
-                                {driver.vehicleNumber || "Vehicle No. Pending"}
-                              </span>
-	                              <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
-	                                {isEngaged ? "Engaged" : "Vacant"}
-	                              </b>
-                                <div className="driver-vehicle-actions">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
+		                    <div>
+		                      <h3>Registered Driver Vehicles</h3>
+		                      <div className="registered-vehicle-table-wrap">
+                          <table className="registered-vehicle-table">
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Driver Name</th>
+                                <th>Vehicle Name</th>
+                                <th>Vehicle Number</th>
+                                <th>Driver Mobile No.</th>
+                                <th>Total Ride Completed</th>
+                                <th>Driver / Owner</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+	                        {drivers.map((driver) => {
+	                          const isEngaged = isStartedRideVehicle(
+	                            driver.vehicleNumber,
+	                            dashboard.recentBookings,
+	                          );
+                            const completedRideCount = getDriverVehicleCompletedRideCount(driver);
+	
+	                          return (
+	                            <tr
+	                              key={`${driver.name}-${driver.mobile}-${driver.vehicleNumber}`}
+	                            >
+                                <td>
+                                  {driver.updatedAt
+                                    ? formatDisplayDate(driver.updatedAt.slice(0, 10))
+                                    : "Not Available"}
+                                </td>
+                                <td>{driver.name}</td>
+                                <td>{driver.vehicle}</td>
+                                <td>{driver.vehicleNumber || "Vehicle No. Pending"}</td>
+                                <td>{driver.mobile}</td>
+                                <td>{completedRideCount}</td>
+                                <td>Driver / Owner</td>
+                                <td>
+		                              <b className={isEngaged ? "vehicle-engaged" : "vehicle-vacant"}>
+		                                {isEngaged ? "Engaged" : "Vacant"}
+		                              </b>
+                                </td>
+                                <td>
+	                                <div className="driver-vehicle-actions">
+	                                  <button
+	                                    type="button"
+	                                    onClick={() => {
                                       setEditingVehicleNumber(driver.vehicleNumber);
                                       setDriverForm({
                                         name: driver.name,
@@ -5461,14 +5540,17 @@ export default function Home() {
                                     type="button"
                                     onClick={() => deleteDriverVehicle(driver)}
                                   >
-                                    Delete
-                                  </button>
-                                </div>
-	                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+	                                    Delete
+	                                  </button>
+	                                </div>
+                                </td>
+		                            </tr>
+	                          );
+	                        })}
+                            </tbody>
+                          </table>
+	                      </div>
+	                    </div>
                   </div>
                 ) : null}
                 {activeAdminTab === "ledger" ? (
@@ -5866,14 +5948,14 @@ export default function Home() {
                     {customerBooking.payment_status || "Pending"} |{" "}
                     {formatInr(customerBooking.payment_amount || 0)}
                   </b>
-                  <small>Driver</small>
-                  <b>
-                    {customerBooking.driver_name
-                      ? `${customerBooking.driver_name} | ${customerBooking.driver_mobile}`
-                      : "Not Assigned"}
-                  </b>
-                  <small>Vehicle No.</small>
-                  <b>{customerBooking.vehicle_number || "Not Assigned"}</b>
+	              <small>Driver</small>
+	              <b>
+	                {customerBooking.driver_name
+	                  ? `${customerBooking.driver_name} | ${customerBooking.driver_mobile}`
+	                  : "Will Assign Soon"}
+	              </b>
+	              <small>Vehicle No.</small>
+	              <b>{customerBooking.vehicle_number || "Will Assign Soon"}</b>
                   <small>Refund</small>
                   <b>
                     {customerBooking.refund_status || "None"}
