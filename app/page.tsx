@@ -5483,8 +5483,8 @@ export default function Home() {
                                 <th>Driver Name</th>
                                 <th>Vehicle Name</th>
                                 <th>Vehicle Number</th>
-                                <th>Driver Mobile No.</th>
-                                <th>Total Ride Completed</th>
+                                <th>Mobile</th>
+                                <th>Completed Rides</th>
                                 <th>Driver / Owner</th>
                                 <th>Status</th>
                                 <th>Action</th>
