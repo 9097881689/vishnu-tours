@@ -4897,8 +4897,7 @@ body {
   display: grid;
   gap: 16px;
   padding: 30px clamp(18px, 4vw, 56px) 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94));
+  background: #ffffff;
 }
 
 .homepage-fleet-head {
@@ -4932,12 +4931,17 @@ body {
 }
 
 .homepage-fleet-list {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 4px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
 }
 
 .homepage-fleet-card {
+  flex: 0 0 248px;
   display: grid;
   gap: 10px;
   min-width: 0;
@@ -4945,7 +4949,8 @@ body {
   border: 1px solid rgba(7, 89, 133, 0.12);
   border-radius: 10px;
   background: #ffffff;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+  box-shadow: none;
+  scroll-snap-align: start;
 }
 
 .homepage-fleet-photo {
@@ -4954,6 +4959,7 @@ body {
   place-items: center;
   border-radius: 8px;
   background: #ffffff;
+  overflow: hidden;
 }
 
 .car-art,
@@ -5416,16 +5422,12 @@ body {
   }
 
   .homepage-fleet-list {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(190px, 74vw);
-    grid-template-columns: none;
-    overflow-x: auto;
+    gap: 10px;
     padding-bottom: 4px;
-    scroll-snap-type: x mandatory;
   }
 
   .homepage-fleet-card {
-    scroll-snap-align: start;
+    flex-basis: min(74vw, 230px);
   }
 
   .homepage-story-section,
