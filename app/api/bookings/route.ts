@@ -908,6 +908,24 @@ export async function GET(request: Request) {
       });
     }
 
+    if (url.searchParams.get("settings") === "publicRates") {
+      const publicVehicles = Object.keys(rateTable).filter(
+        (vehicleName) => vehicleName !== "Toyota Hycross",
+      );
+      const rates = await Promise.all(
+        publicVehicles.map(async (vehicleName) => ({
+          vehicleName,
+          rates: await getEffectiveBookingRate(vehicleName),
+        })),
+      );
+
+      return Response.json({
+        updatedAt: new Date().toISOString(),
+        priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+        vehicles: rates,
+      });
+    }
+
     if (loginMobile) {
       if (loginMobile === adminMobile) {
         const financeSummary = await getAdminFinanceSummary();

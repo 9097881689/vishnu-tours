@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
@@ -872,6 +873,7 @@ export default function Home() {
     halfDay: "",
     vip: "",
   });
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
   const [, setShowVehicleStep] = useState(false);
   const [activeSuggestionField, setActiveSuggestionField] = useState<
     "from" | "to" | null
@@ -1044,6 +1046,16 @@ export default function Home() {
           label: item,
           secondary: "Popular Destination",
         }));
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowCookieConsent(
+        localStorage.getItem("vishnuToursCookieConsent") !== "accepted",
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -3582,7 +3594,9 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="hero" id="home">
+      {bookingView === "home" ? (
+      <>
+      <section className="hero focused-booking-hero" id="home">
         <div className="taxi-visual" aria-hidden="true">
           <span className="road-line" />
           <div className="vip-visual-card">
@@ -4006,6 +4020,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+      </>
+      ) : null}
 
       {bookingView === "cars" ? (
         <section className="car-results-section savaari-results" ref={carResultsRef}>
@@ -4273,6 +4289,8 @@ export default function Home() {
         </section>
       ) : null}
 
+      {bookingView === "home" ? (
+      <>
       <section className="homepage-story-section" aria-label="Corporate travel service">
         <div className="homepage-story-copy">
           <span>Corporate Travel Desk</span>
@@ -4396,24 +4414,57 @@ export default function Home() {
       </section>
 
       <footer className="site-footer" id="contact">
-        <div className="footer-column">
-          <strong>Vishnu Tours</strong>
-          <span>Corporate Cab Booking From Mumbai</span>
+        <div className="footer-column footer-brand-column">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="footer-logo" src="/logo.svg?v=borderless" alt="Vishnu Tours logo" />
+          <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
-          <strong>Contact Address</strong>
+          <strong>Legal Pages</strong>
+          <Link href="/privacy-policy">Privacy Policy</Link>
+          <Link href="/terms-and-conditions">Terms And Conditions</Link>
+          <Link href="/cancellation-refund">Cancellation And Refund</Link>
+          <Link href="/cookie-policy">Cookie Policy</Link>
+        </div>
+        <div className="footer-column">
+          <strong>Company</strong>
+          <Link href="/price-chart">Live Price Chart</Link>
+          <Link href="/disclaimer">Disclaimer</Link>
+          <Link href="/contact">Contact Page</Link>
           <span>Mumbai, Maharashtra, India</span>
         </div>
         <div className="footer-column">
-          <strong>Contact Email</strong>
+          <strong>Contact</strong>
           <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
-        </div>
-        <div className="footer-column">
-          <strong>Phone And WhatsApp</strong>
           <a href={whatsappUrl} target="_blank">+91 7004291529</a>
           <a href={whatsappUrl} target="_blank">WhatsApp Booking Help</a>
         </div>
       </footer>
+      </>
+      ) : null}
+
+      {showCookieConsent ? (
+        <div className="cookie-consent" role="dialog" aria-live="polite" aria-label="Cookie consent">
+          <div>
+            <strong>Cookie Notice</strong>
+            <span>
+              We Use Essential Cookies And Local Storage To Improve Booking, Login And Website Experience.
+            </span>
+          </div>
+          <div className="cookie-actions">
+            <a href="/cookie-policy">Cookie Policy</a>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem("vishnuToursCookieConsent", "accepted");
+                setShowCookieConsent(false);
+              }}
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {collectionPrompt ? (
         <div className="collection-modal-backdrop" role="dialog" aria-modal="true">
