@@ -10,6 +10,7 @@
   --gold: #d7b35a;
   --rose: #e84b3c;
   --sky: #fff8df;
+  --brand-font: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 @theme inline {
@@ -31,7 +32,7 @@ body {
   margin: 0;
   background: var(--soft);
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--brand-font);
 }
 
 a {
@@ -55,7 +56,7 @@ img {
   border: 1px solid #d7b35a;
   border-radius: 8px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--brand-font);
 }
 
 .pac-item {
@@ -1935,7 +1936,7 @@ body {
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.08), transparent 30rem),
     var(--soft);
   color: var(--ink);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--brand-font);
 }
 
 .top-strip {
@@ -2436,7 +2437,7 @@ nav a:hover {
 
 /* Booking Flow Polish: SMK-Style Typography, Compact Hero Form And Ticket Receipt */
 :root {
-  --smk-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  --smk-font: var(--brand-font);
 }
 
 body,
@@ -4409,7 +4410,7 @@ h4,
 
 /* Homepage Travel Backdrop And Matching Header */
 :root {
-  --homepage-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%23075985' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' opacity='.075'%3E%3Cpath d='M36 92V54c0-22 18-40 40-40s40 18 40 40v38'/%3E%3Cpath d='M52 92V58c0-13 11-24 24-24s24 11 24 24v34'/%3E%3Cpath d='M22 92h108M30 106h92M42 106v30M110 106v30M30 136h92'/%3E%3Cpath d='M284 30l54 18-54 18 12-18-12-18Z'/%3E%3Cpath d='M296 48h-58'/%3E%3Cpath d='M246 194c0 23-28 50-28 50s-28-27-28-50a28 28 0 1 1 56 0Z'/%3E%3Ccircle cx='218' cy='194' r='8'/%3E%3Cpath d='M314 126h54v80h-54zM326 126V88h30v38M326 144h10M346 144h10M326 162h10M346 162h10M326 180h10M346 180h10'/%3E%3Cpath d='M38 222h118M52 222l34-44 28 32 18-22 24 34'/%3E%3Cpath d='M148 62h54v44h-54zM160 62V50h30v12M160 82h30'/%3E%3C/g%3E%3Cg fill='none' stroke='%23f59e0b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' opacity='.08'%3E%3Cpath d='M316 232h62M347 204v56M326 212l42 40M368 212l-42 40'/%3E%3Cpath d='M146 150h56l18 18h-92l18-18Z'/%3E%3Cpath d='M134 168h82v24h-82z'/%3E%3Ccircle cx='154' cy='196' r='7'/%3E%3Ccircle cx='196' cy='196' r='7'/%3E%3C/g%3E%3C/svg%3E");
+  --homepage-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='340' viewBox='0 0 520 340'%3E%3Cg fill='none' stroke='%230f172a' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round' opacity='.05'%3E%3Cpath d='M32 112h118M44 112V64h94v48M56 64h70M66 54h50M74 112V88c0-11 9-20 20-20s20 9 20 20v24M52 112v22M130 112v22M42 134h100'/%3E%3Cpath d='M224 42l38 24v70h-76V66l38-24ZM224 42V24M204 82h40M204 102h40M198 136V74M250 136V74'/%3E%3Cpath d='M358 58l76 22-76 22 17-22-17-22ZM376 80h-78'/%3E%3Cpath d='M430 176c0 25-30 54-30 54s-30-29-30-54a30 30 0 1 1 60 0ZM400 176h.1'/%3E%3Cpath d='M48 250h148l20 28H28l20-28ZM40 278h168v28H40zM72 306a13 13 0 1 0 0-26 13 13 0 0 0 0 26ZM176 306a13 13 0 1 0 0-26 13 13 0 0 0 0 26'/%3E%3Cpath d='M258 266h150M282 266c14-46 40-70 51-70s37 24 51 70M333 196v70M300 232h66'/%3E%3Cpath d='M432 250h58v62h-58zM446 250v-20h30v20M446 274h9M466 274h9M446 294h9M466 294h9'/%3E%3Cpath d='M262 122h72v50h-72zM262 122l20-22h72l-20 22M280 100l18 22M306 100l18 22'/%3E%3C/g%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' opacity='.12'%3E%3Cpath d='M30 34h82M42 34c10-16 22-24 30-24s20 8 30 24M72 10v24'/%3E%3Cpath d='M424 42h62M455 18v50M432 26l46 34M478 26l-46 34'/%3E%3Cpath d='M166 196h58l16 18h-90l16-18ZM158 214h88v26h-88zM178 244a8 8 0 1 0 0-16 8 8 0 0 0 0 16M224 244a8 8 0 1 0 0-16 8 8 0 0 0 0 16'/%3E%3Cpath d='M334 300h78M348 300l20-30 18 20 14-16 20 26'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 body {
