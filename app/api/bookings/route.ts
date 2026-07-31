@@ -2,73 +2,125 @@ import { env } from "cloudflare:workers";
 
 const headOffice = "Mumbai Head Office";
 
-const rateTable: Record<
-  string,
-  {
-    perKm: number;
-    local4hr: number;
-    local8hr: number;
-    local10hr: number;
-    fullDay: number;
-    halfDay: number;
-    vip: number;
-  }
-> = {
-  "Toyota Etios": {
-    perKm: 24,
-    local4hr: 1921,
-    local8hr: 3492,
-    local10hr: 3880,
-    fullDay: 3492,
-    halfDay: 1921,
-    vip: 4680,
-  },
-  "Maruti Ertiga": {
-    perKm: 29,
-    local4hr: 2324,
-    local8hr: 4226,
-    local10hr: 4696,
-    fullDay: 4226,
-    halfDay: 2324,
-    vip: 5580,
-  },
-  "Toyota Rumion": {
-    perKm: 29,
-    local4hr: 2324,
-    local8hr: 4226,
-    local10hr: 4696,
-    fullDay: 4226,
-    halfDay: 2324,
-    vip: 5850,
-  },
-  "Toyota Innova Crysta": {
-    perKm: 32,
-    local4hr: 2324,
-    local8hr: 4226,
-    local10hr: 4696,
-    fullDay: 4226,
-    halfDay: 2324,
-    vip: 7650,
-  },
-  "Toyota Innova Hycross": {
-    perKm: 39,
-    local4hr: 2685,
-    local8hr: 4881,
-    local10hr: 5423,
-    fullDay: 4881,
-    halfDay: 2685,
-    vip: 9900,
-  },
-  "Toyota Hycross": {
-    perKm: 39,
-    local4hr: 2685,
-    local8hr: 4881,
-    local10hr: 5423,
-    fullDay: 4881,
-    halfDay: 2685,
-    vip: 9900,
-  },
+type VehicleRates = {
+  perKm: number;
+  local4hr: number;
+  local8hr: number;
+  local10hr: number;
+  fullDay: number;
+  halfDay: number;
+  vip: number;
 };
+
+type FleetVehicle = {
+  name: string;
+  type: string;
+  seats: string;
+  luggage: string;
+  bestFor: string;
+  photo: string;
+  rates: VehicleRates;
+  active: boolean;
+};
+
+const defaultFleetVehicles: FleetVehicle[] = [
+  {
+    name: "Toyota Innova Crysta",
+    type: "Premium MUV",
+    seats: "6-7 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "VIP, Family, Airport And Highway Travel",
+    photo: "/fleet/innova-crysta.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 32,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 7650,
+    },
+  },
+  {
+    name: "Toyota Innova Hycross",
+    type: "Luxury Hybrid",
+    seats: "6-7 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "Executive Guests, Weddings And Long Routes",
+    photo: "/fleet/hycross.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 39,
+      local4hr: 2685,
+      local8hr: 4881,
+      local10hr: 5423,
+      fullDay: 4881,
+      halfDay: 2685,
+      vip: 9900,
+    },
+  },
+  {
+    name: "Maruti Ertiga",
+    type: "Comfort MUV",
+    seats: "6-7 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "Round Trip, Family Tour And Station Pickup",
+    photo: "/fleet/ertiga.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 29,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 5580,
+    },
+  },
+  {
+    name: "Toyota Rumion",
+    type: "Spacious MUV",
+    seats: "6-7 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "Local Booking, Outstation And Group Travel",
+    photo: "/fleet/rumion.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 29,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 5850,
+    },
+  },
+  {
+    name: "Toyota Etios",
+    type: "Sedan",
+    seats: "4 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "City Rides, Business Visits And One Day Travel",
+    photo: "/fleet/etios.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 24,
+      local4hr: 1921,
+      local8hr: 3492,
+      local10hr: 3880,
+      fullDay: 3492,
+      halfDay: 1921,
+      vip: 4680,
+    },
+  },
+];
+
+const rateTable: Record<string, VehicleRates> = Object.fromEntries(
+  defaultFleetVehicles.map((vehicle) => [vehicle.name, vehicle.rates]),
+);
+
+rateTable["Toyota Hycross"] = rateTable["Toyota Innova Hycross"];
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
 type VehicleRateOverride = Partial<Record<PackageType | "local4hr" | "local8hr" | "local10hr", number>>;
@@ -126,6 +178,7 @@ type BookingOperationPayload = {
   adminMobile?: string;
   priceAdjustmentPercent?: number;
   vehicleRateOverrides?: VehicleRateOverrides;
+  fleetVehicles?: FleetVehicle[];
   siteFont?: string;
 };
 type DeleteBookingPayload = {
@@ -602,7 +655,7 @@ function normalizeVehicleRateOverrides(value: unknown): VehicleRateOverrides {
   const overrides: VehicleRateOverrides = {};
 
   Object.entries(value as Record<string, unknown>).forEach(([vehicleName, rates]) => {
-    if (!rateTable[vehicleName] || !rates || typeof rates !== "object" || Array.isArray(rates)) {
+    if (!vehicleName || !rates || typeof rates !== "object" || Array.isArray(rates)) {
       return;
     }
 
@@ -625,6 +678,87 @@ function normalizeVehicleRateOverrides(value: unknown): VehicleRateOverrides {
   });
 
   return overrides;
+}
+
+function normalizeRateAmount(value: unknown, fallback: number) {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 && amount <= 1000000
+    ? Math.round(amount)
+    : fallback;
+}
+
+function normalizeFleetVehicles(value: unknown): FleetVehicle[] {
+  if (!Array.isArray(value)) {
+    return defaultFleetVehicles;
+  }
+
+  const normalizedVehicles = value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const vehicle = item as Partial<FleetVehicle>;
+      const name = clean(vehicle.name);
+      const matchingDefault =
+        defaultFleetVehicles.find((defaultVehicle) => defaultVehicle.name === name) ||
+        defaultFleetVehicles[0];
+      const rates = vehicle.rates || {};
+
+      if (!name) {
+        return null;
+      }
+
+      return {
+        name,
+        type: clean(vehicle.type) || matchingDefault.type,
+        seats: clean(vehicle.seats) || matchingDefault.seats,
+        luggage: clean(vehicle.luggage) || matchingDefault.luggage,
+        bestFor: clean(vehicle.bestFor) || matchingDefault.bestFor,
+        photo: clean(vehicle.photo) || matchingDefault.photo,
+        active: vehicle.active !== false,
+        rates: {
+          perKm: normalizeRateAmount(rates.perKm, matchingDefault.rates.perKm),
+          local4hr: normalizeRateAmount(rates.local4hr, matchingDefault.rates.local4hr),
+          local8hr: normalizeRateAmount(rates.local8hr, matchingDefault.rates.local8hr),
+          local10hr: normalizeRateAmount(rates.local10hr, matchingDefault.rates.local10hr),
+          fullDay: normalizeRateAmount(rates.fullDay, matchingDefault.rates.fullDay),
+          halfDay: normalizeRateAmount(rates.halfDay, matchingDefault.rates.halfDay),
+          vip: normalizeRateAmount(rates.vip, matchingDefault.rates.vip),
+        },
+      };
+    })
+    .filter((vehicle): vehicle is FleetVehicle => Boolean(vehicle));
+
+  return normalizedVehicles.length ? normalizedVehicles : defaultFleetVehicles;
+}
+
+async function getFleetVehicles() {
+  const setting = await env.DB.prepare(
+    "SELECT value FROM app_settings WHERE key = 'fleet_vehicles' LIMIT 1",
+  ).first<{ value: string }>();
+
+  if (!setting?.value) {
+    return defaultFleetVehicles;
+  }
+
+  try {
+    return normalizeFleetVehicles(JSON.parse(setting.value));
+  } catch {
+    return defaultFleetVehicles;
+  }
+}
+
+function getFleetRateTable(fleetVehicles: FleetVehicle[]) {
+  const table = Object.fromEntries(
+    fleetVehicles.map((vehicle) => [vehicle.name, vehicle.rates]),
+  ) as Record<string, VehicleRates>;
+
+  if (table["Toyota Innova Hycross"]) {
+    table["Toyota Hycross"] = table["Toyota Innova Hycross"];
+  }
+
+  return table;
 }
 
 async function getVehicleRateOverrides() {
@@ -660,7 +794,7 @@ async function getPricingUpdatedAt() {
   const setting = await env.DB.prepare(
     `SELECT MAX(updated_at) AS updated_at
      FROM app_settings
-     WHERE key IN ('price_adjustment_percent', 'vehicle_rate_overrides')`,
+     WHERE key IN ('price_adjustment_percent', 'vehicle_rate_overrides', 'fleet_vehicles')`,
   ).first<{ updated_at: string | null }>();
 
   return setting?.updated_at || "2026-07-31T00:00:00+05:30";
@@ -671,7 +805,13 @@ function applyPriceAdjustment(amount: number, percent: number) {
 }
 
 async function getEffectiveBookingRate(vehicle: string) {
-  const selectedRate = rateTable[vehicle] || rateTable["Toyota Etios"];
+  const fleetVehicles = await getFleetVehicles();
+  const fleetRateTable = getFleetRateTable(fleetVehicles);
+  const selectedRate =
+    fleetRateTable[vehicle] ||
+    fleetRateTable["Toyota Etios"] ||
+    fleetVehicles[0]?.rates ||
+    rateTable["Toyota Etios"];
   const priceAdjustmentPercent = await getPriceAdjustmentPercent();
   const vehicleRateOverrides = await getVehicleRateOverrides();
   const selectedOverrides = vehicleRateOverrides[vehicle] || {};
@@ -975,10 +1115,13 @@ export async function GET(request: Request) {
     await ensureBookingsTable();
 
     if (url.searchParams.get("settings") === "pricing") {
+      const fleetVehicles = await getFleetVehicles();
+
       return Response.json(
         {
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           vehicleRateOverrides: await getVehicleRateOverrides(),
+          fleetVehicles,
           siteFont: await getSiteFont(),
         },
         { headers: noStoreHeaders },
@@ -986,13 +1129,18 @@ export async function GET(request: Request) {
     }
 
     if (url.searchParams.get("settings") === "publicRates") {
-      const publicVehicles = Object.keys(rateTable).filter(
-        (vehicleName) => vehicleName !== "Toyota Hycross",
+      const publicVehicles = (await getFleetVehicles()).filter(
+        (vehicle) => vehicle.active !== false,
       );
       const rates = await Promise.all(
-        publicVehicles.map(async (vehicleName) => ({
-          vehicleName,
-          rates: await getEffectiveBookingRate(vehicleName),
+        publicVehicles.map(async (vehicle) => ({
+          vehicleName: vehicle.name,
+          type: vehicle.type,
+          seats: vehicle.seats,
+          luggage: vehicle.luggage,
+          bestFor: vehicle.bestFor,
+          photo: vehicle.photo,
+          rates: await getEffectiveBookingRate(vehicle.name),
         })),
       );
 
@@ -1000,6 +1148,7 @@ export async function GET(request: Request) {
         {
           updatedAt: await getPricingUpdatedAt(),
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
+          fleetVehicles: publicVehicles,
           vehicles: rates,
         },
         { headers: noStoreHeaders },
@@ -1019,6 +1168,7 @@ export async function GET(request: Request) {
           role: "admin",
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           vehicleRateOverrides: await getVehicleRateOverrides(),
+          fleetVehicles: await getFleetVehicles(),
           siteFont: await getSiteFont(),
           totalBookings: financeSummary.totalBookings,
           totalFare: financeSummary.totalBookingAmount,
@@ -1191,6 +1341,7 @@ export async function PATCH(request: Request) {
       action !== "recordCashDeposit" &&
       action !== "updatePriceAdjustment" &&
       action !== "updateVehicleRates" &&
+      action !== "updateFleetVehicles" &&
       action !== "updateSiteFont"
     ) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
@@ -1249,6 +1400,26 @@ export async function PATCH(request: Request) {
         .run();
 
       return Response.json({ success: true, vehicleRateOverrides });
+    }
+
+    if (action === "updateFleetVehicles") {
+      if (clean(payload.adminMobile) !== adminMobile) {
+        return Response.json({ error: "Only Admin Can Update My Vehicle." }, { status: 401 });
+      }
+
+      const fleetVehicles = normalizeFleetVehicles(payload.fleetVehicles);
+
+      await env.DB.prepare(
+        `INSERT INTO app_settings (key, value, updated_at)
+         VALUES ('fleet_vehicles', ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           updated_at = excluded.updated_at`,
+      )
+        .bind(JSON.stringify(fleetVehicles), new Date().toISOString())
+        .run();
+
+      return Response.json({ success: true, fleetVehicles });
     }
 
     if (action === "updateSiteFont") {

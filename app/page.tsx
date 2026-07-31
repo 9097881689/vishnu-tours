@@ -248,6 +248,17 @@ const editableRateKeys = [
 ] as const;
 type EditableRateKey = (typeof editableRateKeys)[number];
 type VehicleRateOverrides = Record<string, Partial<Record<EditableRateKey, number>>>;
+type VehicleRates = Record<EditableRateKey, number>;
+type FleetVehicle = {
+  name: string;
+  type: string;
+  seats: string;
+  luggage: string;
+  bestFor: string;
+  photo: string;
+  rates: VehicleRates;
+  active: boolean;
+};
 
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
@@ -256,8 +267,13 @@ function applyPriceAdjustment(amount: number, percent: number) {
 function buildEditableRateForm(
   vehicleName: string,
   overrides: VehicleRateOverrides = {},
+  baseRateTable: Record<string, VehicleRates> = rateTable,
 ) {
-  const baseRates = rateTable[vehicleName] || rateTable["Toyota Innova Crysta"];
+  const fallbackRates =
+    baseRateTable["Toyota Innova Crysta"] ||
+    Object.values(baseRateTable)[0] ||
+    rateTable["Toyota Innova Crysta"];
+  const baseRates = baseRateTable[vehicleName] || fallbackRates;
   const manualRates = overrides[vehicleName] || {};
 
   return Object.fromEntries(
@@ -267,6 +283,52 @@ function buildEditableRateForm(
     ]),
   ) as Record<EditableRateKey, string>;
 }
+
+function buildRateTableFromVehicles(fleetVehicles: FleetVehicle[]) {
+  return Object.fromEntries(
+    fleetVehicles.map((item) => [item.name, item.rates]),
+  ) as Record<string, VehicleRates>;
+}
+
+function createVehicleForm(vehicle?: FleetVehicle) {
+  const source = vehicle || {
+    name: "",
+    type: "",
+    seats: "4 Seats",
+    luggage: "2 Suitcases",
+    bestFor: "",
+    photo: "",
+    active: true,
+    rates: {
+      perKm: 0,
+      local4hr: 0,
+      local8hr: 0,
+      local10hr: 0,
+      fullDay: 0,
+      halfDay: 0,
+      vip: 0,
+    },
+  };
+
+  return {
+    name: source.name,
+    type: source.type,
+    seats: source.seats,
+    luggage: source.luggage,
+    bestFor: source.bestFor,
+    photo: source.photo,
+    active: source.active,
+    perKm: String(source.rates.perKm || ""),
+    local4hr: String(source.rates.local4hr || ""),
+    local8hr: String(source.rates.local8hr || ""),
+    local10hr: String(source.rates.local10hr || ""),
+    fullDay: String(source.rates.fullDay || ""),
+    halfDay: String(source.rates.halfDay || ""),
+    vip: String(source.rates.vip || ""),
+  };
+}
+
+type VehicleForm = ReturnType<typeof createVehicleForm>;
 
 function getAirportOption(value: string) {
   return (
@@ -305,41 +367,96 @@ declare global {
   }
 }
 
-const vehicles = [
+const defaultFleetVehicles: FleetVehicle[] = [
   {
     name: "Toyota Innova Crysta",
     type: "Premium MUV",
     seats: "6-7 Seats",
+    luggage: "2 Suitcases",
     bestFor: "VIP, Family, Airport And Highway Travel",
     photo: "/fleet/innova-crysta.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 32,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 7650,
+    },
   },
   {
     name: "Toyota Innova Hycross",
     type: "Luxury Hybrid",
     seats: "6-7 Seats",
+    luggage: "2 Suitcases",
     bestFor: "Executive Guests, Weddings And Long Routes",
     photo: "/fleet/hycross.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 39,
+      local4hr: 2685,
+      local8hr: 4881,
+      local10hr: 5423,
+      fullDay: 4881,
+      halfDay: 2685,
+      vip: 9900,
+    },
   },
   {
     name: "Maruti Ertiga",
     type: "Comfort MUV",
     seats: "6-7 Seats",
+    luggage: "2 Suitcases",
     bestFor: "Round Trip, Family Tour And Station Pickup",
     photo: "/fleet/ertiga.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 29,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 5580,
+    },
   },
   {
     name: "Toyota Rumion",
     type: "Spacious MUV",
     seats: "6-7 Seats",
+    luggage: "2 Suitcases",
     bestFor: "Local Booking, Outstation And Group Travel",
     photo: "/fleet/rumion.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 29,
+      local4hr: 2324,
+      local8hr: 4226,
+      local10hr: 4696,
+      fullDay: 4226,
+      halfDay: 2324,
+      vip: 5850,
+    },
   },
   {
     name: "Toyota Etios",
     type: "Sedan",
     seats: "4 Seats",
+    luggage: "2 Suitcases",
     bestFor: "City Rides, Business Visits And One Day Travel",
     photo: "/fleet/etios.png?v=52a12bf",
+    active: true,
+    rates: {
+      perKm: 24,
+      local4hr: 1921,
+      local8hr: 3492,
+      local10hr: 3880,
+      fullDay: 3492,
+      halfDay: 1921,
+      vip: 4680,
+    },
   },
 ];
 
@@ -437,6 +554,7 @@ type AdminPanelTab =
   | "breakup"
   | "bookings"
   | "pricing"
+  | "myVehicle"
   | "vehicles"
   | "ledger"
   | "withdrawals"
@@ -806,6 +924,13 @@ export default function Home() {
   const [activeAdminBreakup, setActiveAdminBreakup] =
     useState<AdminBreakupType>("bookings");
   const [activeAdminTab, setActiveAdminTab] = useState<AdminPanelTab>("bookings");
+  const [fleetVehicles, setFleetVehicles] =
+    useState<FleetVehicle[]>(defaultFleetVehicles);
+  const [vehicleMasterForm, setVehicleMasterForm] = useState<VehicleForm>(
+    createVehicleForm(),
+  );
+  const [editingVehicleName, setEditingVehicleName] = useState("");
+  const [vehicleMasterStatus, setVehicleMasterStatus] = useState("");
   const [adminBookingSearch, setAdminBookingSearch] = useState("");
   const [nextRide, setNextRide] = useState<DashboardBooking | null>(null);
   const [driverEarning, setDriverEarning] = useState({
@@ -868,6 +993,7 @@ export default function Home() {
     withdrawalRequests: DriverWithdrawal[];
     priceAdjustmentPercent: number;
     vehicleRateOverrides: VehicleRateOverrides;
+    fleetVehicles: FleetVehicle[];
     siteFont: string;
   } | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([
@@ -983,9 +1109,17 @@ export default function Home() {
             : packageOptions.find((item) => item.id === packageType)?.label ||
               packageOptions[0].label,
   };
+  const vehicles = useMemo(
+    () => fleetVehicles.filter((item) => item.active !== false),
+    [fleetVehicles],
+  );
+  const activeRateTable = useMemo(
+    () => buildRateTableFromVehicles(fleetVehicles),
+    [fleetVehicles],
+  );
   const adjustedRateTable = useMemo(() => {
     return Object.fromEntries(
-      Object.entries(rateTable).map(([vehicleName, rates]) => [
+      Object.entries(activeRateTable).map(([vehicleName, rates]) => [
         vehicleName,
         {
           ...rates,
@@ -1019,8 +1153,8 @@ export default function Home() {
           ),
         },
       ]),
-    ) as typeof rateTable;
-  }, [priceAdjustmentPercent, vehicleRateOverrides]);
+    ) as Record<string, VehicleRates>;
+  }, [activeRateTable, priceAdjustmentPercent, vehicleRateOverrides]);
   const vehicleRates = useMemo(
     () =>
       vehicles
@@ -1049,7 +1183,7 @@ export default function Home() {
           };
         })
         .sort((first, second) => first.estimatedFare - second.estimatedFare),
-    [adjustedRateTable, billableDistance, selectedLocalPackage, tripType],
+    [adjustedRateTable, billableDistance, selectedLocalPackage, tripType, vehicles],
   );
   const selectedVehicleRate =
     vehicleRates.find((item) => item.name === vehicle) || vehicleRates[0];
@@ -1119,6 +1253,7 @@ export default function Home() {
         const result = (await response.json()) as {
           priceAdjustmentPercent?: number;
           vehicleRateOverrides?: VehicleRateOverrides;
+          fleetVehicles?: FleetVehicle[];
           siteFont?: string;
         };
         const percent = Number(result.priceAdjustmentPercent || 0);
@@ -1127,14 +1262,30 @@ export default function Home() {
           setPriceAdjustmentPercent(percent);
           setPriceAdjustmentInput(String(percent));
           const savedOverrides = result.vehicleRateOverrides || {};
+          const savedFleetVehicles = result.fleetVehicles?.length
+            ? result.fleetVehicles
+            : defaultFleetVehicles;
           setSiteFont(result.siteFont || "Plus Jakarta Sans");
+          setFleetVehicles(savedFleetVehicles);
+          setVehicle((currentVehicle) =>
+            savedFleetVehicles.some((item) => item.name === currentVehicle)
+              ? currentVehicle
+              : savedFleetVehicles[0]?.name || "Toyota Innova Crysta",
+          );
           setVehicleRateOverrides(savedOverrides);
-          setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", savedOverrides));
+          setRateEditorForm(
+            buildEditableRateForm(
+              "Toyota Innova Crysta",
+              savedOverrides,
+              buildRateTableFromVehicles(savedFleetVehicles),
+            ),
+          );
         }
       } catch {
         if (mounted) {
           setPriceAdjustmentPercent(0);
           setPriceAdjustmentInput("0");
+          setFleetVehicles(defaultFleetVehicles);
           setVehicleRateOverrides({});
           setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", {}));
         }
@@ -1735,6 +1886,7 @@ export default function Home() {
         driverCashInHand?: number;
         priceAdjustmentPercent?: number;
         vehicleRateOverrides?: VehicleRateOverrides;
+        fleetVehicles?: FleetVehicle[];
         siteFont?: string;
         recentBookings?: DashboardBooking[];
         drivers?: DriverRow[];
@@ -1787,11 +1939,21 @@ export default function Home() {
         setPriceAdjustmentPercent(currentPriceAdjustment);
         setPriceAdjustmentInput(String(currentPriceAdjustment));
         const savedOverrides = result.vehicleRateOverrides || {};
+        const savedFleetVehicles = result.fleetVehicles?.length
+          ? result.fleetVehicles
+          : defaultFleetVehicles;
         const savedSiteFont = result.siteFont || "Plus Jakarta Sans";
 
         setSiteFont(savedSiteFont);
+        setFleetVehicles(savedFleetVehicles);
         setVehicleRateOverrides(savedOverrides);
-        setRateEditorForm(buildEditableRateForm(rateEditorVehicle, savedOverrides));
+        setRateEditorForm(
+          buildEditableRateForm(
+            rateEditorVehicle,
+            savedOverrides,
+            buildRateTableFromVehicles(savedFleetVehicles),
+          ),
+        );
         setDashboard({
           totalBookings: result.totalBookings || 0,
           totalFare: result.totalFare || 0,
@@ -1806,6 +1968,7 @@ export default function Home() {
           driverLedger: result.driverLedger || [],
           withdrawalRequests: result.withdrawalRequests || [],
           vehicleRateOverrides: savedOverrides,
+          fleetVehicles: savedFleetVehicles,
         });
       }
 
@@ -2000,7 +2163,9 @@ export default function Home() {
       const savedOverrides = result.vehicleRateOverrides || nextOverrides;
 
       setVehicleRateOverrides(savedOverrides);
-      setRateEditorForm(buildEditableRateForm(rateEditorVehicle, savedOverrides));
+      setRateEditorForm(
+        buildEditableRateForm(rateEditorVehicle, savedOverrides, activeRateTable),
+      );
       setDashboard((currentDashboard) =>
         currentDashboard
           ? { ...currentDashboard, vehicleRateOverrides: savedOverrides }
@@ -2013,8 +2178,158 @@ export default function Home() {
   }
 
   function resetIndividualCarFareInput() {
-    setRateEditorForm(buildEditableRateForm(rateEditorVehicle, vehicleRateOverrides));
+    setRateEditorForm(
+      buildEditableRateForm(rateEditorVehicle, vehicleRateOverrides, activeRateTable),
+    );
     setPriceAdjustmentStatus("");
+  }
+
+  function parseVehicleMasterForm() {
+    const vehicleName = vehicleMasterForm.name.trim();
+
+    if (!vehicleName) {
+      setVehicleMasterStatus("Please Enter Vehicle Name.");
+      return null;
+    }
+
+    const rates = Object.fromEntries(
+      editableRateKeys.map((rateKey) => [
+        rateKey,
+        Math.round(Number(vehicleMasterForm[rateKey]) || 0),
+      ]),
+    ) as VehicleRates;
+
+    if (editableRateKeys.some((rateKey) => rates[rateKey] < 1)) {
+      setVehicleMasterStatus("Please Enter Complete Rate Chart For This Vehicle.");
+      return null;
+    }
+
+    return {
+      name: vehicleName,
+      type: vehicleMasterForm.type.trim() || "Corporate Cab",
+      seats: vehicleMasterForm.seats.trim() || "4 Seats",
+      luggage: vehicleMasterForm.luggage.trim() || "2 Suitcases",
+      bestFor:
+        vehicleMasterForm.bestFor.trim() ||
+        "Corporate Guests, Airport Transfers And Outstation Travel",
+      photo: vehicleMasterForm.photo.trim() || "/fleet/innova-crysta.png?v=52a12bf",
+      active: vehicleMasterForm.active,
+      rates,
+    };
+  }
+
+  async function saveFleetVehicles(nextFleetVehicles: FleetVehicle[], successMessage: string) {
+    const normalizedMobile = loginMobile.replace(/\D/g, "");
+
+    setVehicleMasterStatus("Saving My Vehicle...");
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateFleetVehicles",
+          adminMobile: normalizedMobile,
+          fleetVehicles: nextFleetVehicles,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        fleetVehicles?: FleetVehicle[];
+      };
+
+      if (!response.ok) {
+        setVehicleMasterStatus(result.error || "Vehicle Could Not Be Saved.");
+        return false;
+      }
+
+      const savedFleetVehicles = result.fleetVehicles?.length
+        ? result.fleetVehicles
+        : nextFleetVehicles;
+
+      setFleetVehicles(savedFleetVehicles);
+      setDashboard((currentDashboard) =>
+        currentDashboard
+          ? { ...currentDashboard, fleetVehicles: savedFleetVehicles }
+          : currentDashboard,
+      );
+      setVehicle((currentVehicle) =>
+        savedFleetVehicles.some((item) => item.name === currentVehicle)
+          ? currentVehicle
+          : savedFleetVehicles[0]?.name || "Toyota Innova Crysta",
+      );
+      setRateEditorVehicle((currentVehicle) =>
+        savedFleetVehicles.some((item) => item.name === currentVehicle)
+          ? currentVehicle
+          : savedFleetVehicles[0]?.name || "Toyota Innova Crysta",
+      );
+      setVehicleMasterStatus(successMessage);
+      return true;
+    } catch {
+      setVehicleMasterStatus("Vehicle Could Not Be Saved.");
+      return false;
+    }
+  }
+
+  async function saveVehicleMaster() {
+    const nextVehicle = parseVehicleMasterForm();
+
+    if (!nextVehicle) {
+      return;
+    }
+
+    const duplicateVehicle = fleetVehicles.find(
+      (item) =>
+        item.name.toLowerCase() === nextVehicle.name.toLowerCase() &&
+        item.name !== editingVehicleName,
+    );
+
+    if (duplicateVehicle) {
+      setVehicleMasterStatus("This Vehicle Name Already Exists.");
+      return;
+    }
+
+    const nextFleetVehicles = editingVehicleName
+      ? fleetVehicles.map((item) =>
+          item.name === editingVehicleName ? nextVehicle : item,
+        )
+      : [...fleetVehicles, nextVehicle];
+    const saved = await saveFleetVehicles(
+      nextFleetVehicles,
+      editingVehicleName ? "Vehicle Updated Successfully." : "New Vehicle Added Successfully.",
+    );
+
+    if (saved) {
+      setEditingVehicleName("");
+      setVehicleMasterForm(createVehicleForm());
+    }
+  }
+
+  function editVehicleMaster(vehicleItem: FleetVehicle) {
+    setEditingVehicleName(vehicleItem.name);
+    setVehicleMasterForm(createVehicleForm(vehicleItem));
+    setVehicleMasterStatus("Edit Vehicle Details And Click Save Vehicle.");
+  }
+
+  async function deleteVehicleMaster(vehicleName: string) {
+    if (fleetVehicles.length <= 1) {
+      setVehicleMasterStatus("At Least One Vehicle Must Remain Active On Site.");
+      return;
+    }
+
+    if (!window.confirm(`Delete ${vehicleName} From My Vehicle?`)) {
+      return;
+    }
+
+    const saved = await saveFleetVehicles(
+      fleetVehicles.filter((item) => item.name !== vehicleName),
+      "Vehicle Deleted Successfully.",
+    );
+
+    if (saved && editingVehicleName === vehicleName) {
+      setEditingVehicleName("");
+      setVehicleMasterForm(createVehicleForm());
+    }
   }
 
   async function saveMasterPriceAdjustment() {
@@ -4217,7 +4532,7 @@ export default function Home() {
               <div>
                 <small>{item.type}</small>
                 <h3>{item.name}</h3>
-                <p>{item.seats} | White AC Cab</p>
+                <p>{item.seats} | {item.luggage} | White AC Cab</p>
               </div>
             </article>
           ))}
@@ -4282,7 +4597,7 @@ export default function Home() {
                         {item.perKm}/KM
                       </li>
                       <li>
-                        {item.seats.startsWith("4") ? "4" : "6"} Passengers | 2 Suitcases
+                        {item.seats.startsWith("4") ? "4" : "6"} Passengers | {item.luggage}
                       </li>
                       <li>{selectedPackage.label}</li>
                     </ul>
@@ -5097,6 +5412,11 @@ export default function Home() {
                               count: Math.round(priceAdjustmentPercent),
                             },
                             {
+                              id: "myVehicle",
+                              label: "My Vehicle",
+                              count: fleetVehicles.length,
+                            },
+                            {
                               id: "vehicles",
                               label: "Registered Driver Vehicles",
                               count: taskCounts.vehicles,
@@ -5282,7 +5602,11 @@ export default function Home() {
                             const selectedCar = event.target.value;
                             setRateEditorVehicle(selectedCar);
                             setRateEditorForm(
-                              buildEditableRateForm(selectedCar, vehicleRateOverrides),
+                              buildEditableRateForm(
+                                selectedCar,
+                                vehicleRateOverrides,
+                                activeRateTable,
+                              ),
                             );
                           }}
                         >
@@ -5366,8 +5690,11 @@ export default function Home() {
                     <div className="price-preview-table">
                       <h3>Adjusted Fare Preview</h3>
                       {vehicles.map((item) => {
-                        const defaultBase = rateTable[item.name];
+                        const defaultBase = activeRateTable[item.name];
                         const override = vehicleRateOverrides[item.name] || {};
+                        if (!defaultBase) {
+                          return null;
+                        }
                         const base = {
                           ...defaultBase,
                           perKm: override.perKm ?? defaultBase.perKm,
@@ -5392,6 +5719,210 @@ export default function Home() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                ) : null}
+                {activeAdminTab === "myVehicle" ? (
+                  <div className="admin-ops-panel admin-tab-panel my-vehicle-panel">
+                    <div className="vehicle-master-card">
+                      <div className="vehicle-master-head">
+                        <div>
+                          <h3>{editingVehicleName ? "Update Vehicle" : "Add New Vehicle"}</h3>
+                          <p>
+                            Add The Same Public Details, Photo And Fare Chart That Customers
+                            See On Homepage, Cab Selection And Price Chart.
+                          </p>
+                        </div>
+                        {editingVehicleName ? (
+                          <button
+                            className="ghost-price-action"
+                            type="button"
+                            onClick={() => {
+                              setEditingVehicleName("");
+                              setVehicleMasterForm(createVehicleForm());
+                              setVehicleMasterStatus("");
+                            }}
+                          >
+                            New Vehicle
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="vehicle-master-form">
+                        <label>
+                          <span>Vehicle Name</span>
+                          <input
+                            value={vehicleMasterForm.name}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                name: event.target.value,
+                              }))
+                            }
+                            placeholder="Example Toyota Fortuner"
+                          />
+                        </label>
+                        <label>
+                          <span>Vehicle Category</span>
+                          <input
+                            value={vehicleMasterForm.type}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                type: event.target.value,
+                              }))
+                            }
+                            placeholder="Premium SUV"
+                          />
+                        </label>
+                        <label>
+                          <span>Passenger Seats</span>
+                          <input
+                            value={vehicleMasterForm.seats}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                seats: event.target.value,
+                              }))
+                            }
+                            placeholder="6-7 Seats"
+                          />
+                        </label>
+                        <label>
+                          <span>Luggage</span>
+                          <input
+                            value={vehicleMasterForm.luggage}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                luggage: event.target.value,
+                              }))
+                            }
+                            placeholder="2 Suitcases"
+                          />
+                        </label>
+                        <label className="wide-field">
+                          <span>Best For Public Text</span>
+                          <input
+                            value={vehicleMasterForm.bestFor}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                bestFor: event.target.value,
+                              }))
+                            }
+                            placeholder="VIP Guests, Airport And Long Route Travel"
+                          />
+                        </label>
+                        <label className="wide-field">
+                          <span>Vehicle Photo URL</span>
+                          <input
+                            value={vehicleMasterForm.photo}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                photo: event.target.value,
+                              }))
+                            }
+                            placeholder="/fleet/innova-crysta.png?v=52a12bf"
+                          />
+                        </label>
+                        <label className="vehicle-active-toggle">
+                          <input
+                            checked={vehicleMasterForm.active}
+                            onChange={(event) =>
+                              setVehicleMasterForm((currentForm) => ({
+                                ...currentForm,
+                                active: event.target.checked,
+                              }))
+                            }
+                            type="checkbox"
+                          />
+                          <span>Show This Vehicle On Public Site</span>
+                        </label>
+                      </div>
+                      <div className="vehicle-master-rate-grid">
+                        {editableRateKeys.map((rateKey) => (
+                          <label key={`vehicle-master-${rateKey}`}>
+                            <span>
+                              {rateKey === "perKm"
+                                ? "Per KM"
+                                : rateKey === "local4hr"
+                                  ? "4 Hr / 45 KM"
+                                  : rateKey === "local8hr"
+                                    ? "8 Hr / 90 KM"
+                                    : rateKey === "local10hr"
+                                      ? "10 Hr / 100 KM"
+                                      : rateKey === "fullDay"
+                                        ? "Full Day"
+                                        : rateKey === "halfDay"
+                                          ? "Half Day"
+                                          : "VIP"}
+                            </span>
+                            <input
+                              value={vehicleMasterForm[rateKey]}
+                              onChange={(event) =>
+                                setVehicleMasterForm((currentForm) => ({
+                                  ...currentForm,
+                                  [rateKey]: event.target.value,
+                                }))
+                              }
+                              inputMode="numeric"
+                              placeholder="Amount"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="vehicle-master-actions">
+                        <button type="button" onClick={saveVehicleMaster}>
+                          {editingVehicleName ? "Save Vehicle Update" : "Add Vehicle To Site"}
+                        </button>
+                        <button
+                          className="ghost-price-action"
+                          type="button"
+                          onClick={() => setVehicleMasterForm(createVehicleForm())}
+                        >
+                          Clear Form
+                        </button>
+                      </div>
+                      {vehicleMasterStatus ? (
+                        <p className="admin-status">{vehicleMasterStatus}</p>
+                      ) : null}
+                    </div>
+                    <div className="vehicle-master-list-card">
+                      <h3>My Vehicle List</h3>
+                      <div className="vehicle-master-list">
+                        {fleetVehicles.map((item) => (
+                          <article className="vehicle-master-row" key={item.name}>
+                            <div className="vehicle-master-thumb">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={item.photo} alt={`${item.name} vehicle`} />
+                            </div>
+                            <div>
+                              <strong>{item.name}</strong>
+                              <span>{item.type} | {item.seats} | {item.luggage}</span>
+                              <small>
+                                {formatInr(item.rates.perKm)} / KM |{" "}
+                                {formatInr(item.rates.local8hr)} 8 Hr / 90 KM
+                              </small>
+                              <b className={item.active ? "vehicle-vacant" : "vehicle-engaged"}>
+                                {item.active ? "Public Active" : "Hidden"}
+                              </b>
+                            </div>
+                            <div className="driver-vehicle-actions">
+                              <button type="button" onClick={() => editVehicleMaster(item)}>
+                                Edit
+                              </button>
+                              <button
+                                className="danger-action"
+                                type="button"
+                                onClick={() => deleteVehicleMaster(item.name)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : null}
