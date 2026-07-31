@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const whatsappNumber = "917004291529";
@@ -2309,6 +2309,76 @@ export default function Home() {
     setEditingVehicleName(vehicleItem.name);
     setVehicleMasterForm(createVehicleForm(vehicleItem));
     setVehicleMasterStatus("Edit Vehicle Details And Click Save Vehicle.");
+  }
+
+  function handleVehiclePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setVehicleMasterStatus("Please Upload A Valid Image File.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      setVehicleMasterStatus("Image Size Should Be Less Than 4 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setVehicleMasterStatus("Preparing Vehicle Photo...");
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const image = new Image();
+
+      image.onload = () => {
+        const maxWidth = 900;
+        const maxHeight = 520;
+        const scale = Math.min(1, maxWidth / image.width, maxHeight / image.height);
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          setVehicleMasterStatus("Photo Could Not Be Prepared.");
+          return;
+        }
+
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const photoDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+
+        setVehicleMasterForm((currentForm) => ({
+          ...currentForm,
+          photo: photoDataUrl,
+        }));
+        setVehicleMasterStatus("Photo Uploaded. Click Save Vehicle To Publish.");
+      };
+
+      image.onerror = () => {
+        setVehicleMasterStatus("Photo Could Not Be Loaded.");
+      };
+
+      image.src = String(reader.result || "");
+    };
+
+    reader.onerror = () => {
+      setVehicleMasterStatus("Photo Upload Failed.");
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = "";
   }
 
   async function deleteVehicleMaster(vehicleName: string) {
@@ -5826,6 +5896,28 @@ export default function Home() {
                             placeholder="/fleet/innova-crysta.png?v=52a12bf"
                           />
                         </label>
+                        <label className="vehicle-photo-upload">
+                          <span>Upload Vehicle Photo</span>
+                          <input
+                            accept="image/*"
+                            onChange={handleVehiclePhotoUpload}
+                            type="file"
+                          />
+                        </label>
+                        <div className="vehicle-photo-preview">
+                          {vehicleMasterForm.photo ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={vehicleMasterForm.photo}
+                                alt="Selected vehicle preview"
+                              />
+                              <span>Photo Preview</span>
+                            </>
+                          ) : (
+                            <span>No Photo Selected</span>
+                          )}
+                        </div>
                         <label className="vehicle-active-toggle">
                           <input
                             checked={vehicleMasterForm.active}
