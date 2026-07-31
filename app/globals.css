@@ -5588,6 +5588,15 @@ h6,
   color: #0f172a;
 }
 
+.simple-page-with-chrome {
+  padding: 0;
+}
+
+.simple-page-with-chrome .simple-page-card {
+  margin-top: clamp(24px, 5vw, 54px);
+  margin-bottom: clamp(24px, 5vw, 54px);
+}
+
 .simple-page-logo {
   display: inline-block;
   margin-bottom: 24px;
@@ -5663,7 +5672,7 @@ h6,
 
 .price-table {
   width: 100%;
-  min-width: 780px;
+  min-width: 980px;
   border-collapse: collapse;
 }
 
@@ -5685,6 +5694,74 @@ h6,
 .price-table td:first-child {
   color: #075985;
   font-weight: 900;
+}
+
+.price-conditions {
+  margin-top: 22px;
+  padding: clamp(18px, 3vw, 24px);
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.hourly-chart {
+  margin-top: 22px;
+  padding: clamp(18px, 3vw, 24px);
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.hourly-chart h2,
+.price-conditions h2 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: clamp(20px, 3vw, 28px);
+  text-align: center;
+}
+
+.hourly-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hourly-chart-item {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  align-content: center;
+  justify-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.hourly-chart-item span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hourly-chart-item strong {
+  color: #075985;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.price-conditions ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.price-conditions li {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
 }
 
 .cookie-consent {
@@ -5746,6 +5823,14 @@ h6,
 @media (max-width: 760px) {
   .site-footer {
     grid-template-columns: 1fr;
+  }
+
+  .simple-page-with-chrome .simple-page-card {
+    width: calc(100% - 28px);
+  }
+
+  .hourly-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .footer-brand-column {
@@ -6022,5 +6107,172 @@ h6,
 
   .price-control-panel {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Launch Polish: Responsive Header, Booking Form And Price Pages */
+.public-page-menu {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.header-login-link {
+  text-decoration: none;
+}
+
+.brand,
+.brand:visited {
+  text-decoration: none;
+}
+
+.brand .brand-logo {
+  flex: 0 0 auto;
+}
+
+.site-footer {
+  width: 100%;
+}
+
+.price-page-card .simple-page-button {
+  display: flex;
+  width: max-content;
+}
+
+@media (max-width: 900px) {
+  .focused-booking-hero {
+    align-items: start;
+    padding-top: 14px;
+  }
+
+  .focused-booking-hero .hero-content {
+    width: min(100%, 680px);
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy {
+    margin-bottom: 8px;
+  }
+
+  .savaari-booking-panel {
+    width: min(100%, calc(100vw - 24px));
+    padding: 18px 14px 16px;
+    border-radius: 18px;
+  }
+
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .savaari-booking-panel .route-form-row .route-swap {
+    display: none;
+  }
+
+  .savaari-booking-panel .trip-tabs {
+    width: 100%;
+  }
+
+  .booking-field input,
+  .booking-field select,
+  .savaari-booking-panel .choose-trip-field select {
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .place-suggestions {
+    max-height: 220px;
+    overflow: auto;
+  }
+
+  .submit-button,
+  .explore-cabs-button {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 4px;
+  }
+
+  .car-card.savaari-car-card {
+    grid-template-columns: 1fr;
+  }
+
+  .car-card.savaari-car-card .car-image-wrap {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-strip.main-menu,
+  .top-strip.main-menu.public-page-menu {
+    min-height: 62px;
+    padding: 8px 10px;
+    background: linear-gradient(180deg, rgba(7, 21, 36, 0.98), rgba(8, 47, 73, 0.96));
+  }
+
+  .brand-logo,
+  .top-strip.main-menu .brand-logo {
+    width: 146px;
+    height: 42px;
+  }
+
+  .brand .brand-logo + span {
+    display: none;
+  }
+
+  .top-strip.main-menu .header-actions {
+    margin-left: auto;
+  }
+
+  .top-strip.main-menu .call-button {
+    min-width: 74px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) h1 {
+    font-size: 24px;
+  }
+
+  .hero-copy p:not(.eyebrow),
+  .hero-content:has(.savaari-booking-panel) .hero-copy p:not(.eyebrow) {
+    font-size: 13px;
+  }
+
+  .savaari-booking-panel .trip-tabs {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .savaari-booking-panel .trip-tabs button,
+  .savaari-booking-panel .trip-tabs button:first-child,
+  .savaari-booking-panel .trip-tabs button:last-child {
+    flex: 0 0 auto;
+    min-width: 96px;
+    min-height: 34px;
+    font-size: 10px;
+  }
+
+  .booking-title {
+    font-size: 20px;
+  }
+
+  .simple-page-card {
+    padding: 22px 16px;
+  }
+
+  .simple-page-card h1 {
+    font-size: 28px;
+  }
+
+  .price-conditions li {
+    font-size: 13px;
+  }
+
+  .hourly-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cookie-consent {
+    right: 10px;
+    bottom: 10px;
+    width: calc(100% - 20px);
   }
 }

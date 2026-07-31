@@ -8,6 +8,7 @@ const rateTable: Record<
     perKm: number;
     local4hr: number;
     local8hr: number;
+    local10hr: number;
     fullDay: number;
     halfDay: number;
     vip: number;
@@ -17,6 +18,7 @@ const rateTable: Record<
     perKm: 24,
     local4hr: 1921,
     local8hr: 3492,
+    local10hr: 3880,
     fullDay: 3492,
     halfDay: 1921,
     vip: 4680,
@@ -25,6 +27,7 @@ const rateTable: Record<
     perKm: 29,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5580,
@@ -33,6 +36,7 @@ const rateTable: Record<
     perKm: 29,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5850,
@@ -41,6 +45,7 @@ const rateTable: Record<
     perKm: 32,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 7650,
@@ -49,6 +54,7 @@ const rateTable: Record<
     perKm: 39,
     local4hr: 2685,
     local8hr: 4881,
+    local10hr: 5423,
     fullDay: 4881,
     halfDay: 2685,
     vip: 9900,
@@ -57,6 +63,7 @@ const rateTable: Record<
     perKm: 39,
     local4hr: 2685,
     local8hr: 4881,
+    local10hr: 5423,
     fullDay: 4881,
     halfDay: 2685,
     vip: 9900,
@@ -64,7 +71,7 @@ const rateTable: Record<
 };
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
-type VehicleRateOverride = Partial<Record<PackageType | "local4hr" | "local8hr", number>>;
+type VehicleRateOverride = Partial<Record<PackageType | "local4hr" | "local8hr" | "local10hr", number>>;
 type VehicleRateOverrides = Record<string, VehicleRateOverride>;
 
 type BookingPayload = {
@@ -134,7 +141,10 @@ const allowedSiteFonts = new Set([
   "Plus Jakarta Sans",
   "Inter",
   "Poppins",
+  "Manrope",
   "Montserrat",
+  "Nunito Sans",
+  "Open Sans",
   "Roboto",
   "Lato",
   "System UI",
@@ -580,6 +590,7 @@ function normalizeVehicleRateOverrides(value: unknown): VehicleRateOverrides {
     "perKm",
     "local4hr",
     "local8hr",
+    "local10hr",
     "fullDay",
     "halfDay",
     "vip",
@@ -641,6 +652,16 @@ async function getSiteFont() {
   return normalizeSiteFont(setting?.value);
 }
 
+async function getPricingUpdatedAt() {
+  const setting = await env.DB.prepare(
+    `SELECT MAX(updated_at) AS updated_at
+     FROM app_settings
+     WHERE key IN ('price_adjustment_percent', 'vehicle_rate_overrides')`,
+  ).first<{ updated_at: string | null }>();
+
+  return setting?.updated_at || "2026-07-31T00:00:00+05:30";
+}
+
 function applyPriceAdjustment(amount: number, percent: number) {
   return Math.max(0, Math.round(amount * (1 + percent / 100)));
 }
@@ -654,6 +675,7 @@ async function getEffectiveBookingRate(vehicle: string) {
     perKm: selectedOverrides.perKm ?? selectedRate.perKm,
     local4hr: selectedOverrides.local4hr ?? selectedRate.local4hr,
     local8hr: selectedOverrides.local8hr ?? selectedRate.local8hr,
+    local10hr: selectedOverrides.local10hr ?? selectedRate.local10hr,
     fullDay: selectedOverrides.fullDay ?? selectedRate.fullDay,
     halfDay: selectedOverrides.halfDay ?? selectedRate.halfDay,
     vip: selectedOverrides.vip ?? selectedRate.vip,
@@ -663,6 +685,7 @@ async function getEffectiveBookingRate(vehicle: string) {
     perKm: applyPriceAdjustment(manualRate.perKm, priceAdjustmentPercent),
     local4hr: applyPriceAdjustment(manualRate.local4hr, priceAdjustmentPercent),
     local8hr: applyPriceAdjustment(manualRate.local8hr, priceAdjustmentPercent),
+    local10hr: applyPriceAdjustment(manualRate.local10hr, priceAdjustmentPercent),
     fullDay: applyPriceAdjustment(manualRate.fullDay, priceAdjustmentPercent),
     halfDay: applyPriceAdjustment(manualRate.halfDay, priceAdjustmentPercent),
     vip: applyPriceAdjustment(manualRate.vip, priceAdjustmentPercent),
@@ -967,7 +990,7 @@ export async function GET(request: Request) {
       );
 
       return Response.json({
-        updatedAt: new Date().toISOString(),
+        updatedAt: await getPricingUpdatedAt(),
         priceAdjustmentPercent: await getPriceAdjustmentPercent(),
         vehicles: rates,
       });
@@ -2067,10 +2090,16 @@ export async function POST(request: Request) {
     const isRoundTrip = tripType === "Round Trip";
     const isLocal = tripType.includes("Local");
     const isAirport = tripType.includes("Airport");
-    const localPackageKm = tripType.includes("4 Hr") ? 45 : 90;
-    const localPackageRate = tripType.includes("4 Hr")
-      ? adjustedRate.local4hr
-      : adjustedRate.local8hr;
+    const localPackageKm = tripType.includes("10 Hr")
+      ? 100
+      : tripType.includes("4 Hr")
+        ? 45
+        : 90;
+    const localPackageRate = tripType.includes("10 Hr")
+      ? adjustedRate.local10hr
+      : tripType.includes("4 Hr")
+        ? adjustedRate.local4hr
+        : adjustedRate.local8hr;
     const billableKm =
       isLocal
         ? Math.max(oneSideKm, localPackageKm)

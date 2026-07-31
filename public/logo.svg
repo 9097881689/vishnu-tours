@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="236" height="58" viewBox="0 0 236 58" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="58" viewBox="0 0 280 58" fill="none">
   <rect x="4" y="7" width="46" height="42" rx="13" fill="url(#markGradient)"/>
   <path d="M14.2 34.8H39.4L44.2 40H9.6L14.2 34.8Z" fill="#ffffff"/>
   <path d="M11.8 40H42V45.4H11.8V40Z" fill="#ffffff"/>
@@ -6,10 +6,10 @@
   <circle cx="36" cy="45.4" r="2.9" fill="#082F49"/>
   <path d="M18.6 27H34.1L39.1 34.8H13.9L18.6 27Z" fill="#F59E0B"/>
   <path d="M13.2 20.4C21.7 12 37.3 12 45.8 20.4" stroke="#F8C94E" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M63 10H174" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>
-  <circle cx="183" cy="10" r="3.3" fill="#F59E0B"/>
+  <path d="M63 10H190" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>
+  <circle cx="199" cy="10" r="3.3" fill="#F59E0B"/>
   <text x="62" y="32" fill="#ffffff" font-family="'Plus Jakarta Sans', Arial, Helvetica, sans-serif" font-size="22" font-weight="900" letter-spacing=".2">Vishnu Tours</text>
-  <text x="63" y="48" fill="#CFE8F7" font-family="'Plus Jakarta Sans', Arial, Helvetica, sans-serif" font-size="8.6" font-weight="800" letter-spacing="1.3">CORPORATE CABS FROM MUMBAI</text>
+  <text x="63" y="48" fill="#CFE8F7" font-family="'Plus Jakarta Sans', Arial, Helvetica, sans-serif" font-size="8.1" font-weight="800" letter-spacing=".75">CORPORATE CABS FROM MUMBAI</text>
   <defs>
     <linearGradient id="markGradient" x1="4" y1="7" x2="50" y2="49" gradientUnits="userSpaceOnUse">
       <stop stop-color="#075985"/>

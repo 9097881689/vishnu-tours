@@ -1,6 +1,9 @@
+import { PublicFooter, PublicHeader } from "../components/PublicChrome";
+
 export default function CancellationRefundPage() {
   return (
-    <main className="simple-page">
+    <main className="simple-page simple-page-with-chrome">
+      <PublicHeader />
       <section className="simple-page-card">
         <h1>Cancellation And Refund Policy</h1>
         <p>Cancellation Eligibility Depends On Booking Status, Pickup Time, Driver Assignment And Service Type.</p>
@@ -8,6 +11,7 @@ export default function CancellationRefundPage() {
         <p>Partial Refunds May Apply If Administrative Cost, Driver Reporting, Waiting, Toll, Parking Or Other Service Cost Has Already Been Incurred.</p>
         <p>For Refund Support, Contact Vishnu Tours With Your Booking Number And Registered Mobile Number.</p>
       </section>
+      <PublicFooter />
     </main>
   );
 }

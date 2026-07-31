@@ -11,7 +11,10 @@ const siteFontOptions = [
   { label: "Plus Jakarta Sans", value: "Plus Jakarta Sans", stack: "var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif" },
   { label: "Inter", value: "Inter", stack: "var(--font-inter), Inter, sans-serif" },
   { label: "Poppins", value: "Poppins", stack: "var(--font-poppins), Poppins, sans-serif" },
+  { label: "Manrope", value: "Manrope", stack: "var(--font-manrope), Manrope, sans-serif" },
   { label: "Montserrat", value: "Montserrat", stack: "var(--font-montserrat), Montserrat, sans-serif" },
+  { label: "Nunito Sans", value: "Nunito Sans", stack: "var(--font-nunito-sans), 'Nunito Sans', sans-serif" },
+  { label: "Open Sans", value: "Open Sans", stack: "var(--font-open-sans), 'Open Sans', sans-serif" },
   { label: "Roboto", value: "Roboto", stack: "var(--font-roboto), Roboto, sans-serif" },
   { label: "Lato", value: "Lato", stack: "var(--font-lato), Lato, sans-serif" },
   { label: "System UI", value: "System UI", stack: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
@@ -141,6 +144,7 @@ const airportTripOptions = [
 const localPackageOptions = [
   { id: "local4hr", label: "4 Hr / 45 KM", hours: 4, km: 45 },
   { id: "local8hr", label: "8 Hr / 90 KM", hours: 8, km: 90 },
+  { id: "local10hr", label: "10 Hr / 100 KM", hours: 10, km: 100 },
 ] as const;
 const roundTripDailyKm = 300;
 const minimumLocalAirportKm = 40;
@@ -174,6 +178,7 @@ const rateTable: Record<
     perKm: number;
     local4hr: number;
     local8hr: number;
+    local10hr: number;
     fullDay: number;
     halfDay: number;
     vip: number;
@@ -184,6 +189,7 @@ const rateTable: Record<
     perKm: 24,
     local4hr: 1921,
     local8hr: 3492,
+    local10hr: 3880,
     fullDay: 3492,
     halfDay: 1921,
     vip: 4680,
@@ -193,6 +199,7 @@ const rateTable: Record<
     perKm: 29,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5580,
@@ -202,6 +209,7 @@ const rateTable: Record<
     perKm: 29,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5850,
@@ -211,6 +219,7 @@ const rateTable: Record<
     perKm: 32,
     local4hr: 2324,
     local8hr: 4226,
+    local10hr: 4696,
     fullDay: 4226,
     halfDay: 2324,
     vip: 7650,
@@ -220,6 +229,7 @@ const rateTable: Record<
     perKm: 39,
     local4hr: 2685,
     local8hr: 4881,
+    local10hr: 5423,
     fullDay: 4881,
     halfDay: 2685,
     vip: 9900,
@@ -231,6 +241,7 @@ const editableRateKeys = [
   "perKm",
   "local4hr",
   "local8hr",
+  "local10hr",
   "fullDay",
   "halfDay",
   "vip",
@@ -899,6 +910,7 @@ export default function Home() {
     perKm: "",
     local4hr: "",
     local8hr: "",
+    local10hr: "",
     fullDay: "",
     halfDay: "",
     vip: "",
@@ -981,6 +993,10 @@ export default function Home() {
             vehicleRateOverrides[vehicleName]?.local8hr ?? rates.local8hr,
             priceAdjustmentPercent,
           ),
+          local10hr: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.local10hr ?? rates.local10hr,
+            priceAdjustmentPercent,
+          ),
           fullDay: applyPriceAdjustment(
             vehicleRateOverrides[vehicleName]?.fullDay ?? rates.fullDay,
             priceAdjustmentPercent,
@@ -1002,8 +1018,7 @@ export default function Home() {
       vehicles
         .map((item) => {
           const rates = adjustedRateTable[item.name];
-          const localBaseFare =
-            selectedLocalPackage.id === "local4hr" ? rates.local4hr : rates.local8hr;
+          const localBaseFare = rates[selectedLocalPackage.id];
           const localExtraKm =
             tripType === "In-City"
               ? Math.max(0, billableDistance - selectedLocalPackage.km)
@@ -3654,13 +3669,13 @@ export default function Home() {
       style={{ "--active-site-font": activeSiteFontStack } as CSSProperties}
     >
       <header className="top-strip main-menu">
-        <a className="brand" href="#home" aria-label="Vishnu Tours home">
+        <Link className="brand" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src="/logo.svg?v=borderless" alt="Vishnu Tours logo" />
+          <img className="brand-logo" src="/logo.svg?v=wide" alt="Vishnu Tours logo" />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
-        </a>
+        </Link>
         <div className="header-actions">
           <a className="call-button" href={whatsappUrl} target="_blank">
             WhatsApp 7004291529
@@ -4497,7 +4512,7 @@ export default function Home() {
       <footer className="site-footer" id="contact">
         <div className="footer-column footer-brand-column">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="footer-logo" src="/logo.svg?v=borderless" alt="Vishnu Tours logo" />
+          <img className="footer-logo" src="/logo.svg?v=wide" alt="Vishnu Tours logo" />
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
@@ -5139,11 +5154,13 @@ export default function Home() {
                                   ? "4 Hr / 45 KM"
                                   : rateKey === "local8hr"
                                     ? "8 Hr / 90 KM"
-                                    : rateKey === "fullDay"
-                                      ? "Full Day"
-                                      : rateKey === "halfDay"
-                                        ? "Half Day"
-                                        : "VIP"}
+                                    : rateKey === "local10hr"
+                                      ? "10 Hr / 100 KM"
+                                      : rateKey === "fullDay"
+                                        ? "Full Day"
+                                        : rateKey === "halfDay"
+                                          ? "Half Day"
+                                          : "VIP"}
                             </span>
                             <input
                               value={rateEditorForm[rateKey]}
@@ -5207,6 +5224,7 @@ export default function Home() {
                           perKm: override.perKm ?? defaultBase.perKm,
                           local4hr: override.local4hr ?? defaultBase.local4hr,
                           local8hr: override.local8hr ?? defaultBase.local8hr,
+                          local10hr: override.local10hr ?? defaultBase.local10hr,
                           fullDay: override.fullDay ?? defaultBase.fullDay,
                           halfDay: override.halfDay ?? defaultBase.halfDay,
                           vip: override.vip ?? defaultBase.vip,
@@ -5219,6 +5237,7 @@ export default function Home() {
                             <span>KM {formatInr(base.perKm)} → {formatInr(adjusted.perKm)}</span>
                             <span>4 Hr / 45 KM {formatInr(base.local4hr)} → {formatInr(adjusted.local4hr)}</span>
                             <span>8 Hr / 90 KM {formatInr(base.local8hr)} → {formatInr(adjusted.local8hr)}</span>
+                            <span>10 Hr / 100 KM {formatInr(base.local10hr)} → {formatInr(adjusted.local10hr)}</span>
                             <span>Full Day {formatInr(base.fullDay)} → {formatInr(adjusted.fullDay)}</span>
                             <span>VIP {formatInr(base.vip)} → {formatInr(adjusted.vip)}</span>
                           </div>

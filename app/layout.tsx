@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import {
   Inter,
   Lato,
+  Manrope,
   Montserrat,
+  Nunito_Sans,
+  Open_Sans,
   Plus_Jakarta_Sans,
   Poppins,
   Roboto,
@@ -27,10 +30,28 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const nunitoSans = Nunito_Sans({
+  variable: "--font-nunito-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const roboto = Roboto({
@@ -69,7 +90,7 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <body
-        className={`${plusJakartaSans.variable} ${inter.variable} ${poppins.variable} ${montserrat.variable} ${roboto.variable} ${lato.variable} antialiased`}
+        className={`${plusJakartaSans.variable} ${inter.variable} ${poppins.variable} ${manrope.variable} ${montserrat.variable} ${nunitoSans.variable} ${openSans.variable} ${roboto.variable} ${lato.variable} antialiased`}
       >
         {children}
       </body>
