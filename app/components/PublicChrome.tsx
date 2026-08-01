@@ -18,7 +18,7 @@ const publicFontStacks: Record<string, string> = {
   "System UI": "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 const defaultSiteBranding = {
-  iconUrl: "/logo-wide.png?v=20260731",
+  iconUrl: "/logo-mark.png?v=20260801",
   headerLogoSize: 42,
   footerLogoSize: 62,
   faviconSize: 32,
@@ -104,9 +104,11 @@ export function PublicHeader() {
       </Link>
       <nav className="main-nav" aria-label="Primary navigation">
         <Link href="/#home">Home</Link>
+        <Link href="/#why-us">About Us</Link>
         <Link href="/#fleet">Our Fleet</Link>
-        <Link href="/#services">Services</Link>
-        <Link href="/price-chart">Price Chart</Link>
+        <Link href="/#booking">Outstation</Link>
+        <Link href="/#booking">Airport Transfer</Link>
+        <Link href="/#booking">Local Rental</Link>
         <Link href="/#contact">Contact Us</Link>
       </nav>
       <div className="header-actions">

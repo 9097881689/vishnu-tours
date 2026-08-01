@@ -268,7 +268,7 @@ type SiteBranding = {
 };
 
 const defaultSiteBranding: SiteBranding = {
-  iconUrl: "/logo-wide.png?v=20260731",
+  iconUrl: "/logo-mark.png?v=20260801",
   headerLogoSize: 42,
   footerLogoSize: 62,
   faviconSize: 32,
@@ -4316,9 +4316,11 @@ export default function Home() {
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
           <a href="#home">Home</a>
+          <a href="#why-us">About Us</a>
           <a href="#fleet">Our Fleet</a>
-          <a href="#services">Services</a>
-          <Link href="/price-chart">Price Chart</Link>
+          <a href="#booking">Outstation</a>
+          <a href="#booking">Airport Transfer</a>
+          <a href="#booking">Local Rental</a>
           <a href="#contact">Contact Us</a>
         </nav>
         <div className="header-actions">
@@ -4338,25 +4340,18 @@ export default function Home() {
       {bookingView === "home" ? (
       <>
       <section className="hero focused-booking-hero" id="home">
-        <div className="taxi-visual" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/fleet/hycross.png" alt="" />
-          <span className="road-line" />
-        </div>
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="hero-kicker">Mumbai&apos;s Trusted Corporate Cab Service</p>
-            <h1>VIP Luxury <span>Cab Service</span></h1>
+            <p className="hero-kicker">Mumbai&apos;s <b>Most Trusted</b> Cab Service</p>
+            <h1>Stress Free Travel <span>Every Mile With Us</span></h1>
             <p>
-              Premium Cab Booking From Mumbai For Corporate Guests, Airport
-              Transfers, In-City Movement And Outstation Trips. Select Your
-              Cab, Review Fare Details And Enjoy A Comfortable Journey.
+              Experience Safe, Comfortable And Timely Rides With Vishnu Tours.
             </p>
             <div className="hero-service-points" aria-label="Service benefits">
-              <span><b>24x7</b> Booking Support</span>
-              <span><b>Clean</b> Owner Fleet</span>
-              <span><b>On-Time</b> Pickup</span>
-              <span><b>Clear</b> Fare Details</span>
+              <span><b>24x7 Support</b> Always Available</span>
+              <span><b>Clean & Safe Cabs</b> Well Maintained</span>
+              <span><b>On-Time Service</b> Always On Time</span>
+              <span><b>Affordable Pricing</b> Best Fare Guarantee</span>
             </div>
           </div>
 
@@ -4368,7 +4363,7 @@ export default function Home() {
               continueToRates();
             }}
           >
-            <h2 className="booking-title">Corporate Cab Booking In Mumbai</h2>
+            <h2 className="booking-title">Cab Booking</h2>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
               {bookingTypes.map((type) => (
                 <button
@@ -4737,9 +4732,7 @@ export default function Home() {
 
       <section className="homepage-fleet-strip" id="fleet" aria-label="Vishnu Tours car fleet">
         <div className="homepage-fleet-head">
-          <span>Owner Fleet</span>
-          <h2>Cars For Corporate, VIP And Family Travel</h2>
-          <p>Sedan And MUV Options Available From Mumbai For Airport, In-City, Round Trip And Outstation Travel.</p>
+          <h2>Popular Cabs</h2>
         </div>
         <div className="homepage-fleet-list">
           {vehicles.map((item) => (
@@ -5028,62 +5021,41 @@ export default function Home() {
 
       {bookingView === "home" ? (
       <>
-      <section className="homepage-story-section" aria-label="Corporate travel service">
-        <div className="homepage-story-copy">
-          <span>Corporate Travel Desk</span>
-          <h2>Reliable Mumbai Pickup For Business Guests And VIP Movement</h2>
-          <p>
-            Vishnu Tours Handles Airport Transfers, Office Visits, Hotel Pickup,
-            Local Duties And Outstation Travel With Verified Owner Fleet
-            Coordination, Fare Clarity And Premium Guest Support.
-          </p>
-          <div className="homepage-proof-grid">
-            <div>
-              <strong>5 Fleet Types</strong>
-              <small>Etios, Ertiga, Rumion, Crysta And Innova Hycross</small>
-            </div>
-            <div>
-              <strong>GST Fare View</strong>
-              <small>Fare Details Shown Before Booking Confirmation</small>
-            </div>
-            <div>
-              <strong>VIP Ready</strong>
-              <small>Clean White Cars For Corporate Guests And Family Travel</small>
-            </div>
-          </div>
-        </div>
-        <div className="homepage-story-image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/home/innova-hycross-vip-pickup.jpg?v=7f31a1" alt="White Innova Hycross VIP pickup by Vishnu Tours" />
-        </div>
-      </section>
-
-      <section className="homepage-steps-section" aria-label="Booking process">
+      <a className="enquiry-tab" href={whatsappUrl} target="_blank">Enquiry</a>
+      <a className="floating-whatsapp" href={whatsappUrl} target="_blank" aria-label="WhatsApp Vishnu Tours">WA</a>
+      <section className="homepage-steps-section" id="why-us" aria-label="Why choose Vishnu Tours">
         <div className="homepage-section-head">
-          <span>Simple Booking Flow</span>
-          <h2>Book, Select Cab, Confirm And Travel</h2>
+          <h2>Why Choose Vishnu Tours?</h2>
         </div>
         <div className="homepage-steps-grid">
           {[
             {
-              title: "Enter Journey",
-              text: "Choose Outstation, Airport Or In-City And Add Pickup Date, Time And KM.",
+              title: "24x7 Customer Support",
+              text: "We Are Always Here To Help You.",
             },
             {
-              title: "Compare Fleet",
-              text: "See Available Car Options With Fare, GST, Seating And Suitcase Details.",
+              title: "Mumbai Pickup Coverage",
+              text: "Pickup And Drop Support Across Mumbai.",
             },
             {
-              title: "Confirm Booking",
-              text: "Save Booking On Website With Booking Number And Payment Choice.",
+              title: "Sanitized And Safe Cars",
+              text: "Your Safety And Comfort Are Our Priority.",
             },
             {
-              title: "Ride Managed",
-              text: "Your Cab, Pickup Time And Travel Status Stay Clearly Coordinated.",
+              title: "Professional Drivers",
+              text: "Polite, Experienced And Verified Drivers.",
+            },
+            {
+              title: "Transparent Pricing",
+              text: "No Hidden Charges. See Your Fare Clearly.",
+            },
+            {
+              title: "Easy Booking",
+              text: "Quick Website Booking And Confirmation.",
             },
           ].map((item, index) => (
             <article className="homepage-step-card" key={item.title}>
-              <b>{String(index + 1).padStart(2, "0")}</b>
+              <b aria-hidden="true">{["☎", "⌖", "▣", "♙", "₹", "✓"][index]}</b>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
@@ -5093,8 +5065,7 @@ export default function Home() {
 
       <section className="homepage-services-section" id="services" aria-label="Important services">
         <div className="homepage-section-head">
-          <span>Service Coverage</span>
-          <h2>Built For Corporate Guests, Airport Runs And Long Routes</h2>
+          <h2>Our Services</h2>
         </div>
         <div className="homepage-service-grid">
           {[
@@ -5120,39 +5091,26 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-ops-section" aria-label="Airport and outstation coordination">
-        <div className="homepage-ops-image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/home/innova-hycross-vip-pickup.jpg?v=7f31a1" alt="White Innova Hycross corporate pickup by Vishnu Tours" />
+      <section className="homepage-comfort-section" aria-label="Travel with comfort and trust">
+        <div className="homepage-section-head">
+          <h2>Travel With Comfort & Trust</h2>
+          <p>Rides For Every Need, Every Journey And Every Destination.</p>
         </div>
-        <div className="homepage-ops-copy">
-          <span>Trip Coordination</span>
-          <h2>Clear Fare, Clean Car And Assigned Driver Before Travel</h2>
-          <ul>
-            <li>Booking Number In VTT Format After Confirmation.</li>
-            <li>Cab And Driver Details Are Coordinated Before Pickup.</li>
-            <li>Customer Receives Fare, GST And Trip Details Clearly.</li>
-            <li>Airport, Local And Outstation Trips Stay Organized From Mumbai.</li>
-          </ul>
-        </div>
-      </section>
-
-      <section className="trust-strip" aria-label="Service highlights">
-        <div>
-          <strong>Transparent Fare</strong>
-          <span>GST Included Before Confirmation</span>
-        </div>
-        <div>
-          <strong>Owner Fleet</strong>
-          <span>Clean White Cars</span>
-        </div>
-        <div>
-          <strong>Corporate Ready</strong>
-          <span>Guest Movement Support</span>
-        </div>
-        <div>
-          <strong>Flexible Payment</strong>
-          <span>Pay Online Or After Ride</span>
+        <div className="homepage-comfort-grid">
+          {[
+            ["Professional Chauffeurs", "Trained, Polite And Committed To Your Safety.", "/home/corporate-transfer.png"],
+            ["For Business & Professionals", "Punctual, Reliable And Productive Travel Experience.", "/home/innova-hycross-vip-pickup.jpg?v=7f31a1"],
+            ["For Families & Loved Ones", "Comfortable Rides For Memorable Journeys Together.", "/services/all-india.png"],
+          ].map(([title, text, image]) => (
+            <article className="homepage-comfort-card" key={title}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt={title} />
+              <div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -5171,24 +5129,36 @@ export default function Home() {
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
-          <strong>Legal Pages</strong>
+          <strong>Quick Links</strong>
+          <a href="#home">Home</a>
+          <a href="#why-us">About Us</a>
+          <a href="#fleet">Our Fleet</a>
+          <a href="#booking">Book Cab</a>
+        </div>
+        <div className="footer-column">
+          <strong>Our Services</strong>
+          <a href="#booking">Outstation Trips</a>
+          <a href="#booking">Airport Transfers</a>
+          <a href="#booking">In-City Travel</a>
+          <a href="#services">Corporate Travel</a>
+        </div>
+        <div className="footer-column">
+          <strong>Company</strong>
           <Link href="/privacy-policy">Privacy Policy</Link>
           <Link href="/terms-and-conditions">Terms And Conditions</Link>
           <Link href="/cancellation-refund">Cancellation And Refund</Link>
           <Link href="/cookie-policy">Cookie Policy</Link>
         </div>
         <div className="footer-column">
-          <strong>Company</strong>
+          <strong>Contact Us</strong>
           <Link href="/price-chart">Live Price Chart</Link>
-          <Link href="/disclaimer">Disclaimer</Link>
-          <Link href="/contact">Contact Page</Link>
           <span>Mumbai, Maharashtra, India</span>
-        </div>
-        <div className="footer-column">
-          <strong>Contact</strong>
           <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
           <a href={whatsappUrl} target="_blank">+91 7004291529</a>
-          <a href={whatsappUrl} target="_blank">WhatsApp Booking Help</a>
+        </div>
+        <div className="footer-bottom">
+          <span>© 2026 Vishnu Tours. All Rights Reserved.</span>
+          <span>Safe & Comfortable Travel From Mumbai</span>
         </div>
       </footer>
       </>
