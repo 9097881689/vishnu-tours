@@ -268,7 +268,7 @@ type SiteBranding = {
 };
 
 const defaultSiteBranding: SiteBranding = {
-  iconUrl: "/logo-mark.png?v=20260801",
+  iconUrl: "/logo-mark-v2.png?v=20260801",
   headerLogoSize: 42,
   footerLogoSize: 62,
   faviconSize: 32,
@@ -5100,7 +5100,7 @@ export default function Home() {
           {[
             ["Professional Chauffeurs", "Trained, Polite And Committed To Your Safety.", "/home/corporate-transfer.png"],
             ["For Business & Professionals", "Punctual, Reliable And Productive Travel Experience.", "/home/innova-hycross-vip-pickup.jpg?v=7f31a1"],
-            ["For Families & Loved Ones", "Comfortable Rides For Memorable Journeys Together.", "/services/all-india.png"],
+            ["For Families & Loved Ones", "Comfortable Rides For Memorable Journeys Together.", "/home/family-travel-v2.jpg"],
           ].map(([title, text, image]) => (
             <article className="homepage-comfort-card" key={title}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -5124,8 +5124,10 @@ export default function Home() {
 
       <footer className="site-footer" id="contact">
         <div className="footer-column footer-brand-column">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
+          <Link href="/" aria-label="Vishnu Tours home">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
+          </Link>
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
@@ -5154,7 +5156,10 @@ export default function Home() {
           <Link href="/price-chart">Live Price Chart</Link>
           <span>Mumbai, Maharashtra, India</span>
           <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
-          <a href={whatsappUrl} target="_blank">+91 7004291529</a>
+          <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
+            <span className="footer-whatsapp-icon" aria-hidden="true">☎</span>
+            +91 7004291529
+          </a>
         </div>
         <div className="footer-bottom">
           <span>© 2026 Vishnu Tours. All Rights Reserved.</span>

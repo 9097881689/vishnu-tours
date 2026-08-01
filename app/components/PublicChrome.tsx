@@ -18,7 +18,7 @@ const publicFontStacks: Record<string, string> = {
   "System UI": "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 const defaultSiteBranding = {
-  iconUrl: "/logo-mark.png?v=20260801",
+  iconUrl: "/logo-mark-v2.png?v=20260801",
   headerLogoSize: 42,
   footerLogoSize: 62,
   faviconSize: 32,
@@ -54,6 +54,8 @@ function useSiteBrandSync() {
 
         document.documentElement.style.setProperty("--brand-font", stack);
         document.documentElement.style.setProperty("--heading-font", stack);
+        document.body.style.setProperty("--brand-font", stack);
+        document.body.style.setProperty("--heading-font", stack);
         document.documentElement.style.setProperty(
           "--site-header-logo-size",
           `${nextBranding.headerLogoSize}px`,
@@ -129,8 +131,10 @@ export function PublicFooter() {
   return (
     <footer className="site-footer" id="contact" style={style}>
       <div className="footer-column footer-brand-column">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
+        <Link href="/" aria-label="Vishnu Tours home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
+        </Link>
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
           And Outstation Trips.
@@ -153,7 +157,10 @@ export function PublicFooter() {
       <div className="footer-column">
         <strong>Contact</strong>
         <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
-        <a href={whatsappUrl} target="_blank">+91 7004291529</a>
+        <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
+          <span className="footer-whatsapp-icon" aria-hidden="true">☎</span>
+          +91 7004291529
+        </a>
         <a href={whatsappUrl} target="_blank">WhatsApp Booking Help</a>
       </div>
     </footer>

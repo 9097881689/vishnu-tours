@@ -216,7 +216,7 @@ const allowedSiteFonts = new Set([
 ]);
 
 const defaultSiteBranding: SiteBranding = {
-  iconUrl: "/logo-mark.png?v=20260801",
+  iconUrl: "/logo-mark-v2.png?v=20260801",
   headerLogoSize: 42,
   footerLogoSize: 62,
   faviconSize: 32,

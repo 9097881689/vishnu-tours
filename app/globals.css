@@ -8883,3 +8883,34 @@ h6,
     display: none;
   }
 }
+
+/* Focused visual refinements requested after the VTOURS redesign. */
+.savaari-booking-panel {
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.homepage-service-image {
+  height: 96px;
+}
+
+.footer-whatsapp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.footer-whatsapp-icon {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: #20c765;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
