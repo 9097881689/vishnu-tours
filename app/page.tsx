@@ -4314,6 +4314,13 @@ export default function Home() {
             <strong>Vishnu Tours</strong>
           </span>
         </Link>
+        <nav className="main-nav" aria-label="Primary navigation">
+          <a href="#home">Home</a>
+          <a href="#fleet">Our Fleet</a>
+          <a href="#services">Services</a>
+          <Link href="/price-chart">Price Chart</Link>
+          <a href="#contact">Contact Us</a>
+        </nav>
         <div className="header-actions">
           <a className="call-button" href={whatsappUrl} target="_blank">
             WhatsApp 7004291529
@@ -4332,28 +4339,24 @@ export default function Home() {
       <>
       <section className="hero focused-booking-hero" id="home">
         <div className="taxi-visual" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/fleet/hycross.png" alt="" />
           <span className="road-line" />
-          <div className="vip-visual-card">
-            <span>VIP</span>
-            <strong>Luxury Cab Service</strong>
-            <small>Mumbai Corporate Pickup | All India Trips</small>
-          </div>
         </div>
         <div className="hero-content">
           <div className="hero-copy">
-            <h1>VIP Luxury Cab Service</h1>
+            <p className="hero-kicker">Mumbai&apos;s Trusted Corporate Cab Service</p>
+            <h1>VIP Luxury <span>Cab Service</span></h1>
             <p>
               Premium Cab Booking From Mumbai For Corporate Guests, Airport
               Transfers, In-City Movement And Outstation Trips. Select Your
               Cab, Review Fare Details And Enjoy A Comfortable Journey.
             </p>
-            <div className="hero-actions">
-              <a className="primary-action" href="#booking">
-                Book Cab Now
-              </a>
-              <a className="secondary-action" href="tel:+917004291529">
-                Call for Help
-              </a>
+            <div className="hero-service-points" aria-label="Service benefits">
+              <span><b>24x7</b> Booking Support</span>
+              <span><b>Clean</b> Owner Fleet</span>
+              <span><b>On-Time</b> Pickup</span>
+              <span><b>Clear</b> Fare Details</span>
             </div>
           </div>
 
@@ -5088,24 +5091,30 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-services-section" aria-label="Important services">
+      <section className="homepage-services-section" id="services" aria-label="Important services">
         <div className="homepage-section-head">
           <span>Service Coverage</span>
           <h2>Built For Corporate Guests, Airport Runs And Long Routes</h2>
         </div>
         <div className="homepage-service-grid">
           {[
-            ["Airport T1 And T2", "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", "airport"],
-            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support.", "office"],
-            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", "city"],
-            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel.", "route"],
-            ["VIP Event Movement", "Clean White Cars For Weddings, Events And Executive Guests.", "vip"],
-            ["Booking Support", "Clear Fare, Cab Selection And Confirmation Before Travel.", "support"],
-          ].map(([title, text, icon]) => (
+            ["Airport T1 And T2", "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", "airport", "/services/airport.png"],
+            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support.", "office", "/services/corporate.png"],
+            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", "city", "/services/city.png"],
+            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel.", "route", "/services/outstation.png"],
+            ["VIP Event Movement", "Clean White Cars For Weddings, Events And Executive Guests.", "vip", "/services/executive.png"],
+            ["Booking Support", "Clear Fare, Cab Selection And Confirmation Before Travel.", "support", "/services/all-india.png"],
+          ].map(([title, text, icon, image]) => (
             <article className="homepage-service-card" key={title}>
-              <span className={`homepage-service-icon icon-${icon}`} aria-hidden="true" />
-              <h3>{title}</h3>
-              <p>{text}</p>
+              <div className="homepage-service-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image} alt={`${title} cab service`} />
+              </div>
+              <div className="homepage-service-body">
+                <span className={`homepage-service-icon icon-${icon}`} aria-hidden="true" />
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
             </article>
           ))}
         </div>
@@ -5145,6 +5154,14 @@ export default function Home() {
           <strong>Flexible Payment</strong>
           <span>Pay Online Or After Ride</span>
         </div>
+      </section>
+
+      <section className="homepage-cta" aria-label="Book Vishnu Tours cab">
+        <div>
+          <span>Need A Cab From Mumbai?</span>
+          <strong>Choose Your Journey And Get A Clear Fare Before You Confirm.</strong>
+        </div>
+        <a href="#booking">Book Your Cab Now</a>
       </section>
 
       <footer className="site-footer" id="contact">

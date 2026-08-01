@@ -7262,3 +7262,914 @@ h6,
     grid-column: 1;
   }
 }
+
+/* Reference-Led Premium Homepage */
+.site-font-shell {
+  --vt-blue: #0645b8;
+  --vt-blue-dark: #05245f;
+  --vt-ink: #071a3d;
+  --vt-orange: #ff650f;
+  --vt-line: #dce7f7;
+  background: #ffffff;
+  color: var(--vt-ink);
+}
+
+.top-strip.main-menu,
+.top-strip.main-menu.public-page-menu {
+  display: flex;
+  min-height: 68px;
+  padding: 8px clamp(16px, 3.6vw, 54px);
+  border: 0;
+  background: rgba(255, 255, 255, 0.97);
+  color: var(--vt-ink);
+  box-shadow: 0 10px 34px rgba(7, 26, 61, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.top-strip.main-menu .brand {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 245px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #05245f, #0759a8);
+}
+
+.brand .brand-logo,
+.top-strip.main-menu .brand-logo {
+  width: auto;
+  height: min(var(--site-header-logo-size, 42px), 42px);
+  max-width: 218px;
+  filter: none;
+}
+
+.top-strip.main-menu .main-nav {
+  gap: 1px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.top-strip.main-menu .main-nav a {
+  position: relative;
+  padding: 11px 10px;
+  border-radius: 0;
+  color: #233451;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.top-strip.main-menu .main-nav a::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  left: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--vt-blue);
+  transform: scaleX(0);
+  transition: transform 160ms ease;
+}
+
+.top-strip.main-menu .main-nav a:hover {
+  background: transparent;
+  color: var(--vt-blue);
+}
+
+.top-strip.main-menu .main-nav a:hover::after {
+  transform: scaleX(1);
+}
+
+.top-strip.main-menu .header-actions {
+  gap: 8px;
+  margin-left: 10px;
+}
+
+.top-strip.main-menu .call-button {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 8px;
+  background: #e8fff1;
+  color: #08783e;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.top-strip.main-menu .login-button {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--vt-blue);
+  border-radius: 8px;
+  background: var(--vt-blue);
+  color: #ffffff;
+}
+
+.hero.focused-booking-hero {
+  min-height: 720px;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 78% 14%, rgba(255, 255, 255, 0.95) 0 4%, transparent 28%),
+    linear-gradient(112deg, rgba(198, 229, 255, 0.98) 0%, rgba(236, 247, 255, 0.97) 48%, rgba(255, 235, 147, 0.92) 100%);
+}
+
+.hero.focused-booking-hero::before {
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0 47%, rgba(255, 255, 255, 0.34) 47.2% 47.5%, transparent 47.8%),
+    repeating-linear-gradient(165deg, transparent 0 54px, rgba(14, 83, 175, 0.045) 55px 56px, transparent 57px 110px);
+  opacity: 1;
+}
+
+.hero.focused-booking-hero::after {
+  display: block;
+  content: "";
+  position: absolute;
+  right: -7%;
+  bottom: 185px;
+  left: -7%;
+  height: 105px;
+  border-top: 1px solid rgba(26, 107, 212, 0.16);
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.5));
+  transform: rotate(-1.5deg);
+  z-index: -1;
+}
+
+.hero.focused-booking-hero .hero-content {
+  position: relative;
+  z-index: 2;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "copy"
+    "form";
+  align-content: start;
+  gap: 24px;
+  width: min(1220px, calc(100% - 40px));
+  min-height: 720px;
+  padding: 72px 0 42px;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-copy {
+  grid-area: copy;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  width: min(52%, 620px);
+  margin: 0;
+  padding: 0;
+  color: var(--vt-ink);
+  text-align: left;
+}
+
+.hero-kicker {
+  margin: 0 0 10px !important;
+  color: #132f58 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.hero-content:has(.savaari-booking-panel) h1 {
+  display: block;
+  width: min(650px, 100%);
+  margin: 0 0 13px;
+  color: var(--vt-ink);
+  font-size: clamp(38px, 4.4vw, 66px);
+  font-weight: 850;
+  line-height: 1.02;
+  text-align: left;
+  white-space: normal;
+  text-shadow: none;
+}
+
+.hero-content:has(.savaari-booking-panel) h1 span {
+  display: block;
+  color: #0d55c8;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-copy > p:not(.hero-kicker) {
+  max-width: 575px;
+  margin: 0;
+  color: #42516b;
+  font-size: 14px;
+  font-weight: 520;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.hero-service-points {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: min(620px, 100%);
+  margin-top: 20px;
+}
+
+.hero-service-points span {
+  display: grid;
+  gap: 2px;
+  min-height: 54px;
+  align-content: center;
+  padding: 8px 10px;
+  border-left: 2px solid #1470e3;
+  color: #526079;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.hero-service-points b {
+  color: var(--vt-blue-dark);
+  font-size: 12px;
+}
+
+.taxi-visual {
+  position: absolute;
+  top: 56px;
+  right: max(2vw, calc((100vw - 1280px) / 2));
+  z-index: 1;
+  display: grid;
+  width: min(48vw, 620px);
+  min-height: 360px;
+  place-items: end center;
+  pointer-events: none;
+}
+
+.taxi-visual img {
+  width: 100%;
+  aspect-ratio: auto;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+  filter: drop-shadow(0 30px 24px rgba(19, 53, 89, 0.2));
+  transform: scale(1.08);
+}
+
+.taxi-visual .road-line {
+  position: absolute;
+  right: 8%;
+  bottom: 18px;
+  left: 8%;
+  display: block;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(22, 52, 84, 0.18);
+  filter: blur(10px);
+}
+
+.savaari-booking-panel {
+  grid-area: form;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 20px 22px 18px;
+  border: 1px solid rgba(25, 76, 145, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 60px rgba(29, 71, 122, 0.18);
+}
+
+.booking-title {
+  margin-bottom: 12px;
+  color: var(--vt-ink);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.savaari-booking-panel .trip-tabs {
+  width: min(620px, 100%);
+  margin: 0 auto 12px;
+  gap: 0;
+}
+
+.savaari-booking-panel .trip-tabs button,
+.savaari-booking-panel .trip-tabs button:first-child,
+.savaari-booking-panel .trip-tabs button:last-child {
+  min-height: 36px;
+  border-color: #d4dfef;
+  border-radius: 0;
+  background: #ffffff;
+  color: #33425d;
+  font-size: 11px;
+}
+
+.savaari-booking-panel .trip-tabs button:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.savaari-booking-panel .trip-tabs button:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.savaari-booking-panel .trip-tabs button.active {
+  border-color: var(--vt-blue);
+  background: var(--vt-blue);
+  color: #ffffff;
+}
+
+.savaari-booking-panel .route-form-row {
+  gap: 8px;
+}
+
+.savaari-booking-panel .booking-field > span {
+  color: #263754;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.savaari-booking-panel .route-form-row .booking-field input,
+.savaari-booking-panel .route-form-row .booking-field select,
+.savaari-booking-panel .choose-trip-field select {
+  min-height: 40px;
+  padding-inline: 8px;
+  border: 1px solid #d8e2ef;
+  border-radius: 7px;
+  background: #fbfdff;
+  color: #17243a;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.savaari-booking-panel .current-location-button {
+  right: 4px;
+  min-height: 28px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: #e9f3ff;
+  color: #0b58bd;
+}
+
+.savaari-booking-panel .route-form-row .route-swap {
+  border-color: #dbe8f6;
+  background: #eef7ff;
+  color: #075abf;
+}
+
+.savaari-booking-panel .explore-cabs-button {
+  width: min(300px, 100%);
+  min-height: 44px;
+  margin: 12px auto -2px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #ff7518, #f4510b);
+  color: #ffffff;
+  box-shadow: 0 12px 25px rgba(244, 81, 11, 0.24);
+  font-size: 13px;
+}
+
+.booking-rating-strip {
+  transform: translateY(34px);
+  width: max-content;
+  max-width: calc(100% - 20px);
+  margin-top: -14px;
+  padding: 11px 22px;
+  border: 1px solid rgba(20, 83, 166, 0.12);
+  background: #ffffff;
+  color: #253753;
+  box-shadow: 0 14px 30px rgba(7, 26, 61, 0.12);
+  font-size: 11px;
+}
+
+.homepage-fleet-strip {
+  gap: 20px;
+  padding: 42px clamp(18px, 3vw, 48px) 36px;
+  background: #ffffff;
+}
+
+.homepage-fleet-head span {
+  display: none;
+}
+
+.homepage-fleet-head h2,
+.homepage-section-head h2 {
+  color: var(--vt-ink);
+  font-size: clamp(24px, 2.7vw, 34px);
+  font-weight: 800;
+}
+
+.homepage-fleet-head p {
+  color: #65738a;
+  font-weight: 520;
+}
+
+.homepage-fleet-list {
+  gap: 10px;
+  padding: 4px 2px 12px;
+}
+
+.homepage-fleet-card {
+  flex-basis: 220px;
+  padding: 12px;
+  border-color: var(--vt-line);
+  border-radius: 9px;
+  box-shadow: 0 8px 22px rgba(11, 50, 104, 0.06);
+}
+
+.homepage-fleet-photo {
+  min-height: 108px;
+}
+
+.homepage-fleet-photo img {
+  max-height: 104px;
+}
+
+.homepage-fleet-card > div:last-child {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.homepage-fleet-card small {
+  color: #0d5dc8;
+  font-size: 10px;
+}
+
+.homepage-fleet-card h3 {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.homepage-fleet-card p {
+  color: #68768c;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.homepage-story-section,
+.homepage-ops-section {
+  gap: 0;
+  padding: 0;
+  border-color: var(--vt-line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 36px rgba(11, 50, 104, 0.07);
+}
+
+.homepage-story-copy,
+.homepage-ops-copy {
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.homepage-story-copy > span,
+.homepage-ops-copy > span,
+.homepage-section-head span {
+  color: #0d5dc8;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.homepage-story-copy h2,
+.homepage-ops-copy h2 {
+  color: var(--vt-ink);
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 800;
+}
+
+.homepage-story-image,
+.homepage-ops-image,
+.homepage-story-image img,
+.homepage-ops-image img {
+  min-height: 330px;
+  border-radius: 0;
+}
+
+.homepage-story-image img,
+.homepage-ops-image img {
+  object-position: center;
+}
+
+.homepage-proof-grid div,
+.homepage-step-card {
+  border-color: var(--vt-line);
+  background: #ffffff;
+}
+
+.homepage-steps-section,
+.homepage-services-section {
+  margin-top: 44px;
+}
+
+.homepage-steps-grid {
+  gap: 10px;
+}
+
+.homepage-step-card {
+  min-height: 156px;
+  padding: 18px 14px;
+  border-radius: 9px;
+  box-shadow: 0 8px 22px rgba(11, 50, 104, 0.05);
+}
+
+.homepage-step-card b {
+  width: 34px;
+  height: 34px;
+  background: #e9f3ff;
+  color: #075ac2;
+}
+
+.homepage-step-card h3 {
+  color: var(--vt-ink);
+  font-size: 15px;
+}
+
+.homepage-step-card p {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.homepage-service-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.homepage-service-card {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--vt-line);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(11, 50, 104, 0.07);
+  text-align: left;
+}
+
+.homepage-service-image {
+  height: 150px;
+  overflow: hidden;
+  background: #edf4fb;
+}
+
+.homepage-service-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.homepage-service-body {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 16px 16px 18px;
+}
+
+.homepage-service-body .homepage-service-icon {
+  position: absolute;
+  top: -23px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: var(--vt-blue);
+}
+
+.homepage-service-body .homepage-service-icon::before {
+  inset: 10px;
+  background: #ffffff;
+}
+
+.homepage-service-card h3 {
+  color: var(--vt-ink);
+  font-size: 15px;
+  text-align: left;
+}
+
+.homepage-service-card p {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.trust-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 40px;
+  border: 0;
+  border-radius: 0;
+  background: #f5f9ff;
+  box-shadow: none;
+}
+
+.trust-strip div {
+  min-height: 84px;
+  border-color: var(--vt-line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.homepage-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 36px;
+  padding: 28px clamp(22px, 8vw, 130px);
+  background: linear-gradient(110deg, #073783, #0b5ccc);
+  color: #ffffff;
+}
+
+.homepage-cta div {
+  display: grid;
+  gap: 5px;
+}
+
+.homepage-cta span {
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.homepage-cta strong {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 520;
+}
+
+.homepage-cta a {
+  display: inline-grid;
+  min-height: 44px;
+  place-items: center;
+  padding: 0 24px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #ff7518, #f4510b);
+  box-shadow: 0 12px 24px rgba(2, 20, 54, 0.2);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.site-footer {
+  margin-top: 0;
+  padding-top: 42px;
+  padding-bottom: 42px;
+  background: linear-gradient(125deg, #031d48, #042b63 60%, #031a3f);
+}
+
+.site-footer strong {
+  color: #ffffff;
+}
+
+.site-footer span,
+.site-footer a {
+  color: rgba(229, 239, 255, 0.72);
+}
+
+.site-footer a:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 1050px) {
+  .top-strip.main-menu .main-nav a {
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+
+  .top-strip.main-menu .call-button {
+    width: 38px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .top-strip.main-menu .call-button::before {
+    content: "WA";
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .hero.focused-booking-hero .hero-content {
+    padding-top: 62px;
+  }
+
+  .taxi-visual {
+    top: 82px;
+    width: min(49vw, 530px);
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy {
+    width: 55%;
+  }
+}
+
+@media (max-width: 820px) {
+  .top-strip.main-menu,
+  .top-strip.main-menu.public-page-menu {
+    min-height: 62px;
+  }
+
+  .top-strip.main-menu .brand {
+    max-width: 188px;
+  }
+
+  .brand .brand-logo,
+  .top-strip.main-menu .brand-logo {
+    max-width: 170px;
+    height: 36px;
+  }
+
+  .top-strip.main-menu .main-nav {
+    display: none;
+  }
+
+  .hero.focused-booking-hero {
+    min-height: auto;
+  }
+
+  .hero.focused-booking-hero .hero-content {
+    width: min(100% - 24px, 680px);
+    min-height: auto;
+    gap: 16px;
+    padding: 28px 0 42px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy {
+    width: 58%;
+    min-height: 250px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) h1 {
+    font-size: clamp(30px, 6vw, 45px);
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy > p:not(.hero-kicker) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .hero-service-points {
+    display: none;
+  }
+
+  .taxi-visual {
+    top: 68px;
+    right: -7%;
+    width: 54%;
+    min-height: 230px;
+  }
+
+  .savaari-booking-panel {
+    padding: 17px 14px 16px;
+  }
+
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .savaari-booking-panel .route-form-row .route-swap {
+    display: none;
+  }
+
+  .homepage-service-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .homepage-steps-grid,
+  .trust-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .top-strip.main-menu,
+  .top-strip.main-menu.public-page-menu {
+    padding: 7px 9px;
+    background: #ffffff;
+  }
+
+  .top-strip.main-menu .brand {
+    max-width: 145px;
+    padding: 4px 6px;
+  }
+
+  .brand .brand-logo,
+  .top-strip.main-menu .brand-logo {
+    max-width: 132px;
+    height: 30px;
+  }
+
+  .top-strip.main-menu .header-actions {
+    margin-left: auto;
+  }
+
+  .top-strip.main-menu .call-button {
+    width: auto;
+    min-width: 38px;
+    padding: 0 9px;
+  }
+
+  .top-strip.main-menu .call-button::before {
+    content: "WhatsApp";
+    font-size: 10px;
+  }
+
+  .top-strip.main-menu .login-button {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .hero.focused-booking-hero .hero-content {
+    padding-top: 22px;
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy {
+    width: 64%;
+    min-height: 215px;
+  }
+
+  .hero-kicker {
+    margin-bottom: 6px !important;
+    font-size: 10px !important;
+  }
+
+  .hero-content:has(.savaari-booking-panel) h1 {
+    margin-bottom: 8px;
+    font-size: clamp(25px, 8.2vw, 36px);
+  }
+
+  .hero-content:has(.savaari-booking-panel) .hero-copy > p:not(.hero-kicker) {
+    max-height: 72px;
+    overflow: hidden;
+    font-size: 10px;
+  }
+
+  .taxi-visual {
+    top: 72px;
+    right: -15%;
+    width: 59%;
+    min-height: 155px;
+  }
+
+  .booking-title {
+    font-size: 18px;
+  }
+
+  .savaari-booking-panel .trip-tabs {
+    overflow: visible;
+  }
+
+  .savaari-booking-panel .trip-tabs button,
+  .savaari-booking-panel .trip-tabs button:first-child,
+  .savaari-booking-panel .trip-tabs button:last-child {
+    min-width: 0;
+    min-height: 34px;
+    font-size: 9px;
+  }
+
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-rating-strip {
+    width: calc(100% - 16px);
+    padding: 10px 8px;
+    font-size: 9px;
+    text-align: center;
+  }
+
+  .homepage-story-section,
+  .homepage-ops-section {
+    grid-template-columns: 1fr;
+  }
+
+  .homepage-story-copy,
+  .homepage-ops-copy {
+    padding: 24px 18px;
+  }
+
+  .homepage-story-image,
+  .homepage-ops-image,
+  .homepage-story-image img,
+  .homepage-ops-image img {
+    min-height: 220px;
+  }
+
+  .homepage-service-grid,
+  .homepage-steps-grid,
+  .trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .homepage-service-image {
+    height: 165px;
+  }
+
+  .homepage-cta {
+    display: grid;
+    justify-items: center;
+    padding: 24px 18px;
+    text-align: center;
+  }
+
+  .homepage-cta span {
+    font-size: 20px;
+  }
+
+  .homepage-cta a {
+    width: min(280px, 100%);
+  }
+}

@@ -102,6 +102,13 @@ export function PublicHeader() {
           <strong>Vishnu Tours</strong>
         </span>
       </Link>
+      <nav className="main-nav" aria-label="Primary navigation">
+        <Link href="/#home">Home</Link>
+        <Link href="/#fleet">Our Fleet</Link>
+        <Link href="/#services">Services</Link>
+        <Link href="/price-chart">Price Chart</Link>
+        <Link href="/#contact">Contact Us</Link>
+      </nav>
       <div className="header-actions">
         <a className="call-button" href={whatsappUrl} target="_blank">
           WhatsApp 7004291529
