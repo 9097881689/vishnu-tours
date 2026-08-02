@@ -1,8 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ChangeEvent } from "react";
+import type { CSSProperties, ChangeEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  BadgePercent,
+  Banknote,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  CarFront,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  CreditCard,
+  Headphones,
+  Home as HomeIcon,
+  LogOut,
+  MapPinned,
+  Menu,
+  Navigation,
+  Settings,
+  UserRound,
+  Users,
+  WalletCards,
+} from "lucide-react";
 
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai, Maharashtra";
@@ -693,6 +715,7 @@ type PortalRole = "admin" | "driver" | "customer";
 type DriverPanelTab = "dashboard" | "rides" | "wallet" | "vehicles" | "profile" | "history" | "support";
 type CustomerPanelTab = "dashboard" | "bookings" | "payments" | "profile" | "notifications" | "support";
 type AdminPanelTab =
+  | "dashboard"
   | "breakup"
   | "bookings"
   | "pricing"
@@ -1072,7 +1095,7 @@ export default function Home() {
   });
   const [activeAdminBreakup, setActiveAdminBreakup] =
     useState<AdminBreakupType>("bookings");
-  const [activeAdminTab, setActiveAdminTab] = useState<AdminPanelTab>("bookings");
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminPanelTab>("dashboard");
   const [fleetVehicles, setFleetVehicles] =
     useState<FleetVehicle[]>(defaultFleetVehicles);
   const [vehicleMasterForm, setVehicleMasterForm] = useState<VehicleForm>(
@@ -4816,22 +4839,22 @@ export default function Home() {
         !(booking.ride_status || "").toLowerCase().includes("complete") &&
         !(booking.ride_status || "").toLowerCase().includes("cancel"),
     );
-    const driverTabs: Array<{ id: DriverPanelTab; label: string; symbol: string; count?: number }> = [
-      { id: "dashboard", label: "Dashboard", symbol: "⌂" },
-      { id: "rides", label: "Ride Requests & Trips", symbol: "↗", count: openRideRequests.length + assignedDriverRides.length },
-      { id: "wallet", label: "Earnings & Wallet", symbol: "₹", count: withdrawalRequests.filter((item) => item.status === "Pending").length },
-      { id: "vehicles", label: "My Vehicles", symbol: "▰", count: driverVehicles.length },
-      { id: "profile", label: "Profile & Documents", symbol: "●" },
-      { id: "history", label: "Trip History", symbol: "◷", count: completedBookings.length },
-      { id: "support", label: "Help & Support", symbol: "?" },
+    const driverTabs: Array<{ id: DriverPanelTab; label: string; icon: ReactNode; count?: number }> = [
+      { id: "dashboard", label: "Dashboard", icon: <HomeIcon /> },
+      { id: "rides", label: "Ride Requests", icon: <Navigation />, count: openRideRequests.length + assignedDriverRides.length },
+      { id: "history", label: "My Trips", icon: <MapPinned />, count: completedBookings.length },
+      { id: "wallet", label: "Earnings & Wallet", icon: <WalletCards />, count: withdrawalRequests.filter((item) => item.status === "Pending").length },
+      { id: "vehicles", label: "Vehicles", icon: <CarFront />, count: driverVehicles.length },
+      { id: "profile", label: "Profile & Documents", icon: <UserRound /> },
+      { id: "support", label: "Help & Support", icon: <Headphones /> },
     ];
-    const customerTabs: Array<{ id: CustomerPanelTab; label: string; symbol: string; count?: number }> = [
-      { id: "dashboard", label: "Dashboard", symbol: "⌂" },
-      { id: "bookings", label: "My Bookings", symbol: "▤", count: portalBookings.length },
-      { id: "payments", label: "Payments & Invoices", symbol: "₹", count: portalBookings.filter((item) => getBalanceDue(item) > 0).length },
-      { id: "profile", label: "Profile & Addresses", symbol: "●" },
-      { id: "notifications", label: "Notifications", symbol: "◉", count: bookingStatusHistory.length },
-      { id: "support", label: "Help & Support", symbol: "?" },
+    const customerTabs: Array<{ id: CustomerPanelTab; label: string; icon: ReactNode; count?: number }> = [
+      { id: "dashboard", label: "Dashboard", icon: <HomeIcon /> },
+      { id: "bookings", label: "My Bookings", icon: <ClipboardList />, count: portalBookings.length },
+      { id: "payments", label: "Payments & Invoices", icon: <CreditCard />, count: portalBookings.filter((item) => getBalanceDue(item) > 0).length },
+      { id: "profile", label: "Profile & Addresses", icon: <UserRound /> },
+      { id: "notifications", label: "Notifications", icon: <Bell />, count: bookingStatusHistory.length },
+      { id: "support", label: "Help & Support", icon: <Headphones /> },
     ];
 
     return (
@@ -4852,31 +4875,43 @@ export default function Home() {
                   ? setActiveDriverTab(tab.id as DriverPanelTab)
                   : setActiveCustomerTab(tab.id as CustomerPanelTab)}
               >
-                <b aria-hidden="true">{tab.symbol}</b>
+                <b aria-hidden="true">{tab.icon}</b>
                 <span>{tab.label}</span>
                 {typeof tab.count === "number" ? <em>{tab.count}</em> : null}
               </button>
             ))}
           </nav>
           <button className="role-sidebar-logout" type="button" onClick={logoutPortal}>
+            <LogOut aria-hidden="true" />
             Sign Out
           </button>
         </aside>
 
         <section className="role-dashboard-main">
           <header className="role-dashboard-header">
-            <div>
-              <span>{isDriver ? "Driver Dashboard" : "Customer Dashboard"}</span>
-              <strong>{isDriver ? driverProfileForm.name || "Registered Driver" : customerName}</strong>
+            <div className="role-dashboard-heading">
+              <button className="portal-menu-button" type="button" aria-label="Dashboard menu">
+                <Menu aria-hidden="true" />
+              </button>
+              <div>
+                <span>{isDriver ? "Driver Dashboard" : "Customer Dashboard"}</span>
+                <strong>{isDriver ? driverProfileForm.name || "Registered Driver" : customerName}</strong>
+              </div>
             </div>
             {isDriver ? (
-              <label className="driver-online-toggle">
-                <span>{driverOnline ? "Online" : "Offline"}</span>
-                <input checked={driverOnline} onChange={(event) => setDriverOnline(event.target.checked)} type="checkbox" />
-                <i aria-hidden="true" />
-              </label>
+              <div className="portal-user-summary">
+                <label className="driver-online-toggle">
+                  <span>{driverOnline ? "Online" : "Offline"}</span>
+                  <input checked={driverOnline} onChange={(event) => setDriverOnline(event.target.checked)} type="checkbox" />
+                  <i aria-hidden="true" />
+                </label>
+                <b>{(driverProfileForm.name || "Driver").slice(0, 1).toUpperCase()}</b>
+              </div>
             ) : (
-              <span className="customer-header-mobile">{loginMobile}</span>
+              <div className="portal-user-summary">
+                <span className="customer-header-mobile">{loginMobile}</span>
+                <b>{customerName.slice(0, 1).toUpperCase()}</b>
+              </div>
             )}
           </header>
           {portalStatus ? <p className="role-dashboard-status">{portalStatus}</p> : null}
@@ -4893,6 +4928,33 @@ export default function Home() {
                 <div><span>This Month</span><strong>{formatInr(monthEarnings)}</strong><small>Completed Ride Value</small></div>
                 <div><span>Cash In Hand</span><strong>{formatInr(driverEarning.cashInHand)}</strong><small>Settle With Admin</small></div>
               </div>
+              <section className="driver-dashboard-actions">
+                <div>
+                  <span>Quick Actions</span>
+                  <h3>{assignedDriverRides[0] ? `${assignedDriverRides[0].booking_id} · ${assignedDriverRides[0].destination}` : "No Assigned Ride"}</h3>
+                  <p>{assignedDriverRides[0] ? `${assignedDriverRides[0].vehicle} · ${formatDisplayDateTime(assignedDriverRides[0].pickup_datetime)}` : "Accept or receive an assigned ride to enable controls."}</p>
+                </div>
+                <div className="driver-command-buttons">
+                  <button
+                    className="start-command"
+                    type="button"
+                    disabled={!assignedDriverRides[0] || Boolean(assignedDriverRides[0]?.ride_started_at)}
+                    onClick={() => assignedDriverRides[0] && updateDriverRideStatus(assignedDriverRides[0], "Ride Started")}
+                  ><Navigation />Start Ride</button>
+                  <button
+                    className="cancel-command"
+                    type="button"
+                    disabled={!assignedDriverRides[0] || Boolean(assignedDriverRides[0]?.ride_completed_at)}
+                    onClick={() => assignedDriverRides[0] && cancelDriverRide(assignedDriverRides[0])}
+                  ><Clock3 />Cancel Ride</button>
+                  <button
+                    className="complete-command"
+                    type="button"
+                    disabled={!assignedDriverRides[0]?.ride_started_at || Boolean(assignedDriverRides[0]?.ride_completed_at)}
+                    onClick={() => assignedDriverRides[0] && updateDriverRideStatus(assignedDriverRides[0], "Ride Complete")}
+                  ><CheckCircle2 />Complete Ride</button>
+                </div>
+              </section>
               <div className="portal-dashboard-columns">
                 <section className="portal-surface">
                   <div className="portal-section-heading"><div><span>New Work</span><h3>Ride Requests</h3></div><button type="button" onClick={() => setActiveDriverTab("rides")}>View All</button></div>
@@ -4948,7 +5010,16 @@ export default function Home() {
 
           {!isDriver && activeCustomerTab === "dashboard" ? (
             <div className="role-dashboard-view">
-              <div className="portal-welcome-banner customer-welcome-banner"><div><span>Welcome Back</span><h2>{customerName}</h2><p>Book, track, pay and download trip details from one place.</p></div><button type="button" onClick={openPublicBookingForm}>Book A Cab</button></div>
+              <div className="portal-welcome-banner customer-welcome-banner">
+                <div>
+                  <span>Welcome Back</span>
+                  <h2>{customerName}</h2>
+                  <p>Book, track, pay and download trip details from one place.</p>
+                  <button type="button" onClick={openPublicBookingForm}>Book A Cab</button>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/fleet/hycross.png" alt="Toyota Innova Hycross" />
+              </div>
               <div className="portal-kpi-grid"><div><span>Total Bookings</span><strong>{portalBookings.length}</strong></div><div><span>Upcoming Trips</span><strong>{activeBookings.length}</strong></div><div><span>Completed Trips</span><strong>{completedBookings.length}</strong></div><div><span>Cancelled Trips</span><strong>{cancelledBookings.length}</strong></div></div>
               <div className="portal-dashboard-columns">
                 <section className="portal-surface"><div className="portal-section-heading"><div><span>Next Journey</span><h3>Upcoming Trip</h3></div><button type="button" onClick={() => setActiveCustomerTab("bookings")}>View All</button></div>{activeBookings.length ? renderPortalBookingCard(activeBookings[0], false) : <p className="portal-empty-state">No Upcoming Booking.</p>}</section>
@@ -6275,7 +6346,7 @@ export default function Home() {
                             </select>
                           </div>
                         </div>
-	                      {metricCards.map((card) => (
+	                      {activeAdminTab !== "dashboard" ? metricCards.map((card) => (
 	                        <button
                           className={`admin-metric metric-button ${
                             activeAdminBreakup === card.id ? "is-active" : ""
@@ -6290,58 +6361,74 @@ export default function Home() {
                           <span>{card.label}</span>
                           <strong>{card.value}</strong>
                         </button>
-                      ))}
+	                      )) : null}
                       <div className="admin-tabs">
                         {(() => {
                           const taskCounts = getAdminTaskCounts(dashboard);
                           const tabs: Array<{
                             id: AdminPanelTab;
                             label: string;
+                            icon: ReactNode;
                             count: number;
                           }> = [
                             {
-                              id: "breakup",
-                              label: "Total Booking Breakup",
+                              id: "dashboard",
+                              label: "Dashboard",
+                              icon: <HomeIcon />,
                               count: taskCounts.bookings,
                             },
                             {
                               id: "bookings",
-                              label: "Booking",
+                              label: "Bookings & Assignment",
+                              icon: <CalendarDays />,
+                              count: taskCounts.bookings,
+                            },
+                            {
+                              id: "vehicles",
+                              label: "Drivers & Vehicles",
+                              icon: <Users />,
+                              count: taskCounts.vehicles,
+                            },
+                            {
+                              id: "myVehicle",
+                              label: "My Fleet",
+                              icon: <CarFront />,
+                              count: fleetVehicles.length,
+                            },
+                            {
+                              id: "ledger",
+                              label: "Payments & Driver Cash",
+                              icon: <Banknote />,
+                              count: taskCounts.ledger,
+                            },
+                            {
+                              id: "withdrawals",
+                              label: "Withdrawal Requests",
+                              icon: <WalletCards />,
+                              count: taskCounts.withdrawalPending,
+                            },
+                            {
+                              id: "breakup",
+                              label: "Reports & Breakup",
+                              icon: <BarChart3 />,
                               count: taskCounts.bookings,
                             },
                             {
                               id: "pricing",
                               label: "Price Control",
+                              icon: <BadgePercent />,
                               count: Math.round(priceAdjustmentPercent),
                             },
                             {
                               id: "customization",
-                              label: "Customization",
+                              label: "Settings & Customization",
+                              icon: <Settings />,
                               count: siteBranding.headerLogoSize,
                             },
                             {
-                              id: "myVehicle",
-                              label: "My Vehicle",
-                              count: fleetVehicles.length,
-                            },
-                            {
-                              id: "vehicles",
-                              label: "Registered Driver Vehicles",
-                              count: taskCounts.vehicles,
-                            },
-                            {
-                              id: "ledger",
-                              label: "Driver Ledger",
-                              count: taskCounts.ledger,
-                            },
-                            {
-                              id: "withdrawals",
-                              label: "Cash Withdrawal Requests",
-                              count: taskCounts.withdrawalPending,
-                            },
-                            {
                               id: "portalLookup",
-                              label: "Open Any Dashboard",
+                              label: "Driver & Customer Dashboards",
+                              icon: <UserRound />,
                               count: adminLookupBookings.length,
                             },
                           ];
@@ -6395,10 +6482,19 @@ export default function Home() {
                                       type="button"
                                       onClick={() => setActiveAdminTab(tab.id)}
                                     >
+                                      <i aria-hidden="true">{tab.icon}</i>
                                       <span>{tab.label}</span>
                                       <b>{tab.count}</b>
                                     </button>
                                   ))}
+                                  <button
+                                    className="admin-sidebar-logout"
+                                    type="button"
+                                    onClick={logoutPortal}
+                                  >
+                                    <i aria-hidden="true"><LogOut /></i>
+                                    <span>Logout</span>
+                                  </button>
                                 </div>
                               </>
                             );
@@ -6407,6 +6503,122 @@ export default function Home() {
 	                    </>
 	                  );
                 })()}
+                {activeAdminTab === "dashboard" ? (() => {
+                  const finance = getAdminFinanceMetrics(dashboard);
+                  const completed = dashboard.recentBookings.filter((booking) =>
+                    (booking.ride_status || "").toLowerCase().includes("complete"),
+                  ).length;
+                  const cancelled = dashboard.recentBookings.filter((booking) =>
+                    (booking.ride_status || "").toLowerCase().includes("cancel"),
+                  ).length;
+                  const ongoing = dashboard.recentBookings.filter((booking) =>
+                    (booking.ride_status || "").toLowerCase().includes("start"),
+                  ).length;
+                  const pending = Math.max(0, dashboard.totalBookings - completed - cancelled - ongoing);
+                  const statusTotal = Math.max(1, completed + cancelled + ongoing + pending);
+                  const completedPercent = Math.round((completed / statusTotal) * 100);
+                  const ongoingPercent = Math.round((ongoing / statusTotal) * 100);
+                  const cancelledPercent = Math.round((cancelled / statusTotal) * 100);
+                  const uniqueCustomers = new Set(
+                    dashboard.recentBookings.map((booking) => booking.customer_mobile).filter(Boolean),
+                  ).size;
+                  const revenueSeries = dashboard.recentBookings.slice(0, 10).reverse();
+                  const revenueMaximum = Math.max(
+                    1,
+                    ...revenueSeries.map((booking) => getInvoiceTotals(booking).total),
+                  );
+                  const vehicleCounts = dashboard.recentBookings.reduce<Record<string, number>>(
+                    (counts, booking) => {
+                      counts[booking.vehicle] = (counts[booking.vehicle] || 0) + 1;
+                      return counts;
+                    },
+                    {},
+                  );
+                  const topVehicles = Object.entries(vehicleCounts)
+                    .sort((first, second) => second[1] - first[1])
+                    .slice(0, 4);
+
+                  return (
+                    <div className="admin-overview admin-tab-panel">
+                      <div className="admin-overview-title">
+                        <div>
+                          <span>Overview</span>
+                          <h2>Dashboard</h2>
+                        </div>
+                        <button type="button" onClick={() => setActiveAdminTab("bookings")}>Manage Bookings</button>
+                      </div>
+                      <div className="admin-overview-kpis">
+                        <article><span><ClipboardList /></span><div><small>Total Bookings</small><strong>{dashboard.totalBookings}</strong><em>Live booking records</em></div></article>
+                        <article><span><Banknote /></span><div><small>Total Revenue</small><strong>{formatInr(finance.totalBookingAmount)}</strong><em>Final ride value</em></div></article>
+                        <article><span><Users /></span><div><small>Total Drivers</small><strong>{drivers.length}</strong><em>{drivers.filter((driver) => driver.status === "Available").length} available</em></div></article>
+                        <article><span><UserRound /></span><div><small>Total Customers</small><strong>{uniqueCustomers}</strong><em>Recent booking customers</em></div></article>
+                      </div>
+                      <div className="admin-analytics-grid">
+                        <section className="admin-analytics-card admin-revenue-card">
+                          <div className="admin-panel-heading"><div><span>Booking Analytics</span><h3>Revenue Overview</h3></div><b>Recent Rides</b></div>
+                          <div className="admin-booking-chart" aria-label="Recent ride revenue chart">
+                            {revenueSeries.length ? revenueSeries.map((booking) => (
+                              <div key={`revenue-${booking.booking_id}`}>
+                                <i style={{ height: `${Math.max(12, Math.round((getInvoiceTotals(booking).total / revenueMaximum) * 100))}%` }} />
+                                <small>{booking.booking_id.replace("VTT", "")}</small>
+                              </div>
+                            )) : <p>No Booking Analytics Yet.</p>}
+                          </div>
+                        </section>
+                        <section className="admin-analytics-card admin-status-card">
+                          <div className="admin-panel-heading"><div><span>Live Operations</span><h3>Booking Status</h3></div></div>
+                          <div className="admin-status-visual">
+                            <div
+                              className="admin-status-donut"
+                              style={{
+                                "--completed": `${completedPercent * 3.6}deg`,
+                                "--ongoing": `${(completedPercent + ongoingPercent) * 3.6}deg`,
+                                "--cancelled": `${(completedPercent + ongoingPercent + cancelledPercent) * 3.6}deg`,
+                              } as CSSProperties}
+                            >
+                              <strong>{dashboard.totalBookings}</strong>
+                              <span>Total</span>
+                            </div>
+                            <div className="admin-status-legend">
+                              <span><i className="status-completed" />Completed <b>{completed}</b></span>
+                              <span><i className="status-ongoing" />Ongoing <b>{ongoing}</b></span>
+                              <span><i className="status-cancelled" />Cancelled <b>{cancelled}</b></span>
+                              <span><i className="status-pending" />Pending <b>{pending}</b></span>
+                            </div>
+                          </div>
+                        </section>
+                        <section className="admin-analytics-card admin-recent-table-card">
+                          <div className="admin-panel-heading"><div><span>Latest Activity</span><h3>Recent Bookings</h3></div><button type="button" onClick={() => setActiveAdminTab("bookings")}>View All</button></div>
+                          <div className="admin-compact-bookings">
+                            {dashboard.recentBookings.slice(0, 5).map((booking) => (
+                              <button type="button" key={`overview-${booking.booking_id}`} onClick={() => setActiveAdminTab("bookings")}>
+                                <span><b>{booking.booking_id}</b><small>{booking.customer_name}</small></span>
+                                <span><b>{booking.destination}</b><small>{formatDisplayDateTime(booking.pickup_datetime)}</small></span>
+                                <em className={(booking.ride_status || "").toLowerCase().includes("complete") ? "is-complete" : ""}>{booking.ride_status || "Booked"}</em>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                        <section className="admin-analytics-card admin-top-vehicles-card">
+                          <div className="admin-panel-heading"><div><span>Fleet Performance</span><h3>Top Vehicles</h3></div><button type="button" onClick={() => setActiveAdminTab("myVehicle")}>View Fleet</button></div>
+                          <div className="admin-top-vehicles">
+                            {topVehicles.length ? topVehicles.map(([vehicleName, tripCount]) => {
+                              const fleetVehicle = fleetVehicles.find((vehicle) => vehicle.name === vehicleName);
+                              return (
+                                <button type="button" key={`top-${vehicleName}`} onClick={() => setActiveAdminTab("myVehicle")}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={fleetVehicle?.photo || "/fleet/innova-crysta.png"} alt={vehicleName} />
+                                  <span><strong>{vehicleName}</strong><small>{tripCount} Trips</small></span>
+                                  <CarFront />
+                                </button>
+                              );
+                            }) : <p>No Vehicle Trip Data Yet.</p>}
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  );
+                })() : null}
                 {activeAdminTab === "breakup" ? renderAdminMetricBreakup(dashboard) : null}
 	                {activeAdminTab === "bookings" ? (
 	                  <div className="admin-recent admin-tab-panel">
