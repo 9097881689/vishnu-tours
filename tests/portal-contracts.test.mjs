@@ -88,6 +88,22 @@ test("verifies Razorpay signatures on the server before updating payment", async
   assert.match(verifyApi, /payment_transactions/);
 });
 
+test("persists per-hour vehicle fares and adds excess ride time to final fare", async () => {
+  const [bookingsApi, page, priceChart] = await Promise.all([
+    source("app/api/bookings/route.ts"),
+    source("app/page.tsx"),
+    source("app/price-chart/page.tsx"),
+  ]);
+
+  assert.match(bookingsApi, /rate_per_hour INTEGER NOT NULL DEFAULT 0/);
+  assert.match(bookingsApi, /extra_hours INTEGER NOT NULL DEFAULT 0/);
+  assert.match(bookingsApi, /extraHourAmount = Math\.round\(extraHours \* ratePerHour \* 1\.05\)/);
+  assert.match(bookingsApi, /const extraAmount = extraKmAmount \+ extraHourAmount/);
+  assert.match(page, /"perHour"/);
+  assert.match(page, /Per Hour After Package/);
+  assert.match(priceChart, /item\.rates\.perHour/);
+});
+
 test("ships responsive role dashboard styling and all public policy pages", async () => {
   const css = await source("app/globals.css");
   const [homePage, publicChrome] = await Promise.all([

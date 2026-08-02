@@ -7,6 +7,7 @@ type VehicleRates = {
   local4hr: number;
   local8hr: number;
   local10hr: number;
+  perHour: number;
   fullDay: number;
   halfDay: number;
   vip: number;
@@ -44,6 +45,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 7650,
@@ -62,6 +64,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2685,
       local8hr: 4881,
       local10hr: 5423,
+      perHour: 542,
       fullDay: 4881,
       halfDay: 2685,
       vip: 9900,
@@ -80,6 +83,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 5580,
@@ -98,6 +102,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 5850,
@@ -116,6 +121,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 1921,
       local8hr: 3492,
       local10hr: 3880,
+      perHour: 388,
       fullDay: 3492,
       halfDay: 1921,
       vip: 4680,
@@ -130,7 +136,9 @@ const rateTable: Record<string, VehicleRates> = Object.fromEntries(
 rateTable["Toyota Hycross"] = rateTable["Toyota Innova Hycross"];
 
 type PackageType = "perKm" | "fullDay" | "halfDay" | "vip";
-type VehicleRateOverride = Partial<Record<PackageType | "local4hr" | "local8hr" | "local10hr", number>>;
+type VehicleRateOverride = Partial<
+  Record<PackageType | "local4hr" | "local8hr" | "local10hr" | "perHour", number>
+>;
 type VehicleRateOverrides = Record<string, VehicleRateOverride>;
 
 type BookingPayload = {
@@ -262,12 +270,15 @@ type BookingRow = {
   one_side_km: number;
   billable_km: number;
   rate_per_km: number;
+  rate_per_hour: number;
   estimated_fare: number;
   pickup_datetime: string;
   return_date?: string;
   odometer_start?: number;
   odometer_end?: number;
   extra_km?: number;
+  extra_hours?: number;
+  extra_hour_amount?: number;
   extra_amount?: number;
   customer_name: string;
   customer_mobile: string;
@@ -454,13 +465,14 @@ type WithdrawalRow = {
 };
 
 const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
-  start_point, destination, one_side_km, billable_km, rate_per_km,
+  start_point, destination, one_side_km, billable_km, rate_per_km, rate_per_hour,
   estimated_fare, pickup_datetime, return_date, customer_name, customer_mobile, customer_email, status,
   ride_status, refund_status, refund_amount, driver_name, driver_mobile, vehicle_number,
   payment_status, payment_amount, payment_collection_mode, driver_cash_collected,
   refund_collection_mode, driver_cash_refunded,
   refund_driver_name, refund_driver_mobile,
-  cancel_reason, ride_started_at, odometer_start, odometer_end, extra_km, extra_amount,
+  cancel_reason, ride_started_at, odometer_start, odometer_end, extra_km,
+  extra_hours, extra_hour_amount, extra_amount,
   ride_completed_at
   FROM bookings`;
 
@@ -1115,6 +1127,7 @@ function normalizeVehicleRateOverrides(value: unknown): VehicleRateOverrides {
     "local4hr",
     "local8hr",
     "local10hr",
+    "perHour",
     "fullDay",
     "halfDay",
     "vip",
@@ -1189,6 +1202,10 @@ function normalizeFleetVehicles(value: unknown): FleetVehicle[] {
           local4hr: normalizeRateAmount(rates.local4hr, matchingDefault.rates.local4hr),
           local8hr: normalizeRateAmount(rates.local8hr, matchingDefault.rates.local8hr),
           local10hr: normalizeRateAmount(rates.local10hr, matchingDefault.rates.local10hr),
+          perHour: normalizeRateAmount(
+            rates.perHour,
+            Math.max(1, Math.round(matchingDefault.rates.local10hr / 10)),
+          ),
           fullDay: normalizeRateAmount(rates.fullDay, matchingDefault.rates.fullDay),
           halfDay: normalizeRateAmount(rates.halfDay, matchingDefault.rates.halfDay),
           vip: normalizeRateAmount(rates.vip, matchingDefault.rates.vip),
@@ -1360,6 +1377,7 @@ async function getEffectiveBookingRate(vehicle: string) {
     local4hr: selectedOverrides.local4hr ?? selectedRate.local4hr,
     local8hr: selectedOverrides.local8hr ?? selectedRate.local8hr,
     local10hr: selectedOverrides.local10hr ?? selectedRate.local10hr,
+    perHour: selectedOverrides.perHour ?? selectedRate.perHour,
     fullDay: selectedOverrides.fullDay ?? selectedRate.fullDay,
     halfDay: selectedOverrides.halfDay ?? selectedRate.halfDay,
     vip: selectedOverrides.vip ?? selectedRate.vip,
@@ -1370,6 +1388,7 @@ async function getEffectiveBookingRate(vehicle: string) {
     local4hr: applyPriceAdjustment(manualRate.local4hr, priceAdjustmentPercent),
     local8hr: applyPriceAdjustment(manualRate.local8hr, priceAdjustmentPercent),
     local10hr: applyPriceAdjustment(manualRate.local10hr, priceAdjustmentPercent),
+    perHour: applyPriceAdjustment(manualRate.perHour, priceAdjustmentPercent),
     fullDay: applyPriceAdjustment(manualRate.fullDay, priceAdjustmentPercent),
     halfDay: applyPriceAdjustment(manualRate.halfDay, priceAdjustmentPercent),
     vip: applyPriceAdjustment(manualRate.vip, priceAdjustmentPercent),
@@ -1424,6 +1443,7 @@ async function ensureBookingsTable() {
         one_side_km REAL NOT NULL,
         billable_km REAL NOT NULL,
         rate_per_km INTEGER NOT NULL,
+        rate_per_hour INTEGER NOT NULL DEFAULT 0,
         estimated_fare INTEGER NOT NULL,
         pickup_datetime TEXT NOT NULL,
         return_date TEXT NOT NULL DEFAULT '',
@@ -1451,6 +1471,8 @@ async function ensureBookingsTable() {
         odometer_start INTEGER NOT NULL DEFAULT 0,
         odometer_end INTEGER NOT NULL DEFAULT 0,
         extra_km INTEGER NOT NULL DEFAULT 0,
+        extra_hours INTEGER NOT NULL DEFAULT 0,
+        extra_hour_amount INTEGER NOT NULL DEFAULT 0,
         extra_amount INTEGER NOT NULL DEFAULT 0,
         ride_completed_at TEXT NOT NULL DEFAULT ''
       )`,
@@ -1474,6 +1496,21 @@ async function ensureBookingsTable() {
 
   await db
     .prepare("ALTER TABLE bookings ADD COLUMN extra_km INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN rate_per_hour INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN extra_hours INTEGER NOT NULL DEFAULT 0")
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare("ALTER TABLE bookings ADD COLUMN extra_hour_amount INTEGER NOT NULL DEFAULT 0")
     .run()
     .catch(() => undefined);
 
@@ -2757,8 +2794,8 @@ export async function PATCH(request: Request) {
 
         const assignedBooking = await env.DB.prepare(
           `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at,
-            ride_status, customer_mobile, vehicle_number, estimated_fare,
-            payment_amount, billable_km, rate_per_km, odometer_start
+            ride_status, customer_mobile, vehicle, vehicle_number, trip_type, estimated_fare,
+            payment_amount, billable_km, rate_per_km, rate_per_hour, odometer_start
            FROM bookings
            WHERE booking_id = ? AND driver_mobile = ?
            LIMIT 1`,
@@ -2771,11 +2808,14 @@ export async function PATCH(request: Request) {
             ride_completed_at: string;
             ride_status: string;
             customer_mobile: string;
+            vehicle: string;
             vehicle_number: string;
+            trip_type: string;
             estimated_fare: number;
             payment_amount: number;
             billable_km: number;
             rate_per_km: number;
+            rate_per_hour: number;
             odometer_start: number;
           }>();
 
@@ -2857,10 +2897,34 @@ export async function PATCH(request: Request) {
           rideStatus === "Ride Complete"
             ? Math.max(0, actualKm - Math.round(Number(assignedBooking.billable_km || 0)))
             : 0;
-        const extraAmount =
+        const extraKmAmount =
           rideStatus === "Ride Complete"
             ? Math.round(extraKm * Number(assignedBooking.rate_per_km || 0) * 1.05)
             : 0;
+        const includedHours = assignedBooking.trip_type.includes("4 Hr")
+          ? 4
+          : assignedBooking.trip_type.includes("10 Hr")
+            ? 10
+            : assignedBooking.trip_type.includes("Local") ||
+                assignedBooking.trip_type.includes("8 Hr")
+              ? 8
+              : assignedBooking.trip_type.includes("Airport")
+                ? 4
+                : 0;
+        const rideStartedAtMs = Date.parse(assignedBooking.ride_started_at || "");
+        const rideDurationHours =
+          rideStatus === "Ride Complete" && Number.isFinite(rideStartedAtMs)
+            ? Math.max(0, (Date.parse(now) - rideStartedAtMs) / (60 * 60 * 1000))
+            : 0;
+        const extraHours =
+          includedHours > 0 ? Math.max(0, Math.ceil(rideDurationHours - includedHours)) : 0;
+        const effectiveRate = await getEffectiveBookingRate(assignedBooking.vehicle);
+        const ratePerHour = Math.max(
+          0,
+          Number(assignedBooking.rate_per_hour || effectiveRate.perHour || 0),
+        );
+        const extraHourAmount = Math.round(extraHours * ratePerHour * 1.05);
+        const extraAmount = extraKmAmount + extraHourAmount;
         const totalCollectable = Math.max(
           0,
           totalWithGst + extraAmount - paidAmount,
@@ -2921,6 +2985,18 @@ export async function PATCH(request: Request) {
                  WHEN ? > 0 THEN ?
                  ELSE extra_km
                END,
+               rate_per_hour = CASE
+                 WHEN rate_per_hour <= 0 THEN ?
+                 ELSE rate_per_hour
+               END,
+               extra_hours = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE extra_hours
+               END,
+               extra_hour_amount = CASE
+                 WHEN ? > 0 THEN ?
+                 ELSE extra_hour_amount
+               END,
                extra_amount = CASE
                  WHEN ? > 0 THEN ?
                  ELSE extra_amount
@@ -2946,6 +3022,11 @@ export async function PATCH(request: Request) {
             odometerEnd,
             extraKm,
             extraKm,
+            ratePerHour,
+            extraHours,
+            extraHours,
+            extraHourAmount,
+            extraHourAmount,
             extraAmount,
             extraAmount,
             now,
@@ -2963,7 +3044,7 @@ export async function PATCH(request: Request) {
           reason: rideStatus === "Ride Started" ? "Ride Started By Driver" : "Ride Completed By Driver",
           remarks:
             rideStatus === "Ride Complete"
-              ? `Odometer ${activeOdometerStart}-${odometerEnd}; Extra KM ${extraKm}`
+              ? `Odometer ${activeOdometerStart}-${odometerEnd}; Extra KM ${extraKm}; Extra Hours ${extraHours}`
               : `Start Odometer ${activeOdometerStart}`,
         });
 
@@ -2989,7 +3070,18 @@ export async function PATCH(request: Request) {
           entityId: bookingId,
           actorRole: "driver",
           actorMobile: driverMobile,
-          details: { activeOdometerStart, odometerEnd, extraKm, extraAmount, totalCollectable },
+          details: {
+            activeOdometerStart,
+            odometerEnd,
+            extraKm,
+            extraKmAmount,
+            rideDurationHours,
+            extraHours,
+            ratePerHour,
+            extraHourAmount,
+            extraAmount,
+            totalCollectable,
+          },
         });
 
         if (rideStatus === "Ride Complete") {
@@ -4066,6 +4158,7 @@ export async function POST(request: Request) {
         one_side_km,
         billable_km,
         rate_per_km,
+        rate_per_hour,
         estimated_fare,
         pickup_datetime,
         return_date,
@@ -4086,7 +4179,7 @@ export async function POST(request: Request) {
         cancel_reason,
         ride_started_at,
         ride_completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         temporaryBookingId,
@@ -4099,6 +4192,7 @@ export async function POST(request: Request) {
         oneSideKm,
         billableKm,
         adjustedRate.perKm,
+        adjustedRate.perHour,
         estimatedFare,
         date,
         tripType === "Round Trip" ? returnDate : "",
@@ -4153,6 +4247,7 @@ export async function POST(request: Request) {
       oneSideKm,
       billableKm,
       ratePerKm: adjustedRate.perKm,
+      ratePerHour: adjustedRate.perHour,
       packageType,
       returnDate: tripType === "Round Trip" ? returnDate : "",
       estimatedFare,

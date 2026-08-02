@@ -11,6 +11,7 @@ type PublicRate = {
     local4hr: number;
     local8hr: number;
     local10hr: number;
+    perHour: number;
     fullDay: number;
     halfDay: number;
     vip: number;
@@ -75,7 +76,7 @@ export default function PriceChartPage() {
                   <td>{formatInr(item.rates.local4hr)}</td>
                   <td>{formatInr(item.rates.local8hr)}</td>
                   <td>{formatInr(item.rates.local10hr)}</td>
-                  <td>{formatInr(Math.round(item.rates.local10hr / 10))}</td>
+                  <td>{formatInr(item.rates.perHour)}</td>
                   <td>{formatInr(item.rates.fullDay)}</td>
                   <td>{formatInr(item.rates.vip)}</td>
                 </tr>
@@ -89,7 +90,7 @@ export default function PriceChartPage() {
             {vehicles.map((item) => (
               <div className="hourly-chart-item" key={`${item.vehicleName}-hourly`}>
                 <span>{item.vehicleName}</span>
-                <strong>{formatInr(Math.round(item.rates.local10hr / 10))} / Hour</strong>
+                <strong>{formatInr(item.rates.perHour)} / Hour</strong>
               </div>
             ))}
           </div>

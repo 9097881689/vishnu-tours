@@ -47,8 +47,9 @@ export async function POST(request: Request) {
   }
 
   const booking = await env.DB.prepare(
-    `SELECT customer_mobile, driver_mobile, ride_status, estimated_fare,
-      payment_amount, billable_km, rate_per_km, odometer_start
+    `SELECT customer_mobile, driver_mobile, ride_status, trip_type, estimated_fare,
+      payment_amount, billable_km, rate_per_km, rate_per_hour, odometer_start,
+      ride_started_at
      FROM bookings
      WHERE booking_id = ?
      LIMIT 1`,
@@ -58,11 +59,14 @@ export async function POST(request: Request) {
       customer_mobile: string;
       driver_mobile: string;
       ride_status: string;
+      trip_type: string;
       estimated_fare: number;
       payment_amount: number;
       billable_km: number;
       rate_per_km: number;
+      rate_per_hour: number;
       odometer_start: number;
+      ride_started_at: string;
     }>();
 
   if (!booking) {
@@ -103,7 +107,26 @@ export async function POST(request: Request) {
 
     const actualKm = odometerEnd - odometerStart;
     const extraKm = Math.max(0, actualKm - Number(booking.billable_km || 0));
-    const extraAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+    const extraKmAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+    const includedHours = booking.trip_type.includes("4 Hr")
+      ? 4
+      : booking.trip_type.includes("10 Hr")
+        ? 10
+        : booking.trip_type.includes("Local") || booking.trip_type.includes("8 Hr")
+          ? 8
+          : booking.trip_type.includes("Airport")
+            ? 4
+            : 0;
+    const rideStartedAtMs = Date.parse(booking.ride_started_at || "");
+    const rideDurationHours = Number.isFinite(rideStartedAtMs)
+      ? Math.max(0, (Date.now() - rideStartedAtMs) / (60 * 60 * 1000))
+      : 0;
+    const extraHours =
+      includedHours > 0 ? Math.max(0, Math.ceil(rideDurationHours - includedHours)) : 0;
+    const extraHourAmount = Math.round(
+      extraHours * Number(booking.rate_per_hour || 0) * 1.05,
+    );
+    const extraAmount = extraKmAmount + extraHourAmount;
     const expectedPaise = Math.max(0, baseFareWithGst + extraAmount - alreadyPaid) * 100;
 
     if (Math.round(amount) !== expectedPaise) {

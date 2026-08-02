@@ -207,6 +207,7 @@ const rateTable: Record<
     local4hr: number;
     local8hr: number;
     local10hr: number;
+    perHour: number;
     fullDay: number;
     halfDay: number;
     vip: number;
@@ -218,6 +219,7 @@ const rateTable: Record<
     local4hr: 1921,
     local8hr: 3492,
     local10hr: 3880,
+    perHour: 388,
     fullDay: 3492,
     halfDay: 1921,
     vip: 4680,
@@ -228,6 +230,7 @@ const rateTable: Record<
     local4hr: 2324,
     local8hr: 4226,
     local10hr: 4696,
+    perHour: 470,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5580,
@@ -238,6 +241,7 @@ const rateTable: Record<
     local4hr: 2324,
     local8hr: 4226,
     local10hr: 4696,
+    perHour: 470,
     fullDay: 4226,
     halfDay: 2324,
     vip: 5850,
@@ -248,6 +252,7 @@ const rateTable: Record<
     local4hr: 2324,
     local8hr: 4226,
     local10hr: 4696,
+    perHour: 470,
     fullDay: 4226,
     halfDay: 2324,
     vip: 7650,
@@ -258,6 +263,7 @@ const rateTable: Record<
     local4hr: 2685,
     local8hr: 4881,
     local10hr: 5423,
+    perHour: 542,
     fullDay: 4881,
     halfDay: 2685,
     vip: 9900,
@@ -270,6 +276,7 @@ const editableRateKeys = [
   "local4hr",
   "local8hr",
   "local10hr",
+  "perHour",
   "fullDay",
   "halfDay",
   "vip",
@@ -346,6 +353,7 @@ function createVehicleForm(vehicle?: FleetVehicle) {
       local4hr: 0,
       local8hr: 0,
       local10hr: 0,
+      perHour: 0,
       fullDay: 0,
       halfDay: 0,
       vip: 0,
@@ -364,6 +372,7 @@ function createVehicleForm(vehicle?: FleetVehicle) {
     local4hr: String(source.rates.local4hr || ""),
     local8hr: String(source.rates.local8hr || ""),
     local10hr: String(source.rates.local10hr || ""),
+    perHour: String(source.rates.perHour || ""),
     fullDay: String(source.rates.fullDay || ""),
     halfDay: String(source.rates.halfDay || ""),
     vip: String(source.rates.vip || ""),
@@ -482,6 +491,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 7650,
@@ -500,6 +510,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2685,
       local8hr: 4881,
       local10hr: 5423,
+      perHour: 542,
       fullDay: 4881,
       halfDay: 2685,
       vip: 9900,
@@ -518,6 +529,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 5580,
@@ -536,6 +548,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 2324,
       local8hr: 4226,
       local10hr: 4696,
+      perHour: 470,
       fullDay: 4226,
       halfDay: 2324,
       vip: 5850,
@@ -554,6 +567,7 @@ const defaultFleetVehicles: FleetVehicle[] = [
       local4hr: 1921,
       local8hr: 3492,
       local10hr: 3880,
+      perHour: 388,
       fullDay: 3492,
       halfDay: 1921,
       vip: 4680,
@@ -583,11 +597,14 @@ type DashboardBooking = {
   one_side_km?: number;
   billable_km?: number;
   rate_per_km?: number;
+  rate_per_hour?: number;
   pickup_datetime?: string;
   return_date?: string;
   odometer_start?: number;
   odometer_end?: number;
   extra_km?: number;
+  extra_hours?: number;
+  extra_hour_amount?: number;
   extra_amount?: number;
   estimated_fare: number;
   customer_name: string;
@@ -977,12 +994,42 @@ function getOdometerExtra(booking: DashboardBooking, startReading: number, endRe
   const actualKm = Math.max(0, endReading - startReading);
   const billableKm = Math.round(Number(booking.billable_km || 0));
   const extraKm = Math.max(0, actualKm - billableKm);
-  const extraAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+  const extraKmAmount = Math.round(extraKm * Number(booking.rate_per_km || 0) * 1.05);
+  const includedHours = booking.trip_type.includes("4 Hr")
+    ? 4
+    : booking.trip_type.includes("10 Hr")
+      ? 10
+      : booking.trip_type.includes("Local") || booking.trip_type.includes("8 Hr")
+        ? 8
+        : booking.trip_type.includes("Airport")
+          ? 4
+          : 0;
+  const startedAt = Date.parse(booking.ride_started_at || "");
+  const actualHours = Number.isFinite(startedAt)
+    ? Math.max(0, (Date.now() - startedAt) / (60 * 60 * 1000))
+    : 0;
+  const extraHours = includedHours > 0 ? Math.max(0, Math.ceil(actualHours - includedHours)) : 0;
+  const extraHourAmount = Math.round(
+    extraHours * Number(booking.rate_per_hour || 0) * 1.05,
+  );
+  const extraAmount = extraKmAmount + extraHourAmount;
   const finalChargeableKm = Math.max(billableKm, actualKm);
   const baseFare = Number(booking.estimated_fare || 0);
   const finalFareWithGst = baseFare + Math.round(baseFare * 0.05) + extraAmount;
 
-  return { actualKm, billableKm, extraKm, extraAmount, finalChargeableKm, finalFareWithGst };
+  return {
+    actualKm,
+    billableKm,
+    extraKm,
+    extraKmAmount,
+    actualHours,
+    includedHours,
+    extraHours,
+    extraHourAmount,
+    extraAmount,
+    finalChargeableKm,
+    finalFareWithGst,
+  };
 }
 
 function sortDashboardBookings(bookings: DashboardBooking[]) {
@@ -1292,6 +1339,7 @@ export default function Home() {
     local4hr: "",
     local8hr: "",
     local10hr: "",
+    perHour: "",
     fullDay: "",
     halfDay: "",
     vip: "",
@@ -1384,6 +1432,10 @@ export default function Home() {
           ),
           local10hr: applyPriceAdjustment(
             vehicleRateOverrides[vehicleName]?.local10hr ?? rates.local10hr,
+            priceAdjustmentPercent,
+          ),
+          perHour: applyPriceAdjustment(
+            vehicleRateOverrides[vehicleName]?.perHour ?? rates.perHour,
             priceAdjustmentPercent,
           ),
           fullDay: applyPriceAdjustment(
@@ -3099,6 +3151,8 @@ export default function Home() {
         ...booking,
         odometer_end: odometer.odometerEnd,
         extra_km: odometer.extraKm,
+        extra_hours: odometer.extraHours,
+        extra_hour_amount: odometer.extraHourAmount,
         extra_amount: odometer.extraAmount,
       });
       setCollectionStatus("");
@@ -3118,6 +3172,8 @@ export default function Home() {
           ...booking,
           odometer_end: odometer.odometerEnd,
           extra_km: odometer.extraKm,
+          extra_hours: odometer.extraHours,
+          extra_hour_amount: odometer.extraHourAmount,
           extra_amount: odometer.extraAmount,
         });
         setCollectionStatus("");
@@ -3254,6 +3310,9 @@ export default function Home() {
       actualKm: extra.actualKm,
       bookedKm: extra.billableKm,
       extraKm: extra.extraKm,
+      extraKmAmount: extra.extraKmAmount,
+      extraHours: extra.extraHours,
+      extraHourAmount: extra.extraHourAmount,
       extraAmount: extra.extraAmount,
       finalChargeableKm: extra.finalChargeableKm,
       finalFareWithGst: extra.finalFareWithGst,
@@ -5758,6 +5817,7 @@ export default function Home() {
                         {billableDistance || 0} KMs Included | Extra Distance: Rs.{" "}
                         {item.perKm}/KM
                       </li>
+                      <li>Extra Time After Package: {formatInr(item.perHour)}/Hour</li>
                       <li>
                         {item.seats.startsWith("4") ? "4" : "6"} Passengers | {item.luggage}
                       </li>
@@ -6205,7 +6265,18 @@ export default function Home() {
                   <span>Extra KM Charge</span>
                   <b>
                     {Number(collectionPrompt.extra_km || 0)} KM |{" "}
-                    {formatInr(Number(collectionPrompt.extra_amount || 0))}
+                    {formatInr(
+                      Math.max(
+                        0,
+                        Number(collectionPrompt.extra_amount || 0) -
+                          Number(collectionPrompt.extra_hour_amount || 0),
+                      ),
+                    )}
+                  </b>
+                  <span>Extra Time Charge</span>
+                  <b>
+                    {Number(collectionPrompt.extra_hours || 0)} Hour |{" "}
+                    {formatInr(Number(collectionPrompt.extra_hour_amount || 0))}
                   </b>
                 </>
               ) : null}
@@ -6959,6 +7030,8 @@ export default function Home() {
                                     ? "8 Hr / 90 KM"
                                     : rateKey === "local10hr"
                                       ? "10 Hr / 100 KM"
+                                      : rateKey === "perHour"
+                                        ? "Per Hour After Package"
                                       : rateKey === "fullDay"
                                         ? "Full Day"
                                         : rateKey === "halfDay"
@@ -7031,6 +7104,7 @@ export default function Home() {
                           local4hr: override.local4hr ?? defaultBase.local4hr,
                           local8hr: override.local8hr ?? defaultBase.local8hr,
                           local10hr: override.local10hr ?? defaultBase.local10hr,
+                          perHour: override.perHour ?? defaultBase.perHour,
                           fullDay: override.fullDay ?? defaultBase.fullDay,
                           halfDay: override.halfDay ?? defaultBase.halfDay,
                           vip: override.vip ?? defaultBase.vip,
@@ -7044,6 +7118,7 @@ export default function Home() {
                             <span>4 Hr / 45 KM {formatInr(base.local4hr)} → {formatInr(adjusted.local4hr)}</span>
                             <span>8 Hr / 90 KM {formatInr(base.local8hr)} → {formatInr(adjusted.local8hr)}</span>
                             <span>10 Hr / 100 KM {formatInr(base.local10hr)} → {formatInr(adjusted.local10hr)}</span>
+                            <span>Per Hour {formatInr(base.perHour)} → {formatInr(adjusted.perHour)}</span>
                             <span>Full Day {formatInr(base.fullDay)} → {formatInr(adjusted.fullDay)}</span>
                             <span>VIP {formatInr(base.vip)} → {formatInr(adjusted.vip)}</span>
                           </div>
@@ -7310,6 +7385,8 @@ export default function Home() {
                                     ? "8 Hr / 90 KM"
                                     : rateKey === "local10hr"
                                       ? "10 Hr / 100 KM"
+                                      : rateKey === "perHour"
+                                        ? "Per Hour After Package"
                                       : rateKey === "fullDay"
                                         ? "Full Day"
                                         : rateKey === "halfDay"
@@ -7361,6 +7438,7 @@ export default function Home() {
                               <small>
                                 {formatInr(item.rates.perKm)} / KM |{" "}
                                 {formatInr(item.rates.local8hr)} 8 Hr / 90 KM
+                                {" | "}{formatInr(item.rates.perHour)} / Extra Hour
                               </small>
                               <b className={item.active ? "vehicle-vacant" : "vehicle-engaged"}>
                                 {item.active ? "Public Active" : "Hidden"}
