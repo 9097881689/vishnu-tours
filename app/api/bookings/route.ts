@@ -214,6 +214,9 @@ type BookingOperationPayload = {
   referenceNumber?: string;
   paymentReference?: string;
   bookingReference?: string;
+  settlementMode?: string;
+  settlementId?: number;
+  settlementStatus?: string;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -488,6 +491,8 @@ type CashCollectionRow = {
   receipt_reference: string;
   admin_mobile: string;
   collected_by: string;
+  settlement_type: string;
+  settlement_status: string;
 };
 
 type AssignmentHistoryRow = {
@@ -681,7 +686,9 @@ async function getCashCollectionHistory(driverMobile = "") {
       amount, COALESCE(payment_mode, 'Cash') AS payment_mode,
       COALESCE(remarks, '') AS remarks,
       COALESCE(receipt_reference, '') AS receipt_reference,
-      admin_mobile, COALESCE(collected_by, admin_mobile) AS collected_by
+      admin_mobile, COALESCE(collected_by, admin_mobile) AS collected_by,
+      COALESCE(settlement_type, 'admin_deposit') AS settlement_type,
+      COALESCE(settlement_status, 'Completed') AS settlement_status
      FROM driver_cash_deposits
      ${driverMobile ? "WHERE driver_mobile = ?" : ""}
      ORDER BY id DESC
@@ -776,7 +783,8 @@ async function getAdminFinanceSummary() {
   }>();
   const deposited = await env.DB.prepare(
     `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
-     FROM driver_cash_deposits`,
+     FROM driver_cash_deposits
+     WHERE settlement_status = 'Completed'`,
   ).first<{ deposited_amount: number }>();
   const totalCollected = Number(summary?.total_collected || 0);
   const driverCashCollected = Number(summary?.driver_cash_collected || 0);
@@ -870,16 +878,40 @@ async function getDriverEarning(driverMobile: string) {
     .bind(driverMobile)
     .first<{ completed_rides: number; total_earning: number }>();
 
+  const adjusted = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS adjusted_amount
+     FROM driver_cash_deposits
+     WHERE driver_mobile = ?
+       AND settlement_type = 'earning_adjustment'
+       AND settlement_status = 'Completed'`,
+  )
+    .bind(driverMobile)
+    .first<{ adjusted_amount: number }>();
+  const withdrawn = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
+     FROM driver_withdrawals
+     WHERE driver_mobile = ? AND status IN ('Pending', 'Completed')`,
+  )
+    .bind(driverMobile)
+    .first<{ withdrawn_amount: number }>();
+  const totalEarning = Number(summary?.total_earning || 0);
+  const cashAdjustedToEarning = Number(adjusted?.adjusted_amount || 0);
+  const withdrawnAmount = Number(withdrawn?.withdrawn_amount || 0);
+
   return {
     completedRides: Number(summary?.completed_rides || 0),
-    totalEarning: Number(summary?.total_earning || 0),
+    totalEarning,
+    cashAdjustedToEarning,
+    withdrawnAmount,
+    availableEarning: Math.max(0, totalEarning - cashAdjustedToEarning - withdrawnAmount),
   };
 }
 
 async function getDriverCashDeposited(driverMobile?: string) {
   const query = `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
      FROM driver_cash_deposits
-     ${driverMobile ? "WHERE driver_mobile = ?" : ""}`;
+     WHERE settlement_status = 'Completed'
+     ${driverMobile ? "AND driver_mobile = ?" : ""}`;
   const statement = env.DB.prepare(query);
   const deposited = driverMobile
     ? await statement.bind(driverMobile).first<{ deposited_amount: number }>()
@@ -915,21 +947,23 @@ async function getDriverCashInHand(driverMobile: string) {
   );
 }
 
-async function getDriverWithdrawableBalance(driverMobile: string) {
-  const earning = await getDriverEarning(driverMobile);
-  const cashInHand = await getDriverCashInHand(driverMobile);
-  const withdrawn = await env.DB.prepare(
-    `SELECT COALESCE(SUM(amount), 0) AS withdrawn_amount
-     FROM driver_withdrawals
-     WHERE driver_mobile = ? AND status IN ('Pending', 'Completed')`,
+async function getPendingDriverCashTransfers(driverMobile: string) {
+  const pending = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS pending_amount
+     FROM driver_cash_deposits
+     WHERE driver_mobile = ?
+       AND settlement_type = 'admin_transfer'
+       AND settlement_status = 'Pending'`,
   )
     .bind(driverMobile)
-    .first<{ withdrawn_amount: number }>();
+    .first<{ pending_amount: number }>();
 
-  return Math.max(
-    0,
-    earning.totalEarning - Number(withdrawn?.withdrawn_amount || 0) - cashInHand,
-  );
+  return Number(pending?.pending_amount || 0);
+}
+
+async function getDriverWithdrawableBalance(driverMobile: string) {
+  const earning = await getDriverEarning(driverMobile);
+  return earning.availableEarning;
 }
 
 async function getDriverCashSummary() {
@@ -966,14 +1000,35 @@ async function getDriverCashSummary() {
   );
 
   const deposits = await env.DB.prepare(
-    `SELECT driver_mobile, COALESCE(SUM(amount), 0) AS deposited_amount
+    `SELECT driver_mobile,
+      COALESCE(SUM(amount), 0) AS deposited_amount,
+      COALESCE(SUM(CASE WHEN settlement_type = 'earning_adjustment' THEN amount ELSE 0 END), 0) AS earning_adjusted,
+      COALESCE(SUM(CASE WHEN settlement_type != 'earning_adjustment' THEN amount ELSE 0 END), 0) AS admin_deposited
      FROM driver_cash_deposits
+     WHERE settlement_status = 'Completed'
      GROUP BY driver_mobile`,
-  ).all<{ driver_mobile: string; deposited_amount: number }>();
+  ).all<{
+    driver_mobile: string;
+    deposited_amount: number;
+    earning_adjusted: number;
+    admin_deposited: number;
+  }>();
   const depositMap = new Map(
     (deposits.results || []).map((row) => [
       row.driver_mobile,
       Number(row.deposited_amount || 0),
+    ]),
+  );
+  const earningAdjustmentMap = new Map(
+    (deposits.results || []).map((row) => [
+      row.driver_mobile,
+      Number(row.earning_adjusted || 0),
+    ]),
+  );
+  const adminDepositMap = new Map(
+    (deposits.results || []).map((row) => [
+      row.driver_mobile,
+      Number(row.admin_deposited || 0),
     ]),
   );
 
@@ -989,6 +1044,8 @@ async function getDriverCashSummary() {
     cash_collected: Number(row.cash_collected || 0),
     cash_refunded: Number(refundMap.get(row.driver_mobile) || 0),
     cash_deposited: Number(depositMap.get(row.driver_mobile) || 0),
+    cash_adjusted_to_earning: Number(earningAdjustmentMap.get(row.driver_mobile) || 0),
+    cash_sent_to_admin: Number(adminDepositMap.get(row.driver_mobile) || 0),
     cash_rides: row.cash_rides,
   }));
 }
@@ -1662,7 +1719,9 @@ async function ensureBookingsTable() {
         remarks TEXT NOT NULL DEFAULT '',
         receipt_reference TEXT NOT NULL DEFAULT '',
         admin_mobile TEXT NOT NULL,
-        collected_by TEXT NOT NULL DEFAULT ''
+        collected_by TEXT NOT NULL DEFAULT '',
+        settlement_type TEXT NOT NULL DEFAULT 'admin_deposit',
+        settlement_status TEXT NOT NULL DEFAULT 'Completed'
       )`,
     )
     .run();
@@ -1674,6 +1733,8 @@ async function ensureBookingsTable() {
     "remarks TEXT NOT NULL DEFAULT ''",
     "receipt_reference TEXT NOT NULL DEFAULT ''",
     "collected_by TEXT NOT NULL DEFAULT ''",
+    "settlement_type TEXT NOT NULL DEFAULT 'admin_deposit'",
+    "settlement_status TEXT NOT NULL DEFAULT 'Completed'",
   ];
 
   for (const columnDefinition of cashDepositColumns) {
@@ -1944,6 +2005,7 @@ export async function GET(request: Request) {
           ],
           driverEarning: await getDriverEarning(loginMobile),
           driverCashInHand: await getDriverCashInHand(loginMobile),
+          pendingCashTransfer: await getPendingDriverCashTransfers(loginMobile),
           maxWithdrawalAmount: await getDriverWithdrawableBalance(loginMobile),
           driverLedger: await getDriverLedger(loginMobile),
           withdrawalRequests: await getWithdrawals(loginMobile),
@@ -2045,8 +2107,10 @@ export async function PATCH(request: Request) {
     if (
       !bookingId &&
       action !== "requestWithdrawal" &&
+      action !== "settleDriverCash" &&
       action !== "updateWithdrawal" &&
       action !== "recordCashDeposit" &&
+      action !== "updateCashSettlement" &&
       action !== "updatePriceAdjustment" &&
       action !== "updateVehicleRates" &&
       action !== "updateFleetVehicles" &&
@@ -2198,7 +2262,7 @@ export async function PATCH(request: Request) {
       const driverMobile = clean(payload.mobile);
 
       if (
-        ["requestWithdrawal", "acceptRide", "driverRideStatus", "driverCancelRide"].includes(action) &&
+        ["requestWithdrawal", "settleDriverCash", "acceptRide", "driverRideStatus", "driverCancelRide"].includes(action) &&
         !hasRole(portalSession, "driver", driverMobile)
       ) {
         return Response.json(
@@ -2372,6 +2436,84 @@ export async function PATCH(request: Request) {
           .run();
 
         return Response.json({ success: true });
+      }
+
+      if (action === "settleDriverCash" && driverMobile) {
+        const driver = await env.DB.prepare(
+          `SELECT driver_name, driver_mobile, vehicle_number
+           FROM drivers WHERE driver_mobile = ? LIMIT 1`,
+        )
+          .bind(driverMobile)
+          .first<{ driver_name: string; driver_mobile: string; vehicle_number: string }>();
+        const amount = Math.round(Number(payload.amount || 0));
+        const settlementMode = clean(payload.settlementMode);
+        const referenceNumber = clean(payload.referenceNumber) ||
+          `VTC-${Date.now().toString(36).toUpperCase()}`;
+
+        if (!driver) {
+          return Response.json({ error: "Driver Profile Not Found." }, { status: 404 });
+        }
+
+        if (!amount || amount < 1 || !["earning_adjustment", "admin_transfer"].includes(settlementMode)) {
+          return Response.json({ error: "Valid Amount And Settlement Option Are Required." }, { status: 400 });
+        }
+
+        const cashInHand = await getDriverCashInHand(driverMobile);
+        const pendingCashTransfer = await getPendingDriverCashTransfers(driverMobile);
+        const availableCompanyCash = Math.max(0, cashInHand - pendingCashTransfer);
+        if (amount > availableCompanyCash) {
+          return Response.json(
+            { error: `Available Company Cash For Settlement Is ₹${availableCompanyCash}.` },
+            { status: 400 },
+          );
+        }
+
+        if (settlementMode === "earning_adjustment") {
+          const availableEarning = await getDriverWithdrawableBalance(driverMobile);
+          if (amount > availableEarning) {
+            return Response.json(
+              { error: `Only ₹${availableEarning} Can Be Adjusted Against Available Earning.` },
+              { status: 400 },
+            );
+          }
+        }
+
+        const settlementStatus = settlementMode === "earning_adjustment" ? "Completed" : "Pending";
+        await env.DB.prepare(
+          `INSERT INTO driver_cash_deposits (
+            created_at, driver_name, driver_mobile, vehicle_number, booking_id,
+            amount, payment_mode, remarks, receipt_reference, admin_mobile,
+            collected_by, settlement_type, settlement_status
+          ) VALUES (?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            new Date().toISOString(),
+            driver.driver_name,
+            driverMobile,
+            driver.vehicle_number || "",
+            amount,
+            settlementMode === "earning_adjustment" ? "Cash Retained" : "Cash Transfer",
+            settlementMode === "earning_adjustment"
+              ? "Adjusted Against Driver Earning"
+              : "Driver Marked Cash As Sent To Admin",
+            referenceNumber,
+            adminMobile,
+            driverMobile,
+            settlementMode,
+            settlementStatus,
+          )
+          .run();
+
+        await recordAuditLog({
+          action: settlementMode === "earning_adjustment" ? "cash_adjusted_to_driver_earning" : "cash_transfer_requested",
+          entityType: "driver_cash",
+          entityId: referenceNumber,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          details: { amount, settlementMode, settlementStatus },
+        });
+
+        return Response.json({ success: true, referenceNumber, settlementStatus });
       }
 
       if (customerMobile && paymentStatus === "Complete" && paymentAmount > 0) {
@@ -2964,6 +3106,49 @@ export async function PATCH(request: Request) {
       return Response.json({ success: true });
     }
 
+    if (action === "updateCashSettlement") {
+      const settlementId = Number(payload.settlementId || 0);
+      const settlementStatus = clean(payload.settlementStatus);
+
+      if (!settlementId || !["Completed", "Rejected"].includes(settlementStatus)) {
+        return Response.json({ error: "Valid Settlement And Status Are Required." }, { status: 400 });
+      }
+
+      const settlement = await env.DB.prepare(
+        `SELECT id, driver_mobile, amount, settlement_type, settlement_status
+         FROM driver_cash_deposits WHERE id = ? LIMIT 1`,
+      )
+        .bind(settlementId)
+        .first<{ id: number; driver_mobile: string; amount: number; settlement_type: string; settlement_status: string }>();
+
+      if (!settlement || settlement.settlement_type !== "admin_transfer" || settlement.settlement_status !== "Pending") {
+        return Response.json({ error: "Pending Driver Cash Transfer Not Found." }, { status: 404 });
+      }
+
+      if (settlementStatus === "Completed") {
+        const cashInHand = await getDriverCashInHand(settlement.driver_mobile);
+        if (Number(settlement.amount || 0) > cashInHand) {
+          return Response.json({ error: `Driver Cash In Hand Is Only ₹${cashInHand}.` }, { status: 409 });
+        }
+      }
+
+      await env.DB.prepare(
+        `UPDATE driver_cash_deposits SET settlement_status = ? WHERE id = ?`,
+      )
+        .bind(settlementStatus, settlementId)
+        .run();
+      await recordAuditLog({
+        action: settlementStatus === "Completed" ? "cash_transfer_approved" : "cash_transfer_rejected",
+        entityType: "driver_cash",
+        entityId: String(settlementId),
+        actorRole: "admin",
+        actorMobile: adminMobile,
+        details: { driverMobile: settlement.driver_mobile, amount: settlement.amount },
+      });
+
+      return Response.json({ success: true });
+    }
+
     if (action === "recordCashDeposit") {
       const driverMobile = clean(payload.driverMobile);
       const amount = Math.round(Number(payload.amount || 0));
@@ -3006,8 +3191,9 @@ export async function PATCH(request: Request) {
       await env.DB.prepare(
         `INSERT INTO driver_cash_deposits (
           created_at, driver_name, driver_mobile, vehicle_number, booking_id,
-          amount, payment_mode, remarks, receipt_reference, admin_mobile, collected_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          amount, payment_mode, remarks, receipt_reference, admin_mobile, collected_by,
+          settlement_type, settlement_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin_deposit', 'Completed')`,
       )
         .bind(
           new Date().toISOString(),

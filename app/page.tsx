@@ -690,6 +690,8 @@ type CashCollectionHistory = {
   remarks: string;
   receipt_reference: string;
   collected_by: string;
+  settlement_type: string;
+  settlement_status: string;
 };
 
 type AssignmentHistory = {
@@ -742,6 +744,8 @@ type DriverCashSummary = {
   cash_collected?: number;
   cash_deposited?: number;
   cash_refunded?: number;
+  cash_adjusted_to_earning?: number;
+  cash_sent_to_admin?: number;
   cash_rides: number;
 };
 
@@ -1156,7 +1160,15 @@ export default function Home() {
   const [driverEarning, setDriverEarning] = useState({
     completedRides: 0,
     totalEarning: 0,
+    cashAdjustedToEarning: 0,
+    availableEarning: 0,
     cashInHand: 0,
+  });
+  const [pendingCashTransfer, setPendingCashTransfer] = useState(0);
+  const [driverCashHistory, setDriverCashHistory] = useState<CashCollectionHistory[]>([]);
+  const [cashSettlementForm, setCashSettlementForm] = useState({
+    amount: "",
+    referenceNumber: "",
   });
   const [maxWithdrawalAmount, setMaxWithdrawalAmount] = useState(0);
   const [collectionPrompt, setCollectionPrompt] = useState<DashboardBooking | null>(
@@ -1187,6 +1199,8 @@ export default function Home() {
   const [adminLookupDriverEarning, setAdminLookupDriverEarning] = useState({
     completedRides: 0,
     totalEarning: 0,
+    cashAdjustedToEarning: 0,
+    availableEarning: 0,
     cashInHand: 0,
   });
   const [assignmentForm, setAssignmentForm] = useState<
@@ -2125,8 +2139,10 @@ export default function Home() {
     setBookingStatusHistory([]);
     setAssignmentHistory([]);
     setWithdrawalRequests([]);
+    setDriverCashHistory([]);
     setNextRide(null);
     setMaxWithdrawalAmount(0);
+    setPendingCashTransfer(0);
 
     try {
       const response = await fetch(
@@ -2160,8 +2176,11 @@ export default function Home() {
         driverEarning?: {
           completedRides: number;
           totalEarning: number;
+          cashAdjustedToEarning: number;
+          availableEarning: number;
         };
         maxWithdrawalAmount?: number;
+        pendingCashTransfer?: number;
         error?: string;
       };
 
@@ -2180,6 +2199,7 @@ export default function Home() {
       setBookingStatusHistory(result.statusHistory || []);
       setAssignmentHistory(result.assignmentHistory || []);
       setWithdrawalRequests(result.withdrawalRequests || []);
+      setDriverCashHistory(result.cashCollectionHistory || []);
       setNextRide(result.nextRide || null);
 
       if (result.drivers) {
@@ -2272,8 +2292,11 @@ export default function Home() {
         setDriverEarning({
           completedRides: result.driverEarning?.completedRides || 0,
           totalEarning: result.driverEarning?.totalEarning || 0,
+          cashAdjustedToEarning: result.driverEarning?.cashAdjustedToEarning || 0,
+          availableEarning: result.driverEarning?.availableEarning || 0,
           cashInHand: result.driverCashInHand || 0,
         });
+        setPendingCashTransfer(result.pendingCashTransfer || 0);
         setMaxWithdrawalAmount(result.maxWithdrawalAmount || 0);
         setWithdrawalForm((currentForm) => ({
           ...currentForm,
@@ -2329,6 +2352,8 @@ export default function Home() {
         driverEarning?: {
           completedRides: number;
           totalEarning: number;
+          cashAdjustedToEarning: number;
+          availableEarning: number;
         };
         error?: string;
       };
@@ -2347,6 +2372,8 @@ export default function Home() {
       setAdminLookupDriverEarning({
         completedRides: result.driverEarning?.completedRides || 0,
         totalEarning: result.driverEarning?.totalEarning || 0,
+        cashAdjustedToEarning: result.driverEarning?.cashAdjustedToEarning || 0,
+        availableEarning: result.driverEarning?.availableEarning || 0,
         cashInHand: result.driverCashInHand || 0,
       });
       setAdminLookupStatus("");
@@ -3942,6 +3969,83 @@ export default function Home() {
     }
   }
 
+  async function settleDriverCash(settlementMode: "earning_adjustment" | "admin_transfer") {
+    const amount = Math.round(Number(cashSettlementForm.amount || 0));
+    const availableCash = Math.max(0, driverEarning.cashInHand - pendingCashTransfer);
+
+    if (!amount || amount < 1 || amount > availableCash) {
+      setPortalStatus(`Enter An Amount Between ₹1 And ${formatInr(availableCash)}.`);
+      return;
+    }
+
+    if (settlementMode === "earning_adjustment" && amount > driverEarning.availableEarning) {
+      setPortalStatus(`Only ${formatInr(driverEarning.availableEarning)} Can Be Adjusted Against Earning.`);
+      return;
+    }
+
+    setPortalStatus("Updating Automated Cash Ledger...");
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "settleDriverCash",
+          mobile: driverProfileForm.mobile.replace(/\D/g, ""),
+          amount,
+          settlementMode,
+          referenceNumber: cashSettlementForm.referenceNumber,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        referenceNumber?: string;
+        settlementStatus?: string;
+      };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Cash Settlement Could Not Be Saved.");
+        return;
+      }
+
+      setCashSettlementForm({ amount: "", referenceNumber: "" });
+      await loadDashboard();
+      setPortalStatus(
+        settlementMode === "earning_adjustment"
+          ? `Cash Adjusted Against Earning. Reference ${result.referenceNumber}.`
+          : `Cash Transfer Sent For Admin Approval. Reference ${result.referenceNumber}.`,
+      );
+    } catch {
+      setPortalStatus("Cash Settlement Could Not Be Saved.");
+    }
+  }
+
+  async function updateCashSettlement(settlementId: number, settlementStatus: "Completed" | "Rejected") {
+    setPortalStatus("Updating Cash Transfer...");
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateCashSettlement",
+          mobile: loginMobile.replace(/\D/g, ""),
+          settlementId,
+          settlementStatus,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setPortalStatus(result.error || "Cash Transfer Could Not Be Updated.");
+        return;
+      }
+
+      await loadDashboard();
+      setPortalStatus(`Cash Transfer ${settlementStatus}.`);
+    } catch {
+      setPortalStatus("Cash Transfer Could Not Be Updated.");
+    }
+  }
+
   async function updateWithdrawalStatus(withdrawalId: number, status: string) {
     setPortalStatus("Updating Withdrawal...");
 
@@ -3956,7 +4060,7 @@ export default function Home() {
           withdrawalStatus: status,
         }),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { error?: string; receiptReference?: string };
 
       if (!response.ok) {
         setPortalStatus(result.error || "Withdrawal Update Failed.");
@@ -4031,7 +4135,7 @@ export default function Home() {
       }
 
       await loadDashboard();
-      setPortalStatus(`Driver Cash Collected. Receipt ${receiptReference}.`);
+      setPortalStatus(`Driver Cash Collected. Receipt ${result.receiptReference}.`);
     } catch {
       setPortalStatus("Driver Cash Ledger Could Not Be Updated.");
     }
@@ -4228,7 +4332,7 @@ export default function Home() {
       bookingAmount: "Total Ride Amount Breakup",
       collected: "Amount Collected Breakup",
       online: "Online Collection Breakup",
-      driverCash: "Driver Cash In Hand Breakup",
+      driverCash: "Company Cash With Drivers Breakup",
     };
 
     if (activeAdminBreakup === "driverCash") {
@@ -4252,7 +4356,7 @@ export default function Home() {
                 </div>
               ))
             ) : (
-              <p>No Driver Cash In Hand Yet.</p>
+              <p>No Company Cash With Drivers.</p>
             )}
           </div>
         </div>
@@ -4978,9 +5082,9 @@ export default function Home() {
               </div>
               <div className="portal-kpi-grid">
                 <div><span>Today&apos;s Trips</span><strong>{todayTrips.length}</strong><small>{assignedDriverRides.length} Active / Assigned</small></div>
-                <div><span>Total Earnings</span><strong>{formatInr(driverEarning.totalEarning)}</strong><small>{driverEarning.completedRides} Completed Rides</small></div>
+                <div><span>Available Earning</span><strong>{formatInr(driverEarning.availableEarning)}</strong><small>{driverEarning.completedRides} Completed Rides</small></div>
                 <div><span>This Month</span><strong>{formatInr(monthEarnings)}</strong><small>Completed Ride Value</small></div>
-                <div><span>Cash In Hand</span><strong>{formatInr(driverEarning.cashInHand)}</strong><small>Settle With Admin</small></div>
+                <div><span>Company Cash With You</span><strong>{formatInr(driverEarning.cashInHand)}</strong><small>{pendingCashTransfer ? `${formatInr(pendingCashTransfer)} Awaiting Approval` : "Belongs To Admin"}</small></div>
               </div>
               <section className="driver-dashboard-actions">
                 <div>
@@ -5029,7 +5133,36 @@ export default function Home() {
           {isDriver && activeDriverTab === "wallet" ? (
             <div className="role-dashboard-view">
               <div className="portal-page-title"><span>Settlement</span><h2>Earnings And Wallet</h2><p>Cash liability, completed ride earnings and payout requests are shown separately.</p></div>
-              <div className="portal-kpi-grid portal-kpi-grid-three"><div><span>Total Earning</span><strong>{formatInr(driverEarning.totalEarning)}</strong></div><div><span>Cash In Hand</span><strong>{formatInr(driverEarning.cashInHand)}</strong></div><div><span>Maximum Withdrawal</span><strong>{formatInr(maxWithdrawalAmount)}</strong></div></div>
+              <div className="portal-kpi-grid">
+                <div><span>Gross Ride Earning</span><strong>{formatInr(driverEarning.totalEarning)}</strong></div>
+                <div><span>Available Earning</span><strong>{formatInr(driverEarning.availableEarning)}</strong><small>After Payout And Cash Adjustment</small></div>
+                <div><span>Company Cash With You</span><strong>{formatInr(driverEarning.cashInHand)}</strong><small>{formatInr(pendingCashTransfer)} Pending Approval</small></div>
+                <div><span>Maximum Withdrawal</span><strong>{formatInr(maxWithdrawalAmount)}</strong></div>
+              </div>
+              <section className="portal-surface company-cash-settlement">
+                <div className="portal-section-heading"><div><span>Company Money</span><h3>Settle Cash In Hand</h3></div></div>
+                <p>Customer cash belongs to the company. Keep it only by adjusting it against your available earning, or send it to admin for approval.</p>
+                <div className="cash-settlement-balance">
+                  <span>Available For Settlement</span>
+                  <strong>{formatInr(Math.max(0, driverEarning.cashInHand - pendingCashTransfer))}</strong>
+                </div>
+                <div className="cash-settlement-form">
+                  <input inputMode="numeric" placeholder="Settlement Amount" value={cashSettlementForm.amount} onChange={(event) => setCashSettlementForm((form) => ({ ...form, amount: event.target.value }))} />
+                  <input placeholder="Transfer Reference (Optional)" value={cashSettlementForm.referenceNumber} onChange={(event) => setCashSettlementForm((form) => ({ ...form, referenceNumber: event.target.value }))} />
+                  <button className="earning-adjust-action" type="button" disabled={driverEarning.availableEarning < 1} onClick={() => settleDriverCash("earning_adjustment")}>Keep Against Earning</button>
+                  <button type="button" onClick={() => settleDriverCash("admin_transfer")}>Send To Admin</button>
+                </div>
+                <div className="cash-settlement-history">
+                  {driverCashHistory.length ? driverCashHistory.slice(0, 8).map((entry) => (
+                    <div key={`driver-cash-settlement-${entry.id}`}>
+                      <span>{formatDisplayDateTime(entry.created_at)}</span>
+                      <strong>{entry.settlement_type === "earning_adjustment" ? "Kept Against Earning" : "Sent To Admin"}</strong>
+                      <b>{formatInr(entry.amount)}</b>
+                      <i className={`settlement-status settlement-${entry.settlement_status.toLowerCase()}`}>{entry.settlement_status}</i>
+                    </div>
+                  )) : <span>No Cash Settlement Yet.</span>}
+                </div>
+              </section>
               <section className="portal-surface">
                 <div className="portal-section-heading"><div><span>Payout</span><h3>Cash Withdrawal Request</h3></div></div>
                 <div className="driver-form withdrawal-form">
@@ -6376,7 +6509,7 @@ export default function Home() {
                     },
                     {
                       id: "driverCash",
-                      label: "In Driver Hand",
+                      label: "Company Cash With Drivers",
                       value: formatInr(adminMetrics.driverCashInHand),
                       className: "cash-metric",
                     },
@@ -6608,6 +6741,7 @@ export default function Home() {
                       <div className="admin-overview-kpis">
                         <article><span><ClipboardList /></span><div><small>Total Bookings</small><strong>{dashboard.totalBookings}</strong><em>Live booking records</em></div></article>
                         <article><span><Banknote /></span><div><small>Total Revenue</small><strong>{formatInr(finance.totalBookingAmount)}</strong><em>Final ride value</em></div></article>
+                        <article><span><WalletCards /></span><div><small>Company Cash With Drivers</small><strong>{formatInr(finance.driverCashInHand)}</strong><em>Pending driver settlement</em></div></article>
                         <article><span><Users /></span><div><small>Total Drivers</small><strong>{drivers.length}</strong><em>{drivers.filter((driver) => driver.status === "Available").length} available</em></div></article>
                         <article><span><UserRound /></span><div><small>Total Customers</small><strong>{uniqueCustomers}</strong><em>Recent booking customers</em></div></article>
                       </div>
@@ -7467,8 +7601,9 @@ export default function Home() {
                                 {driver.driver_name || "Driver"} | {driver.driver_mobile} |{" "}
                                 Collected {formatInr(Number(driver.cash_collected || 0))} |{" "}
                                 Refunded {formatInr(Number(driver.cash_refunded || 0))} |{" "}
-                                Deposited {formatInr(Number(driver.cash_deposited || 0))} |{" "}
-                                In Hand{" "}
+                                Sent To Admin {formatInr(Number(driver.cash_sent_to_admin || 0))} |{" "}
+                                Kept Against Earning {formatInr(Number(driver.cash_adjusted_to_earning || 0))} |{" "}
+                                Company Cash With Driver{" "}
                                 <strong className="cash-in-hand-amount">
                                   {formatInr(Number(driver.cash_amount || 0))}
                                 </strong>{" "}
@@ -7480,7 +7615,7 @@ export default function Home() {
                                 disabled={Number(driver.cash_amount || 0) < 1}
                                 onClick={() => recordDriverCashDeposit(driver)}
                               >
-                                Cash Collected
+                                Receive Cash
                               </button>
                             </div>
                           ))
@@ -7498,9 +7633,11 @@ export default function Home() {
                               <th>Vehicle</th>
                               <th>Booking</th>
                               <th>Mode</th>
+                              <th>Settlement</th>
                               <th>Amount</th>
                               <th>Receipt</th>
                               <th>Remarks</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -7512,13 +7649,20 @@ export default function Home() {
                                   <td>{entry.vehicle_number || "Not Linked"}</td>
                                   <td>{entry.booking_id || "General Settlement"}</td>
                                   <td>{entry.payment_mode}</td>
+                                  <td><span className={`settlement-status settlement-${entry.settlement_status.toLowerCase()}`}>{entry.settlement_status}</span></td>
                                   <td className="ledger-collected-amount">{formatInr(entry.amount)}</td>
                                   <td>{entry.receipt_reference}</td>
                                   <td>{entry.remarks || "Cash Handover"}</td>
+                                  <td className="cash-settlement-actions">
+                                    {entry.settlement_type === "admin_transfer" && entry.settlement_status === "Pending" ? (<>
+                                      <button type="button" onClick={() => updateCashSettlement(entry.id, "Completed")}>Approve</button>
+                                      <button className="danger-action" type="button" onClick={() => updateCashSettlement(entry.id, "Rejected")}>Reject</button>
+                                    </>) : <span>Recorded</span>}
+                                  </td>
                                 </tr>
                               ))
                             ) : (
-                              <tr><td colSpan={8}>No Cash Collection History Yet.</td></tr>
+                              <tr><td colSpan={10}>No Cash Collection History Yet.</td></tr>
                             )}
                           </tbody>
                         </table>

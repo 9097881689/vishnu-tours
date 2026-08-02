@@ -54,6 +54,24 @@ test("persists audit, payment, assignment and status history without replacing b
   assert.doesNotMatch(bookingsApi, /DROP TABLE/i);
 });
 
+test("automates company cash held by drivers and earning settlements", async () => {
+  const [bookingsApi, page] = await Promise.all([
+    source("app/api/bookings/route.ts"),
+    source("app/page.tsx"),
+  ]);
+
+  assert.match(bookingsApi, /settlement_type TEXT NOT NULL DEFAULT 'admin_deposit'/);
+  assert.match(bookingsApi, /settlement_status TEXT NOT NULL DEFAULT 'Completed'/);
+  assert.match(bookingsApi, /action === "settleDriverCash"/);
+  assert.match(bookingsApi, /action === "updateCashSettlement"/);
+  assert.match(bookingsApi, /earning\.availableEarning/);
+  assert.match(bookingsApi, /settlement_status = 'Completed'/);
+  assert.match(page, /Company Cash With Drivers/);
+  assert.match(page, /Keep Against Earning/);
+  assert.match(page, /Send To Admin/);
+  assert.match(page, /Awaiting Approval/);
+});
+
 test("verifies Razorpay signatures on the server before updating payment", async () => {
   const [orderApi, verifyApi] = await Promise.all([
     source("app/api/razorpay-order/route.ts"),
