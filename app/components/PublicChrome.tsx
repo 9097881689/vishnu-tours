@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MessageCircle, PhoneCall } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 
@@ -131,9 +132,13 @@ export function PublicFooter() {
   return (
     <footer className="site-footer" id="contact" style={style}>
       <div className="footer-column footer-brand-column">
-        <Link href="/" aria-label="Vishnu Tours home">
+        <Link className="footer-brand-lockup" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
+          <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours icon" />
+          <span className="footer-brand-copy">
+            <strong><b>Vishnu</b> <em>Tours</em></strong>
+            <small>Corporate Cabs From Mumbai</small>
+          </span>
         </Link>
         <span className="footer-legal-name">
           <b>Legal Name:</b> Visnu S Tours &amp; Travels
@@ -163,11 +168,14 @@ export function PublicFooter() {
       <div className="footer-column">
         <strong>Contact</strong>
         <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
-        <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
-          <span className="footer-whatsapp-icon" aria-hidden="true">☎</span>
-          +91 7004291529
+        <a className="footer-phone-link" href="tel:+917004291529">
+          <PhoneCall aria-hidden="true" />
+          <span>+91 7004291529</span>
         </a>
-        <a href={whatsappUrl} target="_blank">WhatsApp Booking Help</a>
+        <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
+          <MessageCircle aria-hidden="true" />
+          <span>WhatsApp Booking</span>
+        </a>
       </div>
     </footer>
   );

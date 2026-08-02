@@ -10034,6 +10034,143 @@ h6,
   }
 }
 
+/* Footer brand and contact controls */
+.footer-brand-lockup {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 6px;
+  text-decoration: none;
+}
+
+.footer-brand-lockup .footer-logo {
+  width: clamp(46px, var(--site-footer-logo-size, 62px), 68px);
+  height: clamp(46px, var(--site-footer-logo-size, 62px), 68px);
+  flex: 0 0 auto;
+  margin: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.24));
+}
+
+.footer-brand-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.site-footer .footer-brand-copy strong {
+  color: #ffffff;
+  font-size: clamp(17px, 1.6vw, 23px);
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.site-footer .footer-brand-copy strong b {
+  color: #ffffff;
+}
+
+.site-footer .footer-brand-copy strong em {
+  color: #ffb514;
+  font-style: normal;
+}
+
+.site-footer .footer-brand-copy small {
+  color: rgba(232, 241, 255, 0.82);
+  font-size: 7px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.footer-phone-link,
+.footer-whatsapp-link {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-phone-link svg,
+.footer-whatsapp-link svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 5px;
+  border-radius: 50%;
+  stroke-width: 2.2;
+}
+
+.footer-phone-link svg {
+  background: #e8f2ff;
+  color: #075bd8;
+}
+
+.footer-whatsapp-link {
+  min-height: 34px;
+  padding: 0 12px 0 6px;
+  border: 1px solid rgba(89, 235, 150, 0.45);
+  border-radius: 6px;
+  background: #0b9f50;
+  color: #ffffff !important;
+  font-weight: 800;
+}
+
+.footer-whatsapp-link svg {
+  background: #ffffff;
+  color: #0b9f50;
+}
+
+.floating-whatsapp {
+  display: inline-flex;
+  width: auto;
+  min-width: 122px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 15px;
+  border-radius: 24px;
+  font-size: 11px;
+}
+
+.floating-whatsapp svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2.4;
+}
+
+.floating-whatsapp span {
+  color: #ffffff;
+  font-weight: 850;
+}
+
+@media (max-width: 560px) {
+  .footer-brand-lockup .footer-logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .floating-whatsapp {
+    right: 14px;
+    bottom: 14px;
+    display: inline-grid;
+    width: 50px;
+    min-width: 50px;
+    height: 50px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .floating-whatsapp span {
+    display: none;
+  }
+}
+
 @media (max-width: 500px) {
   .portal-welcome-banner,
   .portal-support-panel {

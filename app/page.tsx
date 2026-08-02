@@ -21,8 +21,10 @@ import {
   LogOut,
   MapPinned,
   Menu,
+  MessageCircle,
   Navigation,
   Plane,
+  PhoneCall,
   Route,
   Settings,
   UserRound,
@@ -5970,7 +5972,10 @@ export default function Home() {
       {bookingView === "home" ? (
       <>
       <a className="enquiry-tab" href={whatsappUrl} target="_blank">Enquiry</a>
-      <a className="floating-whatsapp" href={whatsappUrl} target="_blank" aria-label="WhatsApp Vishnu Tours">WA</a>
+      <a className="floating-whatsapp" href={whatsappUrl} target="_blank" aria-label="Chat With Vishnu Tours On WhatsApp" title="Chat On WhatsApp">
+        <MessageCircle aria-hidden="true" />
+        <span>WhatsApp</span>
+      </a>
       <section className="homepage-steps-section" id="why-us" aria-label="Why choose Vishnu Tours">
         <div className="homepage-section-head">
           <h2>Why Choose Vishnu Tours?</h2>
@@ -6070,9 +6075,13 @@ export default function Home() {
 
       <footer className="site-footer" id="contact">
         <div className="footer-column footer-brand-column">
-          <Link href="/" aria-label="Vishnu Tours home">
+          <Link className="footer-brand-lockup" href="/" aria-label="Vishnu Tours home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
+            <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours icon" />
+            <span className="footer-brand-copy">
+              <strong><b>Vishnu</b> <em>Tours</em></strong>
+              <small>Corporate Cabs From Mumbai</small>
+            </span>
           </Link>
           <span className="footer-legal-name">
             <b>Legal Name:</b> Visnu S Tours &amp; Travels
@@ -6108,9 +6117,13 @@ export default function Home() {
           <Link href="/price-chart">Live Price Chart</Link>
           <span>Mumbai, Maharashtra, India</span>
           <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
+          <a className="footer-phone-link" href="tel:+917004291529">
+            <PhoneCall aria-hidden="true" />
+            <span>+91 7004291529</span>
+          </a>
           <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
-            <span className="footer-whatsapp-icon" aria-hidden="true">☎</span>
-            +91 7004291529
+            <MessageCircle aria-hidden="true" />
+            <span>WhatsApp Booking</span>
           </a>
         </div>
         <div className="footer-bottom">
