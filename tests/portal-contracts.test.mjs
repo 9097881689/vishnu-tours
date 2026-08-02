@@ -81,6 +81,8 @@ test("ships responsive role dashboard styling and all public policy pages", asyn
   assert.match(css, /@media \(max-width: 500px\)/);
   assert.match(homePage, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
   assert.match(publicChrome, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
+  assert.match(homePage, /Trade Name:<\/b> Munni Devi/);
+  assert.match(publicChrome, /Trade Name:<\/b> Munni Devi/);
   assert.match(
     css,
     /\.collection-modal-backdrop\s*\{[\s\S]*?z-index:\s*2147483100/,

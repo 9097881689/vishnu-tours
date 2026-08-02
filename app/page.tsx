@@ -5942,6 +5942,9 @@ export default function Home() {
           <span className="footer-legal-name">
             <b>Legal Name:</b> Visnu S Tours &amp; Travels
           </span>
+          <span className="footer-legal-name">
+            <b>Trade Name:</b> Munni Devi
+          </span>
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
