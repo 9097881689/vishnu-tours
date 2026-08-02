@@ -152,6 +152,28 @@ type BookingPayload = {
   email?: string;
   packageType?: string;
   paymentMode?: string;
+  address?: string;
+  emergencyContact?: string;
+  drivingLicense?: string;
+  licenseExpiry?: string;
+  identityDocument?: string;
+  addressProof?: string;
+  policeVerification?: string;
+  profilePhoto?: string;
+  accountType?: string;
+  approvalStatus?: string;
+  activeStatus?: string;
+  joiningDate?: string;
+  ownerMobile?: string;
+  seatingCapacity?: string;
+  fuelType?: string;
+  registrationCertificate?: string;
+  insurance?: string;
+  insuranceExpiry?: string;
+  permit?: string;
+  fitnessCertificate?: string;
+  puc?: string;
+  vehiclePhoto?: string;
 };
 
 type BookingOperationPayload = {
@@ -188,6 +210,10 @@ type BookingOperationPayload = {
   fleetVehicles?: FleetVehicle[];
   siteFont?: string;
   siteBranding?: SiteBranding;
+  remarks?: string;
+  referenceNumber?: string;
+  paymentReference?: string;
+  bookingReference?: string;
 };
 type DeleteBookingPayload = {
   mobile?: string;
@@ -202,6 +228,7 @@ const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
 const noStoreHeaders = {
   "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 };
+const portalSessionMaxAgeSeconds = 12 * 60 * 60;
 const allowedSiteFonts = new Set([
   "Plus Jakarta Sans",
   "Inter",
@@ -262,6 +289,78 @@ type BookingRow = {
   ride_completed_at: string;
 };
 
+type PortalSession = {
+  token: string;
+  role: AuditRole;
+  mobile: string;
+  expires_at: string;
+};
+
+function getCookieValue(request: Request, name: string) {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const encodedName = `${name}=`;
+  const part = cookieHeader
+    .split(";")
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(encodedName));
+
+  return part ? decodeURIComponent(part.slice(encodedName.length)) : "";
+}
+
+async function getPortalSession(request: Request) {
+  const token = getCookieValue(request, "vt_portal_session");
+  if (!token) {
+    return null;
+  }
+
+  const session = await env.DB.prepare(
+    `SELECT token, role, mobile, expires_at
+     FROM portal_sessions
+     WHERE token = ? AND expires_at > ?
+     LIMIT 1`,
+  )
+    .bind(token, new Date().toISOString())
+    .first<PortalSession>();
+
+  return session || null;
+}
+
+async function createPortalLoginResponse(
+  request: Request,
+  role: Exclude<AuditRole, "system">,
+  mobile: string,
+  data: Record<string, unknown>,
+) {
+  const token = crypto.randomUUID();
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + portalSessionMaxAgeSeconds * 1000,
+  ).toISOString();
+
+  await env.DB.prepare(
+    `INSERT INTO portal_sessions (token, role, mobile, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  )
+    .bind(token, role, mobile, now.toISOString(), expiresAt)
+    .run();
+
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return Response.json(data, {
+    headers: {
+      ...noStoreHeaders,
+      "Set-Cookie": `vt_portal_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${portalSessionMaxAgeSeconds}${secure}`,
+    },
+  });
+}
+
+function hasRole(session: PortalSession | null, role: AuditRole, mobile?: string) {
+  return Boolean(
+    session &&
+      session.role === role &&
+      (!mobile || session.mobile === mobile),
+  );
+}
+
 async function findNearbyDriverAssignmentConflict(
   bookingId: string,
   driverMobile: string,
@@ -309,6 +408,29 @@ type DriverRow = {
   bank_name?: string;
   bank_account?: string;
   bank_ifsc?: string;
+  email?: string;
+  address?: string;
+  emergency_contact?: string;
+  driving_license?: string;
+  license_expiry?: string;
+  identity_document?: string;
+  address_proof?: string;
+  police_verification?: string;
+  profile_photo?: string;
+  account_type?: string;
+  approval_status?: string;
+  active_status?: string;
+  joining_date?: string;
+  owner_mobile?: string;
+  seating_capacity?: string;
+  fuel_type?: string;
+  registration_certificate?: string;
+  insurance?: string;
+  insurance_expiry?: string;
+  permit?: string;
+  fitness_certificate?: string;
+  puc?: string;
+  vehicle_photo?: string;
   updated_at: string;
 };
 
@@ -338,6 +460,268 @@ const bookingSelectSql = `SELECT booking_id, created_at, trip_type, vehicle,
   cancel_reason, ride_started_at, odometer_start, odometer_end, extra_km, extra_amount,
   ride_completed_at
   FROM bookings`;
+
+type AuditRole = "admin" | "driver" | "customer" | "system";
+
+type StatusHistoryRow = {
+  id: number;
+  booking_id: string;
+  old_status: string;
+  new_status: string;
+  actor_role: string;
+  actor_mobile: string;
+  reason: string;
+  remarks: string;
+  created_at: string;
+};
+
+type CashCollectionRow = {
+  id: number;
+  created_at: string;
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_number: string;
+  booking_id: string;
+  amount: number;
+  payment_mode: string;
+  remarks: string;
+  receipt_reference: string;
+  admin_mobile: string;
+  collected_by: string;
+};
+
+type AssignmentHistoryRow = {
+  id: number;
+  booking_id: string;
+  old_driver_mobile: string;
+  new_driver_mobile: string;
+  old_vehicle_number: string;
+  new_vehicle_number: string;
+  assigned_by_role: string;
+  assigned_by_mobile: string;
+  reason: string;
+  created_at: string;
+};
+
+async function recordStatusHistory(input: {
+  bookingId: string;
+  oldStatus: string;
+  newStatus: string;
+  actorRole: AuditRole;
+  actorMobile: string;
+  reason?: string;
+  remarks?: string;
+}) {
+  if (!input.bookingId || !input.newStatus || input.oldStatus === input.newStatus) {
+    return;
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO booking_status_history (
+      booking_id, old_status, new_status, actor_role, actor_mobile,
+      reason, remarks, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      input.bookingId,
+      input.oldStatus || "",
+      input.newStatus,
+      input.actorRole,
+      input.actorMobile,
+      input.reason || "",
+      input.remarks || "",
+      new Date().toISOString(),
+    )
+    .run()
+    .catch(() => undefined);
+}
+
+async function recordAssignmentHistory(input: {
+  bookingId: string;
+  oldDriverMobile?: string;
+  newDriverMobile?: string;
+  oldVehicleNumber?: string;
+  newVehicleNumber?: string;
+  actorRole: AuditRole;
+  actorMobile: string;
+  reason?: string;
+}) {
+  const changed =
+    (input.oldDriverMobile || "") !== (input.newDriverMobile || "") ||
+    (input.oldVehicleNumber || "") !== (input.newVehicleNumber || "");
+
+  if (!input.bookingId || !changed) {
+    return;
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO assignment_history (
+      booking_id, old_driver_mobile, new_driver_mobile,
+      old_vehicle_number, new_vehicle_number, assigned_by_role,
+      assigned_by_mobile, reason, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      input.bookingId,
+      input.oldDriverMobile || "",
+      input.newDriverMobile || "",
+      input.oldVehicleNumber || "",
+      input.newVehicleNumber || "",
+      input.actorRole,
+      input.actorMobile,
+      input.reason || "",
+      new Date().toISOString(),
+    )
+    .run()
+    .catch(() => undefined);
+}
+
+async function recordPaymentTransaction(input: {
+  bookingId?: string;
+  customerMobile?: string;
+  driverMobile?: string;
+  amount: number;
+  transactionType: string;
+  paymentMode: string;
+  referenceNumber?: string;
+  status?: string;
+  settlementStatus?: string;
+  actorRole: AuditRole;
+  actorMobile: string;
+}) {
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    return;
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO payment_transactions (
+      booking_id, customer_mobile, driver_mobile, amount, transaction_type,
+      payment_mode, reference_number, status, settlement_status,
+      created_by_role, created_by_mobile, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      input.bookingId || "",
+      input.customerMobile || "",
+      input.driverMobile || "",
+      Math.round(input.amount),
+      input.transactionType,
+      input.paymentMode,
+      input.referenceNumber || "",
+      input.status || "Complete",
+      input.settlementStatus || "Settled",
+      input.actorRole,
+      input.actorMobile,
+      new Date().toISOString(),
+    )
+    .run()
+    .catch(() => undefined);
+}
+
+async function recordAuditLog(input: {
+  action: string;
+  entityType: string;
+  entityId: string;
+  actorRole: AuditRole;
+  actorMobile: string;
+  details?: Record<string, unknown>;
+}) {
+  await env.DB.prepare(
+    `INSERT INTO audit_logs (
+      action, entity_type, entity_id, actor_role, actor_mobile,
+      details_json, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      input.action,
+      input.entityType,
+      input.entityId,
+      input.actorRole,
+      input.actorMobile,
+      JSON.stringify(input.details || {}),
+      new Date().toISOString(),
+    )
+    .run()
+    .catch(() => undefined);
+}
+
+async function getStatusHistory(role: AuditRole = "admin", mobile = "") {
+  let whereClause = "";
+  const bindings: string[] = [];
+
+  if (role === "driver") {
+    whereClause = "WHERE b.driver_mobile = ?";
+    bindings.push(mobile);
+  } else if (role === "customer") {
+    whereClause = "WHERE b.customer_mobile = ?";
+    bindings.push(mobile);
+  }
+
+  const statement = env.DB.prepare(
+    `SELECT h.id, h.booking_id, h.old_status, h.new_status,
+      h.actor_role, h.actor_mobile, h.reason, h.remarks, h.created_at
+     FROM booking_status_history h
+     LEFT JOIN bookings b ON b.booking_id = h.booking_id
+     ${whereClause}
+     ORDER BY h.id DESC
+     LIMIT 100`,
+  );
+  const history = bindings.length
+    ? await statement.bind(...bindings).all<StatusHistoryRow>()
+    : await statement.all<StatusHistoryRow>();
+
+  return history.results || [];
+}
+
+async function getCashCollectionHistory(driverMobile = "") {
+  const statement = env.DB.prepare(
+    `SELECT id, created_at, driver_name, driver_mobile,
+      COALESCE(vehicle_number, '') AS vehicle_number,
+      COALESCE(booking_id, '') AS booking_id,
+      amount, COALESCE(payment_mode, 'Cash') AS payment_mode,
+      COALESCE(remarks, '') AS remarks,
+      COALESCE(receipt_reference, '') AS receipt_reference,
+      admin_mobile, COALESCE(collected_by, admin_mobile) AS collected_by
+     FROM driver_cash_deposits
+     ${driverMobile ? "WHERE driver_mobile = ?" : ""}
+     ORDER BY id DESC
+     LIMIT 100`,
+  );
+  const rows = driverMobile
+    ? await statement.bind(driverMobile).all<CashCollectionRow>()
+    : await statement.all<CashCollectionRow>();
+
+  return rows.results || [];
+}
+
+async function getAssignmentHistory(role: AuditRole = "admin", mobile = "") {
+  let whereClause = "";
+  const bindings: string[] = [];
+
+  if (role === "driver") {
+    whereClause = "WHERE b.driver_mobile = ?";
+    bindings.push(mobile);
+  } else if (role === "customer") {
+    whereClause = "WHERE b.customer_mobile = ?";
+    bindings.push(mobile);
+  }
+
+  const statement = env.DB.prepare(
+    `SELECT h.id, h.booking_id, h.old_driver_mobile, h.new_driver_mobile,
+      h.old_vehicle_number, h.new_vehicle_number, h.assigned_by_role,
+      h.assigned_by_mobile, h.reason, h.created_at
+     FROM assignment_history h
+     LEFT JOIN bookings b ON b.booking_id = h.booking_id
+     ${whereClause}
+     ORDER BY h.id DESC
+     LIMIT 100`,
+  );
+  const history = bindings.length
+    ? await statement.bind(...bindings).all<AssignmentHistoryRow>()
+    : await statement.all<AssignmentHistoryRow>();
+
+  return history.results || [];
+}
 
 async function getRecentBookings(limit = 80) {
   const recent = await env.DB.prepare(
@@ -425,6 +809,14 @@ async function getDrivers() {
     `SELECT d.driver_name, d.driver_mobile,
       COALESCE(v.vehicle_type, d.vehicle_type) AS vehicle_type,
       COALESCE(v.vehicle_number, d.vehicle_number) AS vehicle_number,
+      d.email, d.address, d.emergency_contact, d.driving_license,
+      d.license_expiry, d.identity_document, d.address_proof,
+      d.police_verification, d.profile_photo, d.account_type,
+      d.approval_status, d.active_status, d.joining_date,
+      COALESCE(v.owner_mobile, d.driver_mobile) AS owner_mobile,
+      v.seating_capacity, v.fuel_type, v.registration_certificate,
+      v.insurance, v.insurance_expiry, v.permit, v.fitness_certificate,
+      v.puc, v.vehicle_photo,
       COALESCE(v.updated_at, d.updated_at) AS updated_at
      FROM drivers d
      LEFT JOIN driver_vehicles v ON v.driver_mobile = d.driver_mobile
@@ -436,7 +828,10 @@ async function getDrivers() {
 
 async function getDriverVehicles(driverMobile: string) {
   const vehicles = await env.DB.prepare(
-    `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number, updated_at
+    `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number,
+      owner_mobile, seating_capacity, fuel_type, registration_certificate,
+      insurance, insurance_expiry, permit, fitness_certificate, puc,
+      vehicle_photo, approval_status, active_status, updated_at
      FROM driver_vehicles
      WHERE driver_mobile = ?
      ORDER BY updated_at DESC`,
@@ -942,6 +1337,24 @@ async function ensureBookingsTable() {
 
   await db
     .prepare(
+      `CREATE TABLE IF NOT EXISTS portal_sessions (
+        token TEXT PRIMARY KEY,
+        role TEXT NOT NULL,
+        mobile TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare("DELETE FROM portal_sessions WHERE expires_at <= ?")
+    .bind(new Date().toISOString())
+    .run()
+    .catch(() => undefined);
+
+  await db
+    .prepare(
       `CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         booking_id TEXT NOT NULL UNIQUE,
@@ -1136,6 +1549,29 @@ async function ensureBookingsTable() {
     .run()
     .catch(() => undefined);
 
+  const driverProfileColumns = [
+    "email TEXT NOT NULL DEFAULT ''",
+    "address TEXT NOT NULL DEFAULT ''",
+    "emergency_contact TEXT NOT NULL DEFAULT ''",
+    "driving_license TEXT NOT NULL DEFAULT ''",
+    "license_expiry TEXT NOT NULL DEFAULT ''",
+    "identity_document TEXT NOT NULL DEFAULT ''",
+    "address_proof TEXT NOT NULL DEFAULT ''",
+    "police_verification TEXT NOT NULL DEFAULT ''",
+    "profile_photo TEXT NOT NULL DEFAULT ''",
+    "account_type TEXT NOT NULL DEFAULT 'Driver-Cum-Owner'",
+    "approval_status TEXT NOT NULL DEFAULT 'Approved'",
+    "active_status TEXT NOT NULL DEFAULT 'Active'",
+    "joining_date TEXT NOT NULL DEFAULT ''",
+  ];
+
+  for (const columnDefinition of driverProfileColumns) {
+    await db
+      .prepare(`ALTER TABLE drivers ADD COLUMN ${columnDefinition}`)
+      .run()
+      .catch(() => undefined);
+  }
+
   await db
     .prepare(
       `CREATE TABLE IF NOT EXISTS driver_vehicles (
@@ -1143,10 +1579,44 @@ async function ensureBookingsTable() {
         driver_mobile TEXT NOT NULL,
         driver_name TEXT NOT NULL,
         vehicle_type TEXT NOT NULL,
+        owner_mobile TEXT NOT NULL DEFAULT '',
+        seating_capacity TEXT NOT NULL DEFAULT '',
+        fuel_type TEXT NOT NULL DEFAULT '',
+        registration_certificate TEXT NOT NULL DEFAULT '',
+        insurance TEXT NOT NULL DEFAULT '',
+        insurance_expiry TEXT NOT NULL DEFAULT '',
+        permit TEXT NOT NULL DEFAULT '',
+        fitness_certificate TEXT NOT NULL DEFAULT '',
+        puc TEXT NOT NULL DEFAULT '',
+        vehicle_photo TEXT NOT NULL DEFAULT '',
+        approval_status TEXT NOT NULL DEFAULT 'Approved',
+        active_status TEXT NOT NULL DEFAULT 'Active',
         updated_at TEXT NOT NULL
       )`,
     )
     .run();
+
+  const driverVehicleColumns = [
+    "owner_mobile TEXT NOT NULL DEFAULT ''",
+    "seating_capacity TEXT NOT NULL DEFAULT ''",
+    "fuel_type TEXT NOT NULL DEFAULT ''",
+    "registration_certificate TEXT NOT NULL DEFAULT ''",
+    "insurance TEXT NOT NULL DEFAULT ''",
+    "insurance_expiry TEXT NOT NULL DEFAULT ''",
+    "permit TEXT NOT NULL DEFAULT ''",
+    "fitness_certificate TEXT NOT NULL DEFAULT ''",
+    "puc TEXT NOT NULL DEFAULT ''",
+    "vehicle_photo TEXT NOT NULL DEFAULT ''",
+    "approval_status TEXT NOT NULL DEFAULT 'Approved'",
+    "active_status TEXT NOT NULL DEFAULT 'Active'",
+  ];
+
+  for (const columnDefinition of driverVehicleColumns) {
+    await db
+      .prepare(`ALTER TABLE driver_vehicles ADD COLUMN ${columnDefinition}`)
+      .run()
+      .catch(() => undefined);
+  }
 
   await db
     .prepare(
@@ -1185,11 +1655,137 @@ async function ensureBookingsTable() {
         created_at TEXT NOT NULL,
         driver_name TEXT NOT NULL,
         driver_mobile TEXT NOT NULL,
+        vehicle_number TEXT NOT NULL DEFAULT '',
+        booking_id TEXT NOT NULL DEFAULT '',
         amount INTEGER NOT NULL,
-        admin_mobile TEXT NOT NULL
+        payment_mode TEXT NOT NULL DEFAULT 'Cash',
+        remarks TEXT NOT NULL DEFAULT '',
+        receipt_reference TEXT NOT NULL DEFAULT '',
+        admin_mobile TEXT NOT NULL,
+        collected_by TEXT NOT NULL DEFAULT ''
       )`,
     )
     .run();
+
+  const cashDepositColumns = [
+    "vehicle_number TEXT NOT NULL DEFAULT ''",
+    "booking_id TEXT NOT NULL DEFAULT ''",
+    "payment_mode TEXT NOT NULL DEFAULT 'Cash'",
+    "remarks TEXT NOT NULL DEFAULT ''",
+    "receipt_reference TEXT NOT NULL DEFAULT ''",
+    "collected_by TEXT NOT NULL DEFAULT ''",
+  ];
+
+  for (const columnDefinition of cashDepositColumns) {
+    await db
+      .prepare(`ALTER TABLE driver_cash_deposits ADD COLUMN ${columnDefinition}`)
+      .run()
+      .catch(() => undefined);
+  }
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS booking_status_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id TEXT NOT NULL,
+        old_status TEXT NOT NULL DEFAULT '',
+        new_status TEXT NOT NULL,
+        actor_role TEXT NOT NULL,
+        actor_mobile TEXT NOT NULL DEFAULT '',
+        reason TEXT NOT NULL DEFAULT '',
+        remarks TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS assignment_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id TEXT NOT NULL,
+        old_driver_mobile TEXT NOT NULL DEFAULT '',
+        new_driver_mobile TEXT NOT NULL DEFAULT '',
+        old_vehicle_number TEXT NOT NULL DEFAULT '',
+        new_vehicle_number TEXT NOT NULL DEFAULT '',
+        assigned_by_role TEXT NOT NULL,
+        assigned_by_mobile TEXT NOT NULL DEFAULT '',
+        reason TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS payment_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id TEXT NOT NULL DEFAULT '',
+        customer_mobile TEXT NOT NULL DEFAULT '',
+        driver_mobile TEXT NOT NULL DEFAULT '',
+        amount INTEGER NOT NULL,
+        transaction_type TEXT NOT NULL,
+        payment_mode TEXT NOT NULL,
+        reference_number TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'Complete',
+        settlement_status TEXT NOT NULL DEFAULT 'Settled',
+        created_by_role TEXT NOT NULL,
+        created_by_mobile TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        actor_role TEXT NOT NULL,
+        actor_mobile TEXT NOT NULL DEFAULT '',
+        details_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS payment_gateway_orders (
+        order_id TEXT PRIMARY KEY,
+        booking_id TEXT NOT NULL,
+        amount_paise INTEGER NOT NULL,
+        purpose TEXT NOT NULL DEFAULT 'booking_payment',
+        created_by_mobile TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'Created',
+        payment_id TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        verified_at TEXT NOT NULL DEFAULT ''
+      )`,
+    )
+    .run();
+
+  const operationalIndexes = [
+    "CREATE INDEX IF NOT EXISTS idx_bookings_customer_mobile ON bookings (customer_mobile)",
+    "CREATE INDEX IF NOT EXISTS idx_bookings_driver_mobile ON bookings (driver_mobile)",
+    "CREATE INDEX IF NOT EXISTS idx_bookings_ride_status ON bookings (ride_status)",
+    "CREATE INDEX IF NOT EXISTS idx_status_history_booking_id ON booking_status_history (booking_id)",
+    "CREATE INDEX IF NOT EXISTS idx_assignment_history_booking_id ON assignment_history (booking_id)",
+    "CREATE INDEX IF NOT EXISTS idx_payment_transactions_booking_id ON payment_transactions (booking_id)",
+    "CREATE INDEX IF NOT EXISTS idx_cash_deposits_driver_mobile ON driver_cash_deposits (driver_mobile)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs (entity_type, entity_id)",
+    "CREATE INDEX IF NOT EXISTS idx_gateway_orders_booking_id ON payment_gateway_orders (booking_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_gateway_orders_payment_id ON payment_gateway_orders (payment_id) WHERE payment_id != ''",
+    "CREATE INDEX IF NOT EXISTS idx_portal_sessions_mobile_role ON portal_sessions (mobile, role)",
+  ];
+
+  for (const indexSql of operationalIndexes) {
+    await db.prepare(indexSql).run();
+  }
+
+  await db.prepare("PRAGMA optimize").run().catch(() => undefined);
 }
 
 export async function GET(request: Request) {
@@ -1201,6 +1797,7 @@ export async function GET(request: Request) {
     const mobile = clean(url.searchParams.get("mobile"));
 
     await ensureBookingsTable();
+    const activePortalSession = await getPortalSession(request);
 
     if (url.searchParams.get("settings") === "pricing") {
       const fleetVehicles = await getFleetVehicles();
@@ -1254,7 +1851,7 @@ export async function GET(request: Request) {
         const driverLedger = await getDriverLedger();
         const withdrawalRequests = await getWithdrawals();
 
-        return Response.json({
+        return createPortalLoginResponse(request, "admin", loginMobile, {
           role: "admin",
           priceAdjustmentPercent: await getPriceAdjustmentPercent(),
           vehicleRateOverrides: await getVehicleRateOverrides(),
@@ -1272,12 +1869,19 @@ export async function GET(request: Request) {
           driverCashSummary,
           driverLedger,
           withdrawalRequests,
+          statusHistory: await getStatusHistory("admin"),
+          assignmentHistory: await getAssignmentHistory("admin"),
+          cashCollectionHistory: await getCashCollectionHistory(),
         });
       }
 
       const driverProfile = await env.DB.prepare(
         `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number,
-           bank_name, bank_account, bank_ifsc, updated_at
+           bank_name, bank_account, bank_ifsc, email, address,
+           emergency_contact, driving_license, license_expiry,
+           identity_document, address_proof, police_verification,
+           profile_photo, account_type, approval_status, active_status,
+           joining_date, updated_at
          FROM drivers
          WHERE driver_mobile = ?
          LIMIT 1`,
@@ -1329,7 +1933,7 @@ export async function GET(request: Request) {
             }
           : driverProfile;
 
-        return Response.json({
+        const driverDashboardData = {
           role: "driver",
           driverProfile: profileWithBank,
           driverVehicles,
@@ -1343,7 +1947,14 @@ export async function GET(request: Request) {
           maxWithdrawalAmount: await getDriverWithdrawableBalance(loginMobile),
           driverLedger: await getDriverLedger(loginMobile),
           withdrawalRequests: await getWithdrawals(loginMobile),
-        });
+          statusHistory: await getStatusHistory("driver", loginMobile),
+          assignmentHistory: await getAssignmentHistory("driver", loginMobile),
+          cashCollectionHistory: await getCashCollectionHistory(loginMobile),
+        };
+
+        return hasRole(activePortalSession, "admin")
+          ? Response.json(driverDashboardData, { headers: noStoreHeaders })
+          : createPortalLoginResponse(request, "driver", loginMobile, driverDashboardData);
       }
 
       const customerBookings = await env.DB.prepare(
@@ -1356,10 +1967,16 @@ export async function GET(request: Request) {
         .all<BookingRow>();
 
       if (customerBookings.results?.length) {
-        return Response.json({
+        const customerDashboardData = {
           role: "customer",
           recentBookings: customerBookings.results,
-        });
+          statusHistory: await getStatusHistory("customer", loginMobile),
+          assignmentHistory: await getAssignmentHistory("customer", loginMobile),
+        };
+
+        return hasRole(activePortalSession, "admin")
+          ? Response.json(customerDashboardData, { headers: noStoreHeaders })
+          : createPortalLoginResponse(request, "customer", loginMobile, customerDashboardData);
       }
 
       return Response.json(
@@ -1440,9 +2057,10 @@ export async function PATCH(request: Request) {
     }
 
     await ensureBookingsTable();
+    const portalSession = await getPortalSession(request);
 
     if (action === "updatePriceAdjustment") {
-      if (clean(payload.adminMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json({ error: "Only Admin Can Update Master Price." }, { status: 401 });
       }
 
@@ -1473,7 +2091,7 @@ export async function PATCH(request: Request) {
     }
 
     if (action === "updateVehicleRates") {
-      if (clean(payload.adminMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json({ error: "Only Admin Can Update Car Fares." }, { status: 401 });
       }
 
@@ -1495,7 +2113,7 @@ export async function PATCH(request: Request) {
     }
 
     if (action === "updateFleetVehicles") {
-      if (clean(payload.adminMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json({ error: "Only Admin Can Update My Vehicle." }, { status: 401 });
       }
 
@@ -1515,7 +2133,7 @@ export async function PATCH(request: Request) {
     }
 
     if (action === "updateSiteFont") {
-      if (clean(payload.adminMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json({ error: "Only Admin Can Update Site Font." }, { status: 401 });
       }
 
@@ -1535,7 +2153,7 @@ export async function PATCH(request: Request) {
     }
 
     if (action === "updateSiteBranding") {
-      if (clean(payload.adminMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json({ error: "Only Admin Can Update Site Branding." }, { status: 401 });
       }
 
@@ -1555,13 +2173,122 @@ export async function PATCH(request: Request) {
     }
 
     const isAdmin =
-      clean(payload.pin) === adminPin || clean(payload.mobile) === adminMobile;
+      hasRole(portalSession, "admin", adminMobile) || clean(payload.pin) === adminPin;
 
     if (!isAdmin) {
       const customerMobile = clean(payload.customerMobile);
       const paymentStatus = clean(payload.paymentStatus);
       const paymentAmount = Number(payload.paymentAmount);
       const driverMobile = clean(payload.mobile);
+
+      if (
+        ["requestWithdrawal", "acceptRide", "driverRideStatus", "driverCancelRide"].includes(action) &&
+        !hasRole(portalSession, "driver", driverMobile)
+      ) {
+        return Response.json(
+          { error: "Driver Session Is Invalid Or Expired. Please Sign In Again." },
+          { status: 403 },
+        );
+      }
+
+      if (action === "customerCancelRide") {
+        if (!hasRole(portalSession, "customer", customerMobile)) {
+          return Response.json(
+            { error: "Customer Session Is Invalid Or Expired. Please Sign In Again." },
+            { status: 403 },
+          );
+        }
+
+        const cancelReason = clean(payload.cancelReason);
+        const customerBooking = await env.DB.prepare(
+          `SELECT booking_id, customer_mobile, driver_mobile, ride_status,
+            ride_started_at, ride_completed_at, payment_amount
+           FROM bookings
+           WHERE booking_id = ? AND customer_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(bookingId, customerMobile)
+          .first<{
+            booking_id: string;
+            customer_mobile: string;
+            driver_mobile: string;
+            ride_status: string;
+            ride_started_at: string;
+            ride_completed_at: string;
+            payment_amount: number;
+          }>();
+
+        if (!customerBooking) {
+          return Response.json({ error: "Booking Not Found." }, { status: 404 });
+        }
+
+        if (
+          customerBooking.driver_mobile ||
+          customerBooking.ride_started_at ||
+          customerBooking.ride_completed_at ||
+          (customerBooking.ride_status || "").includes("Cancel") ||
+          (customerBooking.ride_status || "").includes("Complete")
+        ) {
+          return Response.json(
+            { error: "Customer Cancellation Is Available Only Before Driver Assignment." },
+            { status: 409 },
+          );
+        }
+
+        if (!cancelReason) {
+          return Response.json(
+            { error: "Cancellation Reason Is Required." },
+            { status: 400 },
+          );
+        }
+
+        const cancelResult = await env.DB.prepare(
+          `UPDATE bookings
+           SET ride_status = 'Ride Cancelled',
+               status = 'cancelled',
+               cancel_reason = ?,
+               refund_status = CASE
+                 WHEN payment_amount > 0 THEN 'Pending'
+                 ELSE refund_status
+               END
+           WHERE booking_id = ?
+             AND customer_mobile = ?
+             AND COALESCE(driver_mobile, '') = ''
+             AND COALESCE(ride_started_at, '') = ''
+             AND COALESCE(ride_completed_at, '') = ''`,
+        )
+          .bind(cancelReason, bookingId, customerMobile)
+          .run();
+
+        if (Number(cancelResult.meta.changes || 0) < 1) {
+          return Response.json(
+            { error: "Booking Status Changed Before Cancellation Could Complete." },
+            { status: 409 },
+          );
+        }
+
+        await recordStatusHistory({
+          bookingId,
+          oldStatus: customerBooking.ride_status,
+          newStatus: "Ride Cancelled",
+          actorRole: "customer",
+          actorMobile: customerMobile,
+          reason: cancelReason,
+        });
+        await recordAuditLog({
+          action: "customer_booking_cancelled",
+          entityType: "booking",
+          entityId: bookingId,
+          actorRole: "customer",
+          actorMobile: customerMobile,
+          details: {
+            reason: cancelReason,
+            refundPending: Number(customerBooking.payment_amount || 0) > 0,
+          },
+        });
+
+        return Response.json({ success: true });
+      }
 
       if (action === "requestWithdrawal" && driverMobile) {
         const driver = await env.DB.prepare(
@@ -1632,6 +2359,43 @@ export async function PATCH(request: Request) {
       }
 
       if (customerMobile && paymentStatus === "Complete" && paymentAmount > 0) {
+        if (!hasRole(portalSession, "customer", customerMobile)) {
+          return Response.json(
+            { error: "Online Payment Must Be Verified By Razorpay." },
+            { status: 403 },
+          );
+        }
+        const paymentBooking = await env.DB.prepare(
+          `SELECT customer_mobile, ride_status, estimated_fare, extra_amount, payment_amount
+           FROM bookings
+           WHERE booking_id = ? AND customer_mobile = ?
+           LIMIT 1`,
+        )
+          .bind(bookingId, customerMobile)
+          .first<{
+            customer_mobile: string;
+            ride_status: string;
+            estimated_fare: number;
+            extra_amount: number;
+            payment_amount: number;
+          }>();
+
+        if (!paymentBooking) {
+          return Response.json({ error: "Booking not found." }, { status: 404 });
+        }
+
+        const payableTotal = Math.round(Number(paymentBooking.estimated_fare || 0) * 1.05) +
+          Number(paymentBooking.extra_amount || 0);
+        if (paymentAmount > payableTotal) {
+          return Response.json(
+            { error: `Payment Cannot Exceed Total Fare ₹${payableTotal}.` },
+            { status: 400 },
+          );
+        }
+
+        const normalizedPaymentStatus =
+          paymentAmount >= payableTotal ? "Complete" : "Partially Paid";
+        const previousPaymentAmount = Number(paymentBooking.payment_amount || 0);
         await env.DB.prepare(
           `UPDATE bookings
            SET payment_status = ?,
@@ -1642,15 +2406,36 @@ export async function PATCH(request: Request) {
                END
            WHERE booking_id = ? AND customer_mobile = ?`,
         )
-          .bind(paymentStatus, paymentAmount, bookingId, customerMobile)
+          .bind(normalizedPaymentStatus, paymentAmount, bookingId, customerMobile)
           .run();
+
+        await recordPaymentTransaction({
+          bookingId,
+          customerMobile,
+          amount: Math.max(0, paymentAmount - previousPaymentAmount),
+          transactionType: "Customer Online Payment",
+          paymentMode: "Razorpay",
+          referenceNumber: clean(payload.paymentReference),
+          status: normalizedPaymentStatus,
+          actorRole: "customer",
+          actorMobile: customerMobile,
+        });
+        await recordAuditLog({
+          action: "customer_payment_recorded",
+          entityType: "booking",
+          entityId: bookingId,
+          actorRole: "customer",
+          actorMobile: customerMobile,
+          details: { paymentAmount, paymentStatus: normalizedPaymentStatus },
+        });
 
         return Response.json({ success: true });
       }
 
       if (payload.action === "acceptRide" && driverMobile) {
         const driver = await env.DB.prepare(
-          `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number
+          `SELECT driver_name, driver_mobile, vehicle_type, vehicle_number,
+            approval_status, active_status, license_expiry
            FROM drivers
            WHERE driver_mobile = ?
            LIMIT 1`,
@@ -1665,8 +2450,25 @@ export async function PATCH(request: Request) {
           );
         }
 
+        if (
+          (driver.approval_status && driver.approval_status !== "Approved") ||
+          (driver.active_status && driver.active_status !== "Active")
+        ) {
+          return Response.json(
+            { error: "Driver Profile Must Be Approved And Active Before Accepting Rides." },
+            { status: 403 },
+          );
+        }
+
+        if (driver.license_expiry && Date.parse(driver.license_expiry) < Date.now()) {
+          return Response.json(
+            { error: "Driving Licence Has Expired. Contact Admin." },
+            { status: 403 },
+          );
+        }
+
         const booking = await env.DB.prepare(
-          `SELECT booking_id, pickup_datetime, driver_mobile, vehicle
+          `SELECT booking_id, pickup_datetime, driver_mobile, vehicle, ride_status
            FROM bookings
            WHERE booking_id = ?
            LIMIT 1`,
@@ -1677,6 +2479,7 @@ export async function PATCH(request: Request) {
             pickup_datetime: string;
             driver_mobile: string;
             vehicle: string;
+            ride_status: string;
           }>();
 
         if (!booking) {
@@ -1692,7 +2495,13 @@ export async function PATCH(request: Request) {
 
         const driverVehicles = await getDriverVehicles(driverMobile);
         const assignedVehicle =
-          driverVehicles.find((vehicle) => vehicle.vehicle_type === booking.vehicle) ||
+          driverVehicles.find(
+            (vehicle) =>
+              vehicle.vehicle_type === booking.vehicle &&
+              (!vehicle.approval_status || vehicle.approval_status === "Approved") &&
+              (!vehicle.active_status || vehicle.active_status === "Active") &&
+              (!vehicle.insurance_expiry || Date.parse(vehicle.insurance_expiry) >= Date.now()),
+          ) ||
           (driver.vehicle_type === booking.vehicle ? driver : null);
 
         if (!assignedVehicle) {
@@ -1721,7 +2530,7 @@ export async function PATCH(request: Request) {
           );
         }
 
-        await env.DB.prepare(
+        const assignmentResult = await env.DB.prepare(
           `UPDATE bookings
            SET ride_status = 'Driver Assigned',
                vehicle = ?,
@@ -1738,6 +2547,38 @@ export async function PATCH(request: Request) {
             bookingId,
           )
           .run();
+
+        if (Number(assignmentResult.meta.changes || 0) < 1) {
+          return Response.json(
+            { error: "This Ride Was Accepted By Another Driver." },
+            { status: 409 },
+          );
+        }
+
+        await recordStatusHistory({
+          bookingId,
+          oldStatus: booking.ride_status || "Booking Confirmed",
+          newStatus: "Driver Assigned",
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          reason: "Ride Accepted By Eligible Driver",
+        });
+        await recordAssignmentHistory({
+          bookingId,
+          newDriverMobile: driverMobile,
+          newVehicleNumber: assignedVehicle.vehicle_number,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          reason: "Driver Accepted Available Ride",
+        });
+        await recordAuditLog({
+          action: "ride_accepted",
+          entityType: "booking",
+          entityId: bookingId,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          details: { vehicleNumber: assignedVehicle.vehicle_number },
+        });
 
         const updatedBooking = await getBookingById(bookingId);
         await sendCustomerBookingEmail(updatedBooking, "driver_assigned");
@@ -1758,7 +2599,8 @@ export async function PATCH(request: Request) {
 
         const assignedBooking = await env.DB.prepare(
           `SELECT booking_id, driver_mobile, ride_started_at, ride_completed_at,
-            estimated_fare, payment_amount, billable_km, rate_per_km, odometer_start
+            ride_status, customer_mobile, vehicle_number, estimated_fare,
+            payment_amount, billable_km, rate_per_km, odometer_start
            FROM bookings
            WHERE booking_id = ? AND driver_mobile = ?
            LIMIT 1`,
@@ -1769,6 +2611,9 @@ export async function PATCH(request: Request) {
             driver_mobile: string;
             ride_started_at: string;
             ride_completed_at: string;
+            ride_status: string;
+            customer_mobile: string;
+            vehicle_number: string;
             estimated_fare: number;
             payment_amount: number;
             billable_km: number;
@@ -1790,6 +2635,18 @@ export async function PATCH(request: Request) {
           );
         }
 
+        if (
+          rideStatus === "Ride Started" &&
+          (assignedBooking.ride_started_at ||
+            assignedBooking.ride_status === "Ride Cancelled" ||
+            assignedBooking.ride_status === "Ride Complete")
+        ) {
+          return Response.json(
+            { error: "Only An Assigned Active Ride Can Be Started." },
+            { status: 409 },
+          );
+        }
+
         if (assignedBooking.ride_completed_at) {
           return Response.json(
             { error: "This Ride Is Already Complete." },
@@ -1799,7 +2656,6 @@ export async function PATCH(request: Request) {
 
         const totalWithGst = Math.round(Number(assignedBooking.estimated_fare || 0) * 1.05);
         const paidAmount = Number(assignedBooking.payment_amount || 0);
-        const balanceDue = Math.max(0, totalWithGst - paidAmount);
         const collectionMode = clean(payload.collectionMode);
         const requestedPaymentAmount = Number(payload.paymentAmount);
         const odometerStart = Math.round(Number(payload.odometerStart || 0));
@@ -1847,7 +2703,10 @@ export async function PATCH(request: Request) {
           rideStatus === "Ride Complete"
             ? Math.round(extraKm * Number(assignedBooking.rate_per_km || 0) * 1.05)
             : 0;
-        const totalCollectable = balanceDue + extraAmount;
+        const totalCollectable = Math.max(
+          0,
+          totalWithGst + extraAmount - paidAmount,
+        );
 
         if (rideStatus === "Ride Complete" && totalCollectable > 0) {
           const validCollectionMode =
@@ -1937,6 +2796,44 @@ export async function PATCH(request: Request) {
           )
           .run();
 
+        await recordStatusHistory({
+          bookingId,
+          oldStatus: assignedBooking.ride_status,
+          newStatus: rideStatus,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          reason: rideStatus === "Ride Started" ? "Ride Started By Driver" : "Ride Completed By Driver",
+          remarks:
+            rideStatus === "Ride Complete"
+              ? `Odometer ${activeOdometerStart}-${odometerEnd}; Extra KM ${extraKm}`
+              : `Start Odometer ${activeOdometerStart}`,
+        });
+
+        if (completedWithCollection) {
+          await recordPaymentTransaction({
+            bookingId,
+            customerMobile: assignedBooking.customer_mobile,
+            driverMobile,
+            amount: totalCollectable,
+            transactionType:
+              collectionMode === "cash" ? "Customer Cash To Driver" : "Customer Online Payment",
+            paymentMode: collectionMode === "cash" ? "Cash" : "Razorpay",
+            referenceNumber: clean(payload.paymentReference),
+            settlementStatus: collectionMode === "cash" ? "Driver Holding" : "Settled Online",
+            actorRole: "driver",
+            actorMobile: driverMobile,
+          });
+        }
+
+        await recordAuditLog({
+          action: rideStatus === "Ride Started" ? "ride_started" : "ride_completed",
+          entityType: "booking",
+          entityId: bookingId,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          details: { activeOdometerStart, odometerEnd, extraKm, extraAmount, totalCollectable },
+        });
+
         if (rideStatus === "Ride Complete") {
           const updatedBooking = await getBookingById(bookingId);
           await sendCustomerBookingEmail(updatedBooking, "ride_complete");
@@ -1946,14 +2843,20 @@ export async function PATCH(request: Request) {
       }
 
       if (payload.action === "driverCancelRide" && driverMobile) {
+        const cancelReason = clean(payload.cancelReason);
         const assignedBooking = await env.DB.prepare(
-          `SELECT booking_id, ride_completed_at
+          `SELECT booking_id, ride_status, ride_started_at, ride_completed_at
            FROM bookings
            WHERE booking_id = ? AND driver_mobile = ?
            LIMIT 1`,
         )
           .bind(bookingId, driverMobile)
-          .first<{ booking_id: string; ride_completed_at: string }>();
+          .first<{
+            booking_id: string;
+            ride_status: string;
+            ride_started_at: string;
+            ride_completed_at: string;
+          }>();
 
         if (!assignedBooking) {
           return Response.json(
@@ -1969,14 +2872,45 @@ export async function PATCH(request: Request) {
           );
         }
 
+        if (assignedBooking.ride_started_at) {
+          return Response.json(
+            { error: "Started Ride Can Only Be Cancelled By Admin." },
+            { status: 409 },
+          );
+        }
+
+        if (!cancelReason) {
+          return Response.json(
+            { error: "Cancellation Reason Is Required." },
+            { status: 400 },
+          );
+        }
+
         await env.DB.prepare(
           `UPDATE bookings
            SET ride_status = 'Ride Cancelled',
-               cancel_reason = 'Cancelled By Driver'
+               cancel_reason = ?
            WHERE booking_id = ? AND driver_mobile = ?`,
         )
-          .bind(bookingId, driverMobile)
+          .bind(cancelReason, bookingId, driverMobile)
           .run();
+
+        await recordStatusHistory({
+          bookingId,
+          oldStatus: assignedBooking.ride_status,
+          newStatus: "Ride Cancelled",
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          reason: cancelReason,
+        });
+        await recordAuditLog({
+          action: "ride_cancelled",
+          entityType: "booking",
+          entityId: bookingId,
+          actorRole: "driver",
+          actorMobile: driverMobile,
+          details: { reason: cancelReason },
+        });
 
         return Response.json({ success: true });
       }
@@ -2003,12 +2937,26 @@ export async function PATCH(request: Request) {
         .bind(withdrawalStatus, new Date().toISOString(), withdrawalId)
         .run();
 
+      await recordAuditLog({
+        action: `withdrawal_${withdrawalStatus.toLowerCase()}`,
+        entityType: "driver_withdrawal",
+        entityId: String(withdrawalId),
+        actorRole: "admin",
+        actorMobile: adminMobile,
+      });
+
       return Response.json({ success: true });
     }
 
     if (action === "recordCashDeposit") {
       const driverMobile = clean(payload.driverMobile);
       const amount = Math.round(Number(payload.amount || 0));
+      const vehicleNumber = clean(payload.vehicleNumber);
+      const bookingReference = clean(payload.bookingReference || payload.bookingId);
+      const paymentMode = clean(payload.collectionMode) || "Cash";
+      const remarks = clean(payload.remarks);
+      const receiptReference = clean(payload.referenceNumber) ||
+        `VTC-${Date.now().toString(36).toUpperCase()}`;
 
       if (!driverMobile || !amount || amount < 1) {
         return Response.json(
@@ -2041,13 +2989,46 @@ export async function PATCH(request: Request) {
 
       await env.DB.prepare(
         `INSERT INTO driver_cash_deposits (
-          created_at, driver_name, driver_mobile, amount, admin_mobile
-        ) VALUES (?, ?, ?, ?, ?)`,
+          created_at, driver_name, driver_mobile, vehicle_number, booking_id,
+          amount, payment_mode, remarks, receipt_reference, admin_mobile, collected_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-        .bind(new Date().toISOString(), driver.driver_name, driverMobile, amount, adminMobile)
+        .bind(
+          new Date().toISOString(),
+          driver.driver_name,
+          driverMobile,
+          vehicleNumber,
+          bookingReference,
+          amount,
+          paymentMode,
+          remarks,
+          receiptReference,
+          adminMobile,
+          adminMobile,
+        )
         .run();
 
-      return Response.json({ success: true });
+      await recordPaymentTransaction({
+        bookingId: bookingReference,
+        driverMobile,
+        amount,
+        transactionType: "Driver Cash Handover To Admin",
+        paymentMode,
+        referenceNumber: receiptReference,
+        settlementStatus: "Settled With Admin",
+        actorRole: "admin",
+        actorMobile: adminMobile,
+      });
+      await recordAuditLog({
+        action: "driver_cash_received",
+        entityType: "driver",
+        entityId: driverMobile,
+        actorRole: "admin",
+        actorMobile: adminMobile,
+        details: { amount, vehicleNumber, bookingReference, receiptReference },
+      });
+
+      return Response.json({ success: true, receiptReference });
     }
 
     const existingBooking = await env.DB.prepare(
@@ -2235,6 +3216,87 @@ export async function PATCH(request: Request) {
       )
       .run();
 
+    const resultingRideStatus = requestedRideStatus || existingBooking.ride_status;
+    const resultingDriverMobile = requestedDriverMobile || existingBooking.driver_mobile;
+    const resultingVehicleNumber = requestedVehicleNumber || existingBooking.vehicle_number;
+
+    await recordStatusHistory({
+      bookingId,
+      oldStatus: existingBooking.ride_status,
+      newStatus: resultingRideStatus,
+      actorRole: "admin",
+      actorMobile: adminMobile,
+      reason: clean(payload.cancelReason) || "Admin Booking Update",
+      remarks: clean(payload.remarks),
+    });
+    await recordAssignmentHistory({
+      bookingId,
+      oldDriverMobile: existingBooking.driver_mobile,
+      newDriverMobile: resultingDriverMobile,
+      oldVehicleNumber: existingBooking.vehicle_number,
+      newVehicleNumber: resultingVehicleNumber,
+      actorRole: "admin",
+      actorMobile: adminMobile,
+      reason: "Admin Assignment Update",
+    });
+
+    if (requestedCashCollected > 0) {
+      await recordPaymentTransaction({
+        bookingId,
+        driverMobile: requestedDriverMobile,
+        amount: requestedCashCollected,
+        transactionType: "Customer Cash To Driver",
+        paymentMode: "Cash",
+        referenceNumber: clean(payload.paymentReference),
+        settlementStatus: "Driver Holding",
+        actorRole: "admin",
+        actorMobile: adminMobile,
+      });
+    } else if (
+      Number.isFinite(Number(payload.paymentAmount)) &&
+      Number(payload.paymentAmount) > Number(existingBooking.payment_amount || 0)
+    ) {
+      await recordPaymentTransaction({
+        bookingId,
+        amount: Number(payload.paymentAmount) - Number(existingBooking.payment_amount || 0),
+        transactionType: "Customer Online Payment",
+        paymentMode: requestedCollectionMode || "Online",
+        referenceNumber: clean(payload.paymentReference),
+        actorRole: "admin",
+        actorMobile: adminMobile,
+      });
+    }
+
+    if (requestedRefundAmount > 0) {
+      await recordPaymentTransaction({
+        bookingId,
+        driverMobile: requestedRefundDriverMobile,
+        amount: requestedRefundAmount,
+        transactionType: "Customer Refund",
+        paymentMode:
+          requestedCollectionMode === "refund_driver_cash" ? "Driver Cash" : "Online",
+        referenceNumber: clean(payload.paymentReference),
+        settlementStatus: "Refunded",
+        actorRole: "admin",
+        actorMobile: adminMobile,
+      });
+    }
+
+    await recordAuditLog({
+      action: "admin_booking_updated",
+      entityType: "booking",
+      entityId: bookingId,
+      actorRole: "admin",
+      actorMobile: adminMobile,
+      details: {
+        rideStatus: resultingRideStatus,
+        driverMobile: resultingDriverMobile,
+        vehicleNumber: resultingVehicleNumber,
+        paymentAmount: payload.paymentAmount,
+        refundAmount: requestedRefundAmount,
+      },
+    });
+
     if (requestedDriverMobile || requestedVehicleNumber) {
       const updatedBooking = await getBookingById(bookingId);
       await sendCustomerBookingEmail(updatedBooking, "driver_assigned");
@@ -2257,9 +3319,12 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const payload = (await request.json()) as DeleteBookingPayload;
-    const isAdmin =
-      clean(payload.pin) === adminPin || clean(payload.mobile) === adminMobile;
     const bookingId = clean(payload.bookingId);
+
+    await ensureBookingsTable();
+    const portalSession = await getPortalSession(request);
+    const isAdmin =
+      hasRole(portalSession, "admin", adminMobile) || clean(payload.pin) === adminPin;
 
     if (!isAdmin) {
       return Response.json({ error: "Invalid login mobile." }, { status: 401 });
@@ -2269,7 +3334,17 @@ export async function DELETE(request: Request) {
       return Response.json({ error: "Booking ID is required." }, { status: 400 });
     }
 
-    await ensureBookingsTable();
+    const bookingToDelete = await getBookingById(bookingId);
+    await recordAuditLog({
+      action: "booking_deleted",
+      entityType: "booking",
+      entityId: bookingId,
+      actorRole: "admin",
+      actorMobile: adminMobile,
+      details: bookingToDelete
+        ? { customerMobile: bookingToDelete.customer_mobile }
+        : {},
+    });
     await env.DB.prepare("DELETE FROM bookings WHERE booking_id = ?")
       .bind(bookingId)
       .run();
@@ -2289,9 +3364,29 @@ export async function POST(request: Request) {
     const action = clean(payload.action);
 
     await ensureBookingsTable();
+    const portalSession = await getPortalSession(request);
+
+    if (action === "logout") {
+      const sessionToken = getCookieValue(request, "vt_portal_session");
+      if (sessionToken) {
+        await env.DB.prepare("DELETE FROM portal_sessions WHERE token = ?")
+          .bind(sessionToken)
+          .run();
+      }
+
+      return Response.json(
+        { success: true },
+        {
+          headers: {
+            ...noStoreHeaders,
+            "Set-Cookie": "vt_portal_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
+          },
+        },
+      );
+    }
 
     if (action === "saveDriver") {
-      if (clean(payload.requesterMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json(
           { error: "Only Admin Can Register Driver And Vehicle." },
           { status: 401 },
@@ -2302,6 +3397,10 @@ export async function POST(request: Request) {
       const driverMobile = clean(payload.mobile);
       const vehicleType = clean(payload.vehicle);
       const vehicleNumber = clean(payload.vehicleNumber);
+      const now = new Date().toISOString();
+      const accountType = clean(payload.accountType) || "Driver-Cum-Owner";
+      const approvalStatus = clean(payload.approvalStatus) || "Approved";
+      const activeStatus = clean(payload.activeStatus) || "Active";
 
       if (!driverName || !driverMobile || !vehicleType || !vehicleNumber) {
         return Response.json(
@@ -2312,12 +3411,28 @@ export async function POST(request: Request) {
 
       await env.DB.prepare(
         `INSERT INTO drivers (
-          driver_mobile, driver_name, vehicle_type, vehicle_number, updated_at
-        ) VALUES (?, ?, ?, ?, ?)
+          driver_mobile, driver_name, vehicle_type, vehicle_number,
+          email, address, emergency_contact, driving_license, license_expiry,
+          identity_document, address_proof, police_verification, profile_photo,
+          account_type, approval_status, active_status, joining_date, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(driver_mobile) DO UPDATE SET
           driver_name = excluded.driver_name,
           vehicle_type = excluded.vehicle_type,
           vehicle_number = excluded.vehicle_number,
+          email = excluded.email,
+          address = excluded.address,
+          emergency_contact = excluded.emergency_contact,
+          driving_license = excluded.driving_license,
+          license_expiry = excluded.license_expiry,
+          identity_document = excluded.identity_document,
+          address_proof = excluded.address_proof,
+          police_verification = excluded.police_verification,
+          profile_photo = excluded.profile_photo,
+          account_type = excluded.account_type,
+          approval_status = excluded.approval_status,
+          active_status = excluded.active_status,
+          joining_date = excluded.joining_date,
           updated_at = excluded.updated_at`,
       )
         .bind(
@@ -2325,18 +3440,46 @@ export async function POST(request: Request) {
           driverName,
           vehicleType,
           vehicleNumber,
-          new Date().toISOString(),
+          clean(payload.email).toLowerCase(),
+          clean(payload.address),
+          clean(payload.emergencyContact),
+          clean(payload.drivingLicense),
+          clean(payload.licenseExpiry),
+          clean(payload.identityDocument),
+          clean(payload.addressProof),
+          clean(payload.policeVerification),
+          clean(payload.profilePhoto),
+          accountType,
+          approvalStatus,
+          activeStatus,
+          clean(payload.joiningDate) || now.slice(0, 10),
+          now,
         )
         .run();
 
       await env.DB.prepare(
         `INSERT INTO driver_vehicles (
-          vehicle_number, driver_mobile, driver_name, vehicle_type, updated_at
-        ) VALUES (?, ?, ?, ?, ?)
+          vehicle_number, driver_mobile, driver_name, vehicle_type, owner_mobile,
+          seating_capacity, fuel_type, registration_certificate, insurance,
+          insurance_expiry, permit, fitness_certificate, puc, vehicle_photo,
+          approval_status, active_status, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(vehicle_number) DO UPDATE SET
           driver_mobile = excluded.driver_mobile,
           driver_name = excluded.driver_name,
           vehicle_type = excluded.vehicle_type,
+          owner_mobile = excluded.owner_mobile,
+          seating_capacity = excluded.seating_capacity,
+          fuel_type = excluded.fuel_type,
+          registration_certificate = excluded.registration_certificate,
+          insurance = excluded.insurance,
+          insurance_expiry = excluded.insurance_expiry,
+          permit = excluded.permit,
+          fitness_certificate = excluded.fitness_certificate,
+          puc = excluded.puc,
+          vehicle_photo = excluded.vehicle_photo,
+          approval_status = excluded.approval_status,
+          active_status = excluded.active_status,
           updated_at = excluded.updated_at`,
       )
         .bind(
@@ -2344,15 +3487,36 @@ export async function POST(request: Request) {
           driverMobile,
           driverName,
           vehicleType,
-          new Date().toISOString(),
+          clean(payload.ownerMobile) || driverMobile,
+          clean(payload.seatingCapacity),
+          clean(payload.fuelType),
+          clean(payload.registrationCertificate),
+          clean(payload.insurance),
+          clean(payload.insuranceExpiry),
+          clean(payload.permit),
+          clean(payload.fitnessCertificate),
+          clean(payload.puc),
+          clean(payload.vehiclePhoto),
+          approvalStatus,
+          activeStatus,
+          now,
         )
         .run();
+
+      await recordAuditLog({
+        action: "driver_vehicle_onboarded",
+        entityType: "driver",
+        entityId: driverMobile,
+        actorRole: "admin",
+        actorMobile: adminMobile,
+        details: { vehicleType, vehicleNumber, accountType, approvalStatus, activeStatus },
+      });
 
       return Response.json({ success: true });
     }
 
     if (action === "updateDriverVehicle") {
-      if (clean(payload.requesterMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json(
           { error: "Only Admin Can Update Driver And Vehicle." },
           { status: 401 },
@@ -2429,6 +3593,83 @@ export async function POST(request: Request) {
         .bind(vehicleNumber, driverMobile, driverName, vehicleType, now, originalVehicleNumber)
         .run();
 
+      await env.DB.prepare(
+        `UPDATE drivers SET
+          email = COALESCE(NULLIF(?, ''), email),
+          address = COALESCE(NULLIF(?, ''), address),
+          emergency_contact = COALESCE(NULLIF(?, ''), emergency_contact),
+          driving_license = COALESCE(NULLIF(?, ''), driving_license),
+          license_expiry = COALESCE(NULLIF(?, ''), license_expiry),
+          identity_document = COALESCE(NULLIF(?, ''), identity_document),
+          address_proof = COALESCE(NULLIF(?, ''), address_proof),
+          police_verification = COALESCE(NULLIF(?, ''), police_verification),
+          profile_photo = COALESCE(NULLIF(?, ''), profile_photo),
+          account_type = COALESCE(NULLIF(?, ''), account_type),
+          approval_status = COALESCE(NULLIF(?, ''), approval_status),
+          active_status = COALESCE(NULLIF(?, ''), active_status),
+          joining_date = COALESCE(NULLIF(?, ''), joining_date)
+         WHERE driver_mobile = ?`,
+      )
+        .bind(
+          clean(payload.email).toLowerCase(),
+          clean(payload.address),
+          clean(payload.emergencyContact),
+          clean(payload.drivingLicense),
+          clean(payload.licenseExpiry),
+          clean(payload.identityDocument),
+          clean(payload.addressProof),
+          clean(payload.policeVerification),
+          clean(payload.profilePhoto),
+          clean(payload.accountType),
+          clean(payload.approvalStatus),
+          clean(payload.activeStatus),
+          clean(payload.joiningDate),
+          driverMobile,
+        )
+        .run();
+
+      await env.DB.prepare(
+        `UPDATE driver_vehicles SET
+          owner_mobile = COALESCE(NULLIF(?, ''), owner_mobile),
+          seating_capacity = COALESCE(NULLIF(?, ''), seating_capacity),
+          fuel_type = COALESCE(NULLIF(?, ''), fuel_type),
+          registration_certificate = COALESCE(NULLIF(?, ''), registration_certificate),
+          insurance = COALESCE(NULLIF(?, ''), insurance),
+          insurance_expiry = COALESCE(NULLIF(?, ''), insurance_expiry),
+          permit = COALESCE(NULLIF(?, ''), permit),
+          fitness_certificate = COALESCE(NULLIF(?, ''), fitness_certificate),
+          puc = COALESCE(NULLIF(?, ''), puc),
+          vehicle_photo = COALESCE(NULLIF(?, ''), vehicle_photo),
+          approval_status = COALESCE(NULLIF(?, ''), approval_status),
+          active_status = COALESCE(NULLIF(?, ''), active_status)
+         WHERE vehicle_number = ?`,
+      )
+        .bind(
+          clean(payload.ownerMobile),
+          clean(payload.seatingCapacity),
+          clean(payload.fuelType),
+          clean(payload.registrationCertificate),
+          clean(payload.insurance),
+          clean(payload.insuranceExpiry),
+          clean(payload.permit),
+          clean(payload.fitnessCertificate),
+          clean(payload.puc),
+          clean(payload.vehiclePhoto),
+          clean(payload.approvalStatus),
+          clean(payload.activeStatus),
+          vehicleNumber,
+        )
+        .run();
+
+      await recordAuditLog({
+        action: "driver_vehicle_updated",
+        entityType: "vehicle",
+        entityId: vehicleNumber,
+        actorRole: "admin",
+        actorMobile: adminMobile,
+        details: { originalVehicleNumber, driverMobile, driverName, vehicleType },
+      });
+
       const remainingOldDriverVehicles = await env.DB.prepare(
         `SELECT COUNT(*) AS total
          FROM driver_vehicles
@@ -2447,7 +3688,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "deleteDriverVehicle") {
-      if (clean(payload.requesterMobile) !== adminMobile) {
+      if (!hasRole(portalSession, "admin", adminMobile)) {
         return Response.json(
           { error: "Only Admin Can Delete Driver And Vehicle." },
           { status: 401 },
@@ -2493,6 +3734,15 @@ export async function POST(request: Request) {
       await env.DB.prepare("DELETE FROM driver_vehicles WHERE vehicle_number = ?")
         .bind(vehicleNumber)
         .run();
+
+      await recordAuditLog({
+        action: "driver_vehicle_deleted",
+        entityType: "vehicle",
+        entityId: vehicleNumber,
+        actorRole: "admin",
+        actorMobile: adminMobile,
+        details: { driverMobile: existingVehicle.driver_mobile },
+      });
 
       const remainingVehicle = await env.DB.prepare(
         `SELECT vehicle_number, vehicle_type
@@ -2675,6 +3925,23 @@ export async function POST(request: Request) {
     await env.DB.prepare("UPDATE bookings SET booking_id = ? WHERE id = ?")
       .bind(bookingId, rowId)
       .run();
+
+    await recordStatusHistory({
+      bookingId,
+      oldStatus: "",
+      newStatus: initialRideStatus,
+      actorRole: "customer",
+      actorMobile: mobile,
+      reason: "Website Booking Created",
+    });
+    await recordAuditLog({
+      action: "booking_created",
+      entityType: "booking",
+      entityId: bookingId,
+      actorRole: "customer",
+      actorMobile: mobile,
+      details: { tripType, vehicle, pickupDatetime: date, estimatedFare },
+    });
 
     const booking = {
       bookingId,

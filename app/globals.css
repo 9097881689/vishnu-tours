@@ -8914,3 +8914,1011 @@ h6,
   font-weight: 800;
   line-height: 1;
 }
+
+/* Role dashboards: additive reference-led UI for Admin, Driver and Customer. */
+.login-card {
+  width: min(430px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  padding: 26px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.login-card > h2,
+.login-card > p,
+.login-card .admin-login-row,
+.login-card .admin-status {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.login-card > h2 {
+  margin: 15px 0 5px;
+  padding: 0;
+  color: #0a2456;
+  font-size: 22px;
+  text-align: center;
+}
+
+.login-card > p {
+  margin-top: 0;
+  color: #66758d;
+  font-size: 12px;
+  text-align: center;
+}
+
+.portal-login-brand {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.portal-login-brand img {
+  width: auto;
+  height: 54px;
+  max-width: 190px;
+  object-fit: contain;
+}
+
+.portal-login-brand span {
+  color: #0a55c9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-card .admin-login-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.login-card .admin-login-row input,
+.login-card .admin-login-row button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 7px;
+}
+
+.login-card .admin-login-row button {
+  background: #075bd8;
+  color: #ffffff;
+}
+
+.admin-sidebar-brand,
+.role-sidebar-brand {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+
+.admin-sidebar-brand {
+  margin-bottom: 4px;
+  padding: 5px 7px 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-sidebar-brand img,
+.role-sidebar-brand img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.admin-sidebar-brand div,
+.role-sidebar-brand div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.admin-sidebar-brand strong,
+.role-sidebar-brand strong {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar-brand span,
+.role-sidebar-brand span {
+  color: rgba(219, 234, 254, 0.72);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.role-dashboard-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: min(790px, calc(100vh - 28px));
+  background: #f4f7fb;
+}
+
+.admin-card:has(.role-dashboard-shell) {
+  width: min(1460px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  background: #f4f7fb;
+}
+
+.role-dashboard-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  min-height: min(790px, calc(100vh - 28px));
+  padding: 18px 12px 14px;
+  background: linear-gradient(180deg, #06182d 0%, #073a63 100%);
+  color: #ffffff;
+}
+
+.driver-role-shell .role-dashboard-sidebar {
+  background: linear-gradient(180deg, #062b2a 0%, #075a4a 100%);
+}
+
+.role-sidebar-brand {
+  padding: 0 5px 17px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.role-dashboard-sidebar nav {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.role-dashboard-sidebar nav button,
+.role-sidebar-logout {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(239, 246, 255, 0.84);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.role-dashboard-sidebar nav button:hover,
+.role-dashboard-sidebar nav button.is-active {
+  border-color: rgba(147, 197, 253, 0.22);
+  background: #075bd8;
+  color: #ffffff;
+}
+
+.driver-role-shell .role-dashboard-sidebar nav button:hover,
+.driver-role-shell .role-dashboard-sidebar nav button.is-active {
+  border-color: rgba(134, 239, 172, 0.22);
+  background: #0a9a54;
+}
+
+.role-dashboard-sidebar nav button b {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 12px;
+}
+
+.role-dashboard-sidebar nav button em {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.role-sidebar-logout {
+  grid-template-columns: 1fr;
+  margin-top: 22px;
+  border-color: rgba(255, 255, 255, 0.17);
+  text-align: center;
+}
+
+.role-dashboard-main {
+  min-width: 0;
+  padding: 0 20px 26px;
+}
+
+.role-dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 -20px 18px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #dce5f0;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.role-dashboard-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.role-dashboard-header span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.role-dashboard-header strong {
+  color: #0b2347;
+  font-size: 15px;
+}
+
+.driver-online-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.driver-online-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.driver-online-toggle i {
+  position: relative;
+  display: block;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.driver-online-toggle i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 160ms ease;
+}
+
+.driver-online-toggle input:checked + i {
+  background: #11a85c;
+}
+
+.driver-online-toggle input:checked + i::after {
+  transform: translateX(16px);
+}
+
+.customer-header-mobile {
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #edf5ff;
+  color: #075bd8 !important;
+}
+
+.role-dashboard-status {
+  margin: -7px 0 12px;
+  padding: 9px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.role-dashboard-view {
+  display: grid;
+  gap: 16px;
+}
+
+.portal-welcome-banner {
+  position: relative;
+  display: flex;
+  min-height: 126px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+  padding: 22px 26px;
+  border-radius: 9px;
+  background: linear-gradient(115deg, #eff6ff, #ffffff 66%, #dbeafe);
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.07);
+}
+
+.driver-welcome-banner {
+  background: linear-gradient(115deg, #ecfdf5, #ffffff 66%, #d1fae5);
+}
+
+.portal-welcome-banner::after {
+  content: "VT";
+  position: absolute;
+  right: 155px;
+  color: rgba(7, 91, 216, 0.06);
+  font-size: 92px;
+  font-weight: 900;
+}
+
+.driver-welcome-banner::after {
+  color: rgba(10, 154, 84, 0.07);
+}
+
+.portal-welcome-banner > div,
+.portal-page-title {
+  display: grid;
+  gap: 4px;
+}
+
+.portal-welcome-banner span,
+.portal-page-title > span,
+.portal-section-heading span {
+  color: #075bd8;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.driver-role-shell .portal-welcome-banner span,
+.driver-role-shell .portal-page-title > span,
+.driver-role-shell .portal-section-heading span {
+  color: #078849;
+}
+
+.portal-welcome-banner h2,
+.portal-page-title h2,
+.portal-section-heading h3,
+.portal-welcome-banner p,
+.portal-page-title p {
+  margin: 0;
+}
+
+.portal-welcome-banner h2,
+.portal-page-title h2 {
+  color: #071e4d;
+  font-size: 22px;
+}
+
+.portal-welcome-banner p,
+.portal-page-title p {
+  color: #66758d;
+  font-size: 11px;
+}
+
+.portal-welcome-banner button,
+.portal-section-heading button,
+.portal-support-panel a,
+.portal-payment-list button {
+  position: relative;
+  z-index: 1;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 7px;
+  background: #075bd8;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.driver-role-shell .portal-welcome-banner button,
+.driver-role-shell .portal-section-heading button,
+.driver-role-shell .portal-support-panel a {
+  background: #0a9a54;
+}
+
+.portal-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.portal-kpi-grid-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portal-kpi-grid > div {
+  display: grid;
+  gap: 5px;
+  min-height: 96px;
+  padding: 15px;
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.045);
+}
+
+.portal-kpi-grid span,
+.portal-profile-grid span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.portal-kpi-grid strong {
+  color: #0b2347;
+  font-size: 22px;
+}
+
+.driver-role-shell .portal-kpi-grid strong {
+  color: #087744;
+}
+
+.portal-kpi-grid small {
+  color: #8492a6;
+  font-size: 9px;
+}
+
+.portal-dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.portal-surface {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.portal-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.portal-section-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-section-heading h3 {
+  color: #0b2347;
+  font-size: 15px;
+}
+
+.portal-section-heading button {
+  min-height: 31px;
+  background: #edf5ff;
+  color: #075bd8;
+}
+
+.driver-role-shell .portal-section-heading button {
+  background: #ecfdf5;
+  color: #078849;
+}
+
+.portal-booking-list {
+  display: grid;
+  gap: 12px;
+}
+
+.booking-audit-details {
+  margin-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.booking-audit-details summary {
+  padding: 10px 0 3px;
+  color: #075bd8;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.booking-audit-details > div {
+  display: grid;
+  gap: 6px;
+  padding-top: 7px;
+}
+
+.booking-audit-details p {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.8fr) minmax(170px, 1fr) minmax(160px, 1fr);
+  gap: 9px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.booking-audit-details strong,
+.booking-audit-details span,
+.booking-audit-details small {
+  color: #52637b;
+  font-size: 8.5px;
+}
+
+.booking-audit-details strong {
+  color: #193a68;
+}
+
+.role-dashboard-shell .booking-card-progress,
+.role-dashboard-shell .booking-card-complete,
+.role-dashboard-shell .booking-card-cancelled {
+  margin: 0;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.role-dashboard-shell .workflow-progress {
+  padding: 10px;
+}
+
+.role-dashboard-shell .booking-detail-grid {
+  grid-template-columns: 120px minmax(0, 1fr) 120px minmax(0, 1fr);
+  gap: 7px 10px;
+}
+
+.role-dashboard-shell .booking-detail-grid small,
+.role-dashboard-shell .booking-detail-grid b {
+  font-size: 9.5px;
+}
+
+.role-dashboard-shell .booking-actions button,
+.role-dashboard-shell .manual-assign-grid button,
+.role-dashboard-shell .driver-form button {
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 9.5px;
+}
+
+.role-dashboard-shell .portal-customer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-dashboard-shell .portal-customer-actions button {
+  width: auto;
+  min-width: 150px;
+  padding: 0 14px;
+  border: 0;
+  background: #075bd8;
+  color: #ffffff;
+}
+
+.role-dashboard-shell .portal-customer-actions .customer-cancel-booking {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.portal-page-title {
+  padding: 2px 1px;
+}
+
+.portal-empty-state {
+  margin: 0;
+  padding: 22px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 7px;
+  color: #74839a;
+  font-size: 11px;
+  text-align: center;
+}
+
+.portal-activity-list {
+  display: grid;
+}
+
+.portal-activity-row {
+  display: grid;
+  grid-template-columns: 11px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 51px;
+  padding: 9px 2px;
+  border-bottom: 1px solid #e8eef5;
+}
+
+.portal-activity-row:last-child {
+  border-bottom: 0;
+}
+
+.portal-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #075bd8;
+  box-shadow: 0 0 0 4px #dbeafe;
+}
+
+.driver-role-shell .portal-activity-dot {
+  background: #0a9a54;
+  box-shadow: 0 0 0 4px #d1fae5;
+}
+
+.portal-activity-row div {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-activity-row strong {
+  color: #263a57;
+  font-size: 10px;
+}
+
+.portal-activity-row p,
+.portal-activity-row time {
+  margin: 0;
+  color: #7b899e;
+  font-size: 9px;
+}
+
+.portal-vehicle-grid,
+.portal-payment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.portal-vehicle-grid article,
+.portal-payment-list article {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.portal-vehicle-grid article {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.portal-vehicle-grid article > div,
+.portal-payment-list article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.portal-vehicle-grid article p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #738198;
+  font-size: 9px;
+}
+
+.portal-payment-list article {
+  grid-template-columns: minmax(210px, 1.6fr) repeat(3, minmax(80px, 0.7fr)) auto;
+}
+
+.portal-payment-list span,
+.portal-vehicle-grid span,
+.portal-vehicle-grid small {
+  color: #738198;
+  font-size: 9px;
+}
+
+.portal-payment-list strong,
+.portal-payment-list b,
+.portal-vehicle-grid strong {
+  color: #0b2347;
+  font-size: 11px;
+}
+
+.portal-profile-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portal-profile-grid > div {
+  display: grid;
+  gap: 5px;
+  min-height: 72px;
+  padding: 13px;
+  border-radius: 7px;
+  background: #f7faff;
+}
+
+.portal-profile-grid strong {
+  overflow-wrap: anywhere;
+  color: #0b2347;
+  font-size: 11px;
+}
+
+.portal-support-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.portal-support-panel div {
+  display: grid;
+  gap: 4px;
+}
+
+.portal-support-panel strong {
+  color: #14532d;
+  font-size: 14px;
+}
+
+.portal-support-panel p {
+  margin: 0;
+  color: #4b6b58;
+  font-size: 10px;
+}
+
+.onboarding-details {
+  grid-column: 1 / -1;
+  border: 1px solid #d5dfeb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.onboarding-details summary {
+  padding: 12px 14px;
+  color: #0b3d71;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.onboarding-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 12px 12px;
+}
+
+.onboarding-details-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.onboarding-details-grid label span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cash-history-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dce5f0;
+  border-radius: 8px;
+}
+
+.cash-history-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.cash-history-table th,
+.cash-history-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e5edf6;
+  color: #3b4c65;
+  font-size: 9px;
+  text-align: left;
+}
+
+.cash-history-table th {
+  background: #f5f8fc;
+  color: #49617e;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1050px) {
+  .role-dashboard-shell {
+    grid-template-columns: 184px minmax(0, 1fr);
+  }
+
+  .portal-kpi-grid,
+  .portal-kpi-grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portal-dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-payment-list article {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .portal-payment-list article > div:first-child,
+  .portal-payment-list article button {
+    grid-column: span 3;
+  }
+
+  .onboarding-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-card:has(.role-dashboard-shell) {
+    width: 100vw;
+    max-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .role-dashboard-shell {
+    width: 100%;
+    max-width: 100vw;
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .role-dashboard-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    width: 100%;
+    min-width: 0;
+    max-width: 100vw;
+    min-height: auto;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  .role-sidebar-brand {
+    display: none;
+  }
+
+  .role-dashboard-sidebar nav {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 5px;
+    overflow-x: auto;
+    margin: 0;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .role-dashboard-sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .role-dashboard-sidebar nav button {
+    flex: 0 0 auto;
+    width: auto;
+    grid-template-columns: 22px auto auto;
+    min-height: 38px;
+    padding: 6px 9px;
+  }
+
+  .role-dashboard-sidebar nav button b {
+    width: 21px;
+    height: 21px;
+  }
+
+  .role-sidebar-logout {
+    display: none;
+  }
+
+  .role-dashboard-main {
+    width: 100%;
+    min-width: 0;
+    max-width: 100vw;
+    padding: 0 11px 22px;
+  }
+
+  .role-dashboard-header {
+    min-height: 58px;
+    margin: 0 -11px 12px;
+    padding: 8px 44px 8px 14px;
+  }
+
+  .admin-card:has(.role-dashboard-shell) > .admin-close {
+    position: fixed;
+    z-index: 20;
+    top: 58px;
+    right: 8px;
+  }
+
+  .portal-welcome-banner {
+    min-height: 118px;
+    padding: 18px;
+  }
+
+  .portal-welcome-banner::after {
+    display: none;
+  }
+
+  .portal-welcome-banner h2,
+  .portal-page-title h2 {
+    font-size: 19px;
+  }
+
+  .portal-kpi-grid,
+  .portal-kpi-grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .role-dashboard-shell .booking-detail-grid {
+    grid-template-columns: 102px minmax(0, 1fr);
+  }
+
+  .portal-profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .portal-welcome-banner,
+  .portal-support-panel {
+    display: grid;
+  }
+
+  .portal-welcome-banner button,
+  .portal-support-panel a {
+    width: max-content;
+  }
+
+  .portal-kpi-grid,
+  .portal-kpi-grid-three,
+  .portal-profile-grid,
+  .onboarding-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-kpi-grid > div {
+    min-height: 82px;
+  }
+
+  .portal-payment-list article {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .portal-payment-list article > div:first-child,
+  .portal-payment-list article button {
+    grid-column: 1 / -1;
+  }
+
+  .portal-activity-row {
+    grid-template-columns: 11px minmax(0, 1fr);
+  }
+
+  .portal-activity-row time {
+    grid-column: 2;
+  }
+}

@@ -495,6 +495,12 @@ type PlaceSuggestion = {
   secondary?: string;
 };
 
+type RazorpaySuccess = {
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+};
+
 type DashboardBooking = {
   booking_id: string;
   created_at: string;
@@ -541,6 +547,19 @@ type DriverProfile = {
   vehicleNumber: string;
   updatedAt?: string;
   status: "Available" | "Assigned";
+  email?: string;
+  address?: string;
+  emergencyContact?: string;
+  drivingLicense?: string;
+  licenseExpiry?: string;
+  accountType?: string;
+  approvalStatus?: string;
+  activeStatus?: string;
+  joiningDate?: string;
+  ownerMobile?: string;
+  seatingCapacity?: string;
+  fuelType?: string;
+  insuranceExpiry?: string;
 };
 
 type DriverRow = {
@@ -552,6 +571,98 @@ type DriverRow = {
   bank_name?: string;
   bank_account?: string;
   bank_ifsc?: string;
+  email?: string;
+  address?: string;
+  emergency_contact?: string;
+  driving_license?: string;
+  license_expiry?: string;
+  identity_document?: string;
+  address_proof?: string;
+  police_verification?: string;
+  profile_photo?: string;
+  account_type?: string;
+  approval_status?: string;
+  active_status?: string;
+  joining_date?: string;
+  owner_mobile?: string;
+  seating_capacity?: string;
+  fuel_type?: string;
+  registration_certificate?: string;
+  insurance?: string;
+  insurance_expiry?: string;
+  permit?: string;
+  fitness_certificate?: string;
+  puc?: string;
+  vehicle_photo?: string;
+};
+
+type BookingStatusHistory = {
+  id: number;
+  booking_id: string;
+  old_status: string;
+  new_status: string;
+  actor_role: string;
+  actor_mobile: string;
+  reason: string;
+  remarks: string;
+  created_at: string;
+};
+
+type CashCollectionHistory = {
+  id: number;
+  created_at: string;
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_number: string;
+  booking_id: string;
+  amount: number;
+  payment_mode: string;
+  remarks: string;
+  receipt_reference: string;
+  collected_by: string;
+};
+
+type AssignmentHistory = {
+  id: number;
+  booking_id: string;
+  old_driver_mobile: string;
+  new_driver_mobile: string;
+  old_vehicle_number: string;
+  new_vehicle_number: string;
+  assigned_by_role: string;
+  assigned_by_mobile: string;
+  reason: string;
+  created_at: string;
+};
+
+type DriverFormData = {
+  name: string;
+  mobile: string;
+  vehicle: string;
+  vehicleNumber: string;
+  email?: string;
+  address?: string;
+  emergencyContact?: string;
+  drivingLicense?: string;
+  licenseExpiry?: string;
+  identityDocument?: string;
+  addressProof?: string;
+  policeVerification?: string;
+  profilePhoto?: string;
+  accountType?: string;
+  approvalStatus?: string;
+  activeStatus?: string;
+  joiningDate?: string;
+  ownerMobile?: string;
+  seatingCapacity?: string;
+  fuelType?: string;
+  registrationCertificate?: string;
+  insurance?: string;
+  insuranceExpiry?: string;
+  permit?: string;
+  fitnessCertificate?: string;
+  puc?: string;
+  vehiclePhoto?: string;
 };
 
 type DriverCashSummary = {
@@ -579,6 +690,8 @@ type DriverWithdrawal = {
 };
 
 type PortalRole = "admin" | "driver" | "customer";
+type DriverPanelTab = "dashboard" | "rides" | "wallet" | "vehicles" | "profile" | "history" | "support";
+type CustomerPanelTab = "dashboard" | "bookings" | "payments" | "profile" | "notifications" | "support";
 type AdminPanelTab =
   | "breakup"
   | "bookings"
@@ -920,6 +1033,7 @@ export default function Home() {
   const [drop, setDrop] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [date, setDate] = useState("");
+  const [bookingValidationTime] = useState(() => Date.now());
   const [returnDate, setReturnDate] = useState("");
   const [pickupTime, setPickupTime] = useState("10:00");
   const [name, setName] = useState("");
@@ -944,7 +1058,12 @@ export default function Home() {
   const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
   const [driverVehicles, setDriverVehicles] = useState<DriverRow[]>([]);
   const [driverLedger, setDriverLedger] = useState<DashboardBooking[]>([]);
+  const [bookingStatusHistory, setBookingStatusHistory] = useState<BookingStatusHistory[]>([]);
+  const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistory[]>([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState<DriverWithdrawal[]>([]);
+  const [activeDriverTab, setActiveDriverTab] = useState<DriverPanelTab>("dashboard");
+  const [activeCustomerTab, setActiveCustomerTab] = useState<CustomerPanelTab>("dashboard");
+  const [driverOnline, setDriverOnline] = useState(true);
   const [withdrawalForm, setWithdrawalForm] = useState({
     amount: "",
     bankName: "",
@@ -1021,6 +1140,9 @@ export default function Home() {
     driverCashSummary: DriverCashSummary[];
     driverLedger: DashboardBooking[];
     withdrawalRequests: DriverWithdrawal[];
+    statusHistory: BookingStatusHistory[];
+    assignmentHistory: AssignmentHistory[];
+    cashCollectionHistory: CashCollectionHistory[];
     priceAdjustmentPercent: number;
     vehicleRateOverrides: VehicleRateOverrides;
     fleetVehicles: FleetVehicle[];
@@ -1036,17 +1158,20 @@ export default function Home() {
       status: "Available",
     },
   ]);
-  const [driverProfileForm, setDriverProfileForm] = useState({
+  const [driverProfileForm, setDriverProfileForm] = useState<DriverFormData>({
     name: "",
     mobile: "",
     vehicle: "Toyota Innova Crysta",
     vehicleNumber: "",
   });
-  const [driverForm, setDriverForm] = useState({
+  const [driverForm, setDriverForm] = useState<DriverFormData>({
     name: "",
     mobile: "",
     vehicle: "Toyota Innova Crysta",
     vehicleNumber: "",
+    accountType: "Driver-Cum-Owner",
+    approvalStatus: "Approved",
+    activeStatus: "Active",
   });
   const [editingVehicleNumber, setEditingVehicleNumber] = useState("");
   const [adminPaymentPrompt, setAdminPaymentPrompt] =
@@ -1242,7 +1367,7 @@ export default function Home() {
         ? Boolean(drop.trim())
         : Boolean(startPoint.trim() && drop.trim());
   const advanceBookingReady = pickupDateTime
-    ? new Date(pickupDateTime).getTime() - Date.now() >= 8 * 60 * 60 * 1000
+    ? new Date(pickupDateTime).getTime() - bookingValidationTime >= 8 * 60 * 60 * 1000
     : true;
   const pickupAllowed = isMumbaiPickup(startPoint);
   const showPickupError =
@@ -1807,8 +1932,9 @@ export default function Home() {
           amount: Math.round(amount * 100),
           receipt: `vishnu-${activeBooking.bookingId}`,
           notes: {
-            bookingId: activeBooking.bookingId,
-            name,
+	            bookingId: activeBooking.bookingId,
+                customerMobile: mobile,
+	            name,
             mobile,
             pickup: bookingStartPoint,
             drop: bookingDropPoint,
@@ -1878,14 +2004,21 @@ export default function Home() {
       theme: {
         color: "#f6bd16",
       },
-      handler: async () => {
-        setIsPaying(false);
-        setIsPaymentComplete(true);
-        setShowBookingTicket(true);
-        setPaymentStatus("Payment Received Successfully.");
-        playBookingConfirmSound();
-        await updatePaymentReceived(activeBooking, amount);
-      },
+	      handler: async (gatewayPayment: RazorpaySuccess) => {
+          try {
+            await verifyRazorpayPayment(activeBooking.bookingId, gatewayPayment);
+            setIsPaymentComplete(true);
+            setShowBookingTicket(true);
+            setPaymentStatus("Payment Verified And Received Successfully.");
+            playBookingConfirmSound();
+          } catch (error) {
+            setPaymentStatus(
+              error instanceof Error ? error.message : "Payment Could Not Be Verified.",
+            );
+          } finally {
+            setIsPaying(false);
+          }
+	      },
       modal: {
         ondismiss: () => {
           setIsPaying(false);
@@ -1917,6 +2050,8 @@ export default function Home() {
     setPortalBookings([]);
     setDriverVehicles([]);
     setDriverLedger([]);
+    setBookingStatusHistory([]);
+    setAssignmentHistory([]);
     setWithdrawalRequests([]);
     setNextRide(null);
     setMaxWithdrawalAmount(0);
@@ -1943,6 +2078,9 @@ export default function Home() {
         driverVehicles?: DriverRow[];
         driverLedger?: DashboardBooking[];
         withdrawalRequests?: DriverWithdrawal[];
+        statusHistory?: BookingStatusHistory[];
+        assignmentHistory?: AssignmentHistory[];
+        cashCollectionHistory?: CashCollectionHistory[];
         nextRide?: DashboardBooking | null;
         driverCashSummary?: DriverCashSummary[];
         driverCashInHand?: number;
@@ -1967,6 +2105,8 @@ export default function Home() {
       setPortalBookings(sortDashboardBookings(result.recentBookings || []));
       setDriverVehicles(result.driverVehicles || []);
       setDriverLedger(result.driverLedger || []);
+      setBookingStatusHistory(result.statusHistory || []);
+      setAssignmentHistory(result.assignmentHistory || []);
       setWithdrawalRequests(result.withdrawalRequests || []);
       setNextRide(result.nextRide || null);
 
@@ -1979,6 +2119,19 @@ export default function Home() {
             vehicleNumber: driver.vehicle_number,
             updatedAt: driver.updated_at,
             status: "Available",
+            email: driver.email,
+            address: driver.address,
+            emergencyContact: driver.emergency_contact,
+            drivingLicense: driver.driving_license,
+            licenseExpiry: driver.license_expiry,
+            accountType: driver.account_type,
+            approvalStatus: driver.approval_status,
+            activeStatus: driver.active_status,
+            joiningDate: driver.joining_date,
+            ownerMobile: driver.owner_mobile,
+            seatingCapacity: driver.seating_capacity,
+            fuelType: driver.fuel_type,
+            insuranceExpiry: driver.insurance_expiry,
           })),
         );
       }
@@ -2020,6 +2173,9 @@ export default function Home() {
           driverCashSummary: result.driverCashSummary || [],
           driverLedger: result.driverLedger || [],
           withdrawalRequests: result.withdrawalRequests || [],
+          statusHistory: result.statusHistory || [],
+          assignmentHistory: result.assignmentHistory || [],
+          cashCollectionHistory: result.cashCollectionHistory || [],
           vehicleRateOverrides: savedOverrides,
           fleetVehicles: savedFleetVehicles,
         });
@@ -2031,6 +2187,15 @@ export default function Home() {
           mobile: normalizedMobile,
           vehicle: result.driverProfile?.vehicle_type || "Toyota Innova Crysta",
           vehicleNumber: result.driverProfile?.vehicle_number || "",
+          email: result.driverProfile?.email || "",
+          address: result.driverProfile?.address || "",
+          emergencyContact: result.driverProfile?.emergency_contact || "",
+          drivingLicense: result.driverProfile?.driving_license || "",
+          licenseExpiry: result.driverProfile?.license_expiry || "",
+          accountType: result.driverProfile?.account_type || "Driver-Cum-Owner",
+          approvalStatus: result.driverProfile?.approval_status || "Approved",
+          activeStatus: result.driverProfile?.active_status || "Active",
+          joiningDate: result.driverProfile?.joining_date || "",
         });
         setDriverEarning({
           completedRides: result.driverEarning?.completedRides || 0,
@@ -2682,7 +2847,7 @@ export default function Home() {
     }
   }
 
-  async function saveDriverProfile(form = driverProfileForm) {
+  async function saveDriverProfile(form: DriverFormData = driverProfileForm) {
     if (!form.name.trim() || !form.mobile.trim() || !form.vehicleNumber.trim()) {
       setPortalStatus("Enter Driver Name, Mobile, Vehicle Type And Vehicle Number.");
       return false;
@@ -2701,6 +2866,29 @@ export default function Home() {
           mobile: form.mobile.replace(/\D/g, ""),
           vehicle: form.vehicle,
           vehicleNumber: form.vehicleNumber,
+          email: form.email,
+          address: form.address,
+          emergencyContact: form.emergencyContact,
+          drivingLicense: form.drivingLicense,
+          licenseExpiry: form.licenseExpiry,
+          identityDocument: form.identityDocument,
+          addressProof: form.addressProof,
+          policeVerification: form.policeVerification,
+          profilePhoto: form.profilePhoto,
+          accountType: form.accountType,
+          approvalStatus: form.approvalStatus,
+          activeStatus: form.activeStatus,
+          joiningDate: form.joiningDate,
+          ownerMobile: form.ownerMobile,
+          seatingCapacity: form.seatingCapacity,
+          fuelType: form.fuelType,
+          registrationCertificate: form.registrationCertificate,
+          insurance: form.insurance,
+          insuranceExpiry: form.insuranceExpiry,
+          permit: form.permit,
+          fitnessCertificate: form.fitnessCertificate,
+          puc: form.puc,
+          vehiclePhoto: form.vehiclePhoto,
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -2843,6 +3031,7 @@ export default function Home() {
     collection?: {
       collectionMode?: "cash" | "payment_gateway";
       paymentAmount?: number;
+      paymentReference?: string;
       cashCollected?: number;
       odometerStart?: number;
       odometerEnd?: number;
@@ -2888,6 +3077,18 @@ export default function Home() {
       return;
     }
 
+    if (booking.ride_started_at) {
+      setPortalStatus("Started Ride Can Only Be Cancelled By Admin.");
+      return;
+    }
+
+    const cancelReason = window.prompt("Enter Cancellation Reason.");
+
+    if (!cancelReason?.trim()) {
+      setPortalStatus("Cancellation Reason Is Required.");
+      return;
+    }
+
     setPortalStatus("Cancelling Ride...");
 
     try {
@@ -2898,6 +3099,7 @@ export default function Home() {
           action: "driverCancelRide",
           mobile: driverProfileForm.mobile.replace(/\D/g, ""),
           bookingId: booking.booking_id,
+          cancelReason: cancelReason.trim(),
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -3006,6 +3208,8 @@ export default function Home() {
             bookingId: booking.booking_id,
             collectionBy: driverProfileForm.mobile,
             balanceDue: String(amountToCollect),
+            odometerStart: String(odometer.odometerStart || booking.odometer_start || 0),
+            odometerEnd: String(odometer.odometerEnd || 0),
             vehicle: booking.vehicle,
             pickup: booking.start_point,
             drop: booking.destination,
@@ -3065,14 +3269,27 @@ export default function Home() {
       theme: {
         color: "#f6bd16",
       },
-      handler: async () => {
-        setIsPaying(false);
-        playBookingConfirmSound();
-        await submitDriverRideStatus(booking, "Ride Complete", {
-          collectionMode: "payment_gateway",
-          paymentAmount: getInvoiceTotals(booking).total,
-          ...odometer,
-        });
+      handler: async (gatewayPayment: RazorpaySuccess) => {
+        try {
+          const verification = await verifyRazorpayPayment(
+            booking.booking_id,
+            gatewayPayment,
+          );
+          playBookingConfirmSound();
+          await submitDriverRideStatus(booking, "Ride Complete", {
+            collectionMode: "payment_gateway",
+            paymentAmount:
+              verification.paymentAmount || getInvoiceTotals(booking).total,
+            paymentReference: gatewayPayment.razorpay_payment_id,
+            ...odometer,
+          });
+        } catch (error) {
+          setCollectionStatus(
+            error instanceof Error ? error.message : "Payment Could Not Be Verified.",
+          );
+        } finally {
+          setIsPaying(false);
+        }
       },
       modal: {
         ondismiss: () => {
@@ -3116,6 +3333,29 @@ export default function Home() {
             mobile: driverForm.mobile.replace(/\D/g, ""),
             vehicle: driverForm.vehicle,
             vehicleNumber: driverForm.vehicleNumber,
+            email: driverForm.email,
+            address: driverForm.address,
+            emergencyContact: driverForm.emergencyContact,
+            drivingLicense: driverForm.drivingLicense,
+            licenseExpiry: driverForm.licenseExpiry,
+            identityDocument: driverForm.identityDocument,
+            addressProof: driverForm.addressProof,
+            policeVerification: driverForm.policeVerification,
+            profilePhoto: driverForm.profilePhoto,
+            accountType: driverForm.accountType,
+            approvalStatus: driverForm.approvalStatus,
+            activeStatus: driverForm.activeStatus,
+            joiningDate: driverForm.joiningDate,
+            ownerMobile: driverForm.ownerMobile,
+            seatingCapacity: driverForm.seatingCapacity,
+            fuelType: driverForm.fuelType,
+            registrationCertificate: driverForm.registrationCertificate,
+            insurance: driverForm.insurance,
+            insuranceExpiry: driverForm.insuranceExpiry,
+            permit: driverForm.permit,
+            fitnessCertificate: driverForm.fitnessCertificate,
+            puc: driverForm.puc,
+            vehiclePhoto: driverForm.vehiclePhoto,
           }),
         });
         const result = (await response.json()) as { error?: string };
@@ -3384,22 +3624,175 @@ export default function Home() {
     setAdminRefundPrompt(null);
   }
 
-  async function updatePaymentReceived(
-    activeBooking: {
-      bookingId: string;
-    },
-    amount: number,
-  ) {
-    await fetch("/api/bookings", {
-      method: "PATCH",
+  async function verifyRazorpayPayment(bookingId: string, payment: RazorpaySuccess) {
+    const response = await fetch("/api/razorpay-verify", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        bookingId: activeBooking.bookingId,
-        customerMobile: mobile,
-        paymentStatus: "Complete",
-        paymentAmount: amount,
+        bookingId,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpaySignature: payment.razorpay_signature,
       }),
+    });
+    const result = (await response.json()) as {
+      success?: boolean;
+      paymentAmount?: number;
+      error?: string;
+    };
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Payment Could Not Be Verified.");
+    }
+
+    return result;
+  }
+
+  async function payPortalBooking(booking: DashboardBooking) {
+    const amountToPay = getBalanceDue(booking);
+
+    if (amountToPay <= 0) {
+      setPortalStatus("This Booking Has No Pending Balance.");
+      return;
+    }
+
+    setIsPaying(true);
+    setPortalStatus("Opening Secure Razorpay Payment...");
+
+    try {
+      const orderResponse = await fetch("/api/razorpay-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Math.round(amountToPay * 100),
+          receipt: `customer-${booking.booking_id}`,
+          notes: {
+            bookingId: booking.booking_id,
+            customerMobile: booking.customer_mobile,
+            vehicle: booking.vehicle,
+            pickup: booking.start_point,
+            drop: booking.destination,
+          },
+        }),
+      });
+      const order = (await orderResponse.json()) as {
+        keyId?: string;
+        orderId?: string;
+        error?: string;
+      };
+
+      if (!orderResponse.ok || !order.keyId || !order.orderId) {
+        throw new Error(order.error || "Payment Gateway Is Not Available.");
+      }
+
+      if (!window.Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Razorpay Could Not Load."));
+          document.body.appendChild(script);
+        });
+      }
+
+      if (!window.Razorpay) {
+        throw new Error("Razorpay Could Not Load.");
+      }
+
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        order_id: order.orderId,
+        amount: Math.round(amountToPay * 100),
+        currency: "INR",
+        name: "Vishnu Tours",
+        description: `${booking.booking_id} Booking Payment`,
+        prefill: {
+          name: booking.customer_name,
+          contact: booking.customer_mobile,
+          email: booking.customer_email,
+        },
+        notes: {
+          bookingId: booking.booking_id,
+          customerMobile: booking.customer_mobile,
+        },
+        theme: { color: "#075bd8" },
+        handler: async (gatewayPayment: RazorpaySuccess) => {
+          try {
+            await verifyRazorpayPayment(booking.booking_id, gatewayPayment);
+            playBookingConfirmSound();
+            await loadDashboard();
+            setPortalStatus("Payment Verified And Received Successfully.");
+          } catch (error) {
+            setPortalStatus(
+              error instanceof Error ? error.message : "Payment Could Not Be Verified.",
+            );
+          } finally {
+            setIsPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPaying(false);
+            setPortalStatus("Payment Window Was Closed Before Completion.");
+          },
+        },
+      });
+
+      checkout.open();
+    } catch (error) {
+      setIsPaying(false);
+      setPortalStatus(
+        error instanceof Error ? error.message : "Payment Gateway Could Not Be Opened.",
+      );
+    }
+  }
+
+  async function cancelCustomerBooking(booking: DashboardBooking) {
+    const cancelReason = window.prompt("Enter Cancellation Reason.");
+    if (!cancelReason?.trim()) {
+      setPortalStatus("Cancellation Reason Is Required.");
+      return;
+    }
+
+    setPortalStatus("Cancelling Booking...");
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "customerCancelRide",
+          bookingId: booking.booking_id,
+          customerMobile: booking.customer_mobile,
+          cancelReason: cancelReason.trim(),
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Booking Could Not Be Cancelled.");
+      }
+
+      await loadDashboard();
+      setPortalStatus("Booking Cancelled Successfully.");
+    } catch (error) {
+      setPortalStatus(
+        error instanceof Error ? error.message : "Booking Could Not Be Cancelled.",
+      );
+    }
+  }
+
+  async function logoutPortal() {
+    await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "logout" }),
     }).catch(() => undefined);
+
+    setPortalRole(null);
+    setPortalBookings([]);
+    setDashboard(null);
+    setPortalStatus("");
+    setShowLogin(false);
   }
 
   async function loadCustomerBooking() {
@@ -3524,6 +3917,18 @@ export default function Home() {
       return;
     }
 
+    const driverVehicle = drivers.find((item) => item.mobile === driver.driver_mobile);
+    const bookingReference = window.prompt(
+      "Enter Booking Or Trip Reference (Optional).",
+      "",
+    );
+    if (bookingReference === null) {
+      return;
+    }
+    const remarks = window.prompt("Enter Collection Remarks (Optional).", "Cash Handed To Admin");
+    if (remarks === null) {
+      return;
+    }
     setPortalStatus("Updating Driver Cash Ledger...");
 
     try {
@@ -3534,7 +3939,11 @@ export default function Home() {
           action: "recordCashDeposit",
           mobile: loginMobile.replace(/\D/g, ""),
           driverMobile: driver.driver_mobile,
+          vehicleNumber: driverVehicle?.vehicleNumber || "",
+          bookingReference,
           amount,
+          collectionMode: "Cash",
+          remarks,
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -3545,7 +3954,7 @@ export default function Home() {
       }
 
       await loadDashboard();
-      setPortalStatus("Driver Cash Collected And Ledger Updated.");
+      setPortalStatus(`Driver Cash Collected. Receipt ${receiptReference}.`);
     } catch {
       setPortalStatus("Driver Cash Ledger Could Not Be Updated.");
     }
@@ -3601,6 +4010,34 @@ export default function Home() {
         )}
       </div>
     );
+  }
+
+  function renderStatusActivity(history: BookingStatusHistory[]) {
+    return (
+      <div className="portal-activity-list">
+        {history.length ? (
+          history.slice(0, 20).map((item) => (
+            <div className="portal-activity-row" key={`status-${item.id}`}>
+              <span className="portal-activity-dot" aria-hidden="true" />
+              <div>
+                <strong>{item.booking_id} · {item.new_status}</strong>
+                <p>{item.reason || "Booking Status Updated"}</p>
+              </div>
+              <time>{formatDisplayDateTime(item.created_at)}</time>
+            </div>
+          ))
+        ) : (
+          <p className="portal-empty-state">No Status Activity Yet.</p>
+        )}
+      </div>
+    );
+  }
+
+  function openPublicBookingForm() {
+    setShowLogin(false);
+    window.setTimeout(() => {
+      document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
   }
 
   function renderWithdrawalList(withdrawals: DriverWithdrawal[], canManage: boolean) {
@@ -3938,6 +4375,12 @@ export default function Home() {
         : "booking-card-progress";
     const invoiceTotals = getInvoiceTotals(booking);
     const balanceDue = getBalanceDue(booking);
+    const bookingStatusAudit = bookingStatusHistory.filter(
+      (item) => item.booking_id === booking.booking_id,
+    );
+    const bookingAssignmentAudit = assignmentHistory.filter(
+      (item) => item.booking_id === booking.booking_id,
+    );
     const hasPayment = Number(booking.payment_amount || 0) > 0;
     const isBookingConfirmed = (booking.ride_status || "")
       .toLowerCase()
@@ -4071,7 +4514,52 @@ export default function Home() {
           <small>Cancel Reason</small>
           <b>{booking.cancel_reason || "None"}</b>
         </div>
+        {(bookingStatusAudit.length || bookingAssignmentAudit.length) ? (
+          <details className="booking-audit-details">
+            <summary>Booking History</summary>
+            <div>
+              {bookingStatusAudit.map((item) => (
+                <p key={`booking-status-${item.id}`}>
+                  <strong>{item.new_status}</strong>
+                  <span>{formatDisplayDateTime(item.created_at)} · {item.actor_role}</span>
+                  <small>{item.reason || "Status Updated"}</small>
+                </p>
+              ))}
+              {bookingAssignmentAudit.map((item) => (
+                <p key={`booking-assignment-${item.id}`}>
+                  <strong>Driver / Vehicle Assigned</strong>
+                  <span>{formatDisplayDateTime(item.created_at)} · {item.assigned_by_role}</span>
+                  <small>{item.new_driver_mobile || "Driver Pending"} · {item.new_vehicle_number || "Vehicle Pending"}</small>
+                </p>
+              ))}
+            </div>
+          </details>
+        ) : null}
         {portalRole === "customer" ? renderInvoice(booking) : null}
+        {portalRole === "customer" &&
+        !normalizedStatus.includes("cancel") &&
+        !normalizedStatus.includes("complete") ? (
+          <div className="booking-actions portal-customer-actions">
+            {balanceDue > 0 ? (
+              <button
+                type="button"
+                disabled={isPaying}
+                onClick={() => payPortalBooking(booking)}
+              >
+                {isPaying ? "Opening Payment..." : `Pay ${formatInr(balanceDue)} Online`}
+              </button>
+            ) : null}
+            {!booking.driver_mobile && !booking.ride_started_at ? (
+              <button
+                className="customer-cancel-booking"
+                type="button"
+                onClick={() => cancelCustomerBooking(booking)}
+              >
+                Cancel Booking
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {portalRole === "driver" && !booking.driver_mobile ? (
           <div className="booking-actions">
             <button
@@ -4288,6 +4776,208 @@ export default function Home() {
           </>
         ) : null}
       </article>
+    );
+  }
+
+  function renderRolePortalDashboard() {
+    if (!portalRole || portalRole === "admin") {
+      return null;
+    }
+
+    const isDriver = portalRole === "driver";
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const currentMonthKey = todayKey.slice(0, 7);
+    const customerName = portalBookings[0]?.customer_name || "Customer";
+    const completedBookings = portalBookings.filter((booking) =>
+      (booking.ride_status || "").toLowerCase().includes("complete"),
+    );
+    const cancelledBookings = portalBookings.filter((booking) =>
+      (booking.ride_status || "").toLowerCase().includes("cancel"),
+    );
+    const activeBookings = portalBookings.filter(
+      (booking) =>
+        !(booking.ride_status || "").toLowerCase().includes("complete") &&
+        !(booking.ride_status || "").toLowerCase().includes("cancel"),
+    );
+    const todayTrips = portalBookings.filter((booking) =>
+      (booking.pickup_datetime || "").startsWith(todayKey),
+    );
+    const monthEarnings = driverLedger
+      .filter(
+        (booking) =>
+          (booking.ride_completed_at || booking.pickup_datetime || "").startsWith(currentMonthKey) &&
+          (booking.ride_status || "").toLowerCase().includes("complete"),
+      )
+      .reduce((total, booking) => total + getInvoiceTotals(booking).total, 0);
+    const openRideRequests = portalBookings.filter((booking) => !booking.driver_mobile);
+    const assignedDriverRides = portalBookings.filter(
+      (booking) =>
+        booking.driver_mobile === driverProfileForm.mobile.replace(/\D/g, "") &&
+        !(booking.ride_status || "").toLowerCase().includes("complete") &&
+        !(booking.ride_status || "").toLowerCase().includes("cancel"),
+    );
+    const driverTabs: Array<{ id: DriverPanelTab; label: string; symbol: string; count?: number }> = [
+      { id: "dashboard", label: "Dashboard", symbol: "⌂" },
+      { id: "rides", label: "Ride Requests & Trips", symbol: "↗", count: openRideRequests.length + assignedDriverRides.length },
+      { id: "wallet", label: "Earnings & Wallet", symbol: "₹", count: withdrawalRequests.filter((item) => item.status === "Pending").length },
+      { id: "vehicles", label: "My Vehicles", symbol: "▰", count: driverVehicles.length },
+      { id: "profile", label: "Profile & Documents", symbol: "●" },
+      { id: "history", label: "Trip History", symbol: "◷", count: completedBookings.length },
+      { id: "support", label: "Help & Support", symbol: "?" },
+    ];
+    const customerTabs: Array<{ id: CustomerPanelTab; label: string; symbol: string; count?: number }> = [
+      { id: "dashboard", label: "Dashboard", symbol: "⌂" },
+      { id: "bookings", label: "My Bookings", symbol: "▤", count: portalBookings.length },
+      { id: "payments", label: "Payments & Invoices", symbol: "₹", count: portalBookings.filter((item) => getBalanceDue(item) > 0).length },
+      { id: "profile", label: "Profile & Addresses", symbol: "●" },
+      { id: "notifications", label: "Notifications", symbol: "◉", count: bookingStatusHistory.length },
+      { id: "support", label: "Help & Support", symbol: "?" },
+    ];
+
+    return (
+      <div className={`role-dashboard-shell ${isDriver ? "driver-role-shell" : "customer-role-shell"}`}>
+        <aside className="role-dashboard-sidebar">
+          <div className="role-sidebar-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={siteBranding.iconUrl} alt="Vishnu Tours" />
+            <div><strong>Vishnu Tours</strong><span>{isDriver ? "Driver Console" : "Customer Portal"}</span></div>
+          </div>
+          <nav aria-label={`${isDriver ? "Driver" : "Customer"} dashboard navigation`}>
+            {(isDriver ? driverTabs : customerTabs).map((tab) => (
+              <button
+                className={(isDriver ? activeDriverTab : activeCustomerTab) === tab.id ? "is-active" : ""}
+                key={tab.id}
+                type="button"
+                onClick={() => isDriver
+                  ? setActiveDriverTab(tab.id as DriverPanelTab)
+                  : setActiveCustomerTab(tab.id as CustomerPanelTab)}
+              >
+                <b aria-hidden="true">{tab.symbol}</b>
+                <span>{tab.label}</span>
+                {typeof tab.count === "number" ? <em>{tab.count}</em> : null}
+              </button>
+            ))}
+          </nav>
+          <button className="role-sidebar-logout" type="button" onClick={logoutPortal}>
+            Sign Out
+          </button>
+        </aside>
+
+        <section className="role-dashboard-main">
+          <header className="role-dashboard-header">
+            <div>
+              <span>{isDriver ? "Driver Dashboard" : "Customer Dashboard"}</span>
+              <strong>{isDriver ? driverProfileForm.name || "Registered Driver" : customerName}</strong>
+            </div>
+            {isDriver ? (
+              <label className="driver-online-toggle">
+                <span>{driverOnline ? "Online" : "Offline"}</span>
+                <input checked={driverOnline} onChange={(event) => setDriverOnline(event.target.checked)} type="checkbox" />
+                <i aria-hidden="true" />
+              </label>
+            ) : (
+              <span className="customer-header-mobile">{loginMobile}</span>
+            )}
+          </header>
+          {portalStatus ? <p className="role-dashboard-status">{portalStatus}</p> : null}
+
+          {isDriver && activeDriverTab === "dashboard" ? (
+            <div className="role-dashboard-view">
+              <div className="portal-welcome-banner driver-welcome-banner">
+                <div><span>Welcome Back</span><h2>{driverProfileForm.name || "Driver"}</h2><p>{nextRide ? `Next Pickup ${formatDisplayDateTime(nextRide.pickup_datetime)}` : "You Have No Assigned Upcoming Ride."}</p></div>
+                <button type="button" onClick={() => setActiveDriverTab("rides")}>View Ride Requests</button>
+              </div>
+              <div className="portal-kpi-grid">
+                <div><span>Today&apos;s Trips</span><strong>{todayTrips.length}</strong><small>{assignedDriverRides.length} Active / Assigned</small></div>
+                <div><span>Total Earnings</span><strong>{formatInr(driverEarning.totalEarning)}</strong><small>{driverEarning.completedRides} Completed Rides</small></div>
+                <div><span>This Month</span><strong>{formatInr(monthEarnings)}</strong><small>Completed Ride Value</small></div>
+                <div><span>Cash In Hand</span><strong>{formatInr(driverEarning.cashInHand)}</strong><small>Settle With Admin</small></div>
+              </div>
+              <div className="portal-dashboard-columns">
+                <section className="portal-surface">
+                  <div className="portal-section-heading"><div><span>New Work</span><h3>Ride Requests</h3></div><button type="button" onClick={() => setActiveDriverTab("rides")}>View All</button></div>
+                  {openRideRequests.length ? openRideRequests.slice(0, 2).map((booking) => renderPortalBookingCard(booking, false)) : <p className="portal-empty-state">No Eligible Open Ride Request.</p>}
+                </section>
+                <section className="portal-surface">
+                  <div className="portal-section-heading"><div><span>Current Schedule</span><h3>Assigned Rides</h3></div></div>
+                  {assignedDriverRides.length ? assignedDriverRides.slice(0, 2).map((booking) => renderPortalBookingCard(booking, false)) : <p className="portal-empty-state">No Assigned Ride At This Time.</p>}
+                </section>
+              </div>
+            </div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "rides" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Dispatch</span><h2>Available And Assigned Rides</h2><p>Only matching registered vehicle categories can be accepted.</p></div><div className="portal-booking-list">{portalBookings.length ? portalBookings.map((booking) => renderPortalBookingCard(booking, false)) : <p className="portal-empty-state">No Rides Found.</p>}</div></div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "wallet" ? (
+            <div className="role-dashboard-view">
+              <div className="portal-page-title"><span>Settlement</span><h2>Earnings And Wallet</h2><p>Cash liability, completed ride earnings and payout requests are shown separately.</p></div>
+              <div className="portal-kpi-grid portal-kpi-grid-three"><div><span>Total Earning</span><strong>{formatInr(driverEarning.totalEarning)}</strong></div><div><span>Cash In Hand</span><strong>{formatInr(driverEarning.cashInHand)}</strong></div><div><span>Maximum Withdrawal</span><strong>{formatInr(maxWithdrawalAmount)}</strong></div></div>
+              <section className="portal-surface">
+                <div className="portal-section-heading"><div><span>Payout</span><h3>Cash Withdrawal Request</h3></div></div>
+                <div className="driver-form withdrawal-form">
+                  <input value={withdrawalForm.amount} onChange={(event) => setWithdrawalForm((form) => ({ ...form, amount: event.target.value }))} placeholder="Amount" inputMode="numeric" />
+                  <input value={withdrawalForm.bankName} onChange={(event) => setWithdrawalForm((form) => ({ ...form, bankName: event.target.value }))} placeholder="Bank Name" />
+                  <input value={withdrawalForm.bankAccount} onChange={(event) => setWithdrawalForm((form) => ({ ...form, bankAccount: event.target.value }))} placeholder="Account Number" />
+                  <input value={withdrawalForm.bankIfsc} onChange={(event) => setWithdrawalForm((form) => ({ ...form, bankIfsc: event.target.value }))} placeholder="IFSC Code" />
+                  <button type="button" onClick={requestCashWithdrawal}>Request Withdrawal</button>
+                  <button className="ghost-action" disabled={maxWithdrawalAmount < 1} type="button" onClick={() => setWithdrawalForm((form) => ({ ...form, amount: String(maxWithdrawalAmount) }))}>Use Maximum</button>
+                </div>
+                {renderWithdrawalList(withdrawalRequests, false)}
+              </section>
+              <section className="portal-surface"><div className="portal-section-heading"><div><span>Transactions</span><h3>Driver Ledger</h3></div></div>{renderDriverLedger(driverLedger)}</section>
+            </div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "vehicles" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Registered Fleet</span><h2>My Vehicles</h2><p>Only admin-approved vehicles can be used to accept matching rides.</p></div><div className="portal-vehicle-grid">{driverVehicles.length ? driverVehicles.map((item) => { const engaged = isStartedRideVehicle(item.vehicle_number, portalBookings); return <article key={`vehicle-${item.vehicle_number}`}><div><span>{item.vehicle_type}</span><strong>{item.vehicle_number}</strong><small>{item.fuel_type || "Fuel Not Set"} · {item.seating_capacity || "Seats Not Set"}</small></div><b className={engaged ? "vehicle-engaged" : "vehicle-vacant"}>{engaged ? "Engaged" : "Vacant"}</b><p>{item.approval_status || "Approved"} · {item.active_status || "Active"}</p></article>; }) : <p className="portal-empty-state">No Registered Vehicle Found.</p>}</div></div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "profile" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Account</span><h2>Profile And Documents</h2></div><section className="portal-surface portal-profile-grid"><div><span>Driver Name</span><strong>{driverProfileForm.name || "Not Available"}</strong></div><div><span>Mobile</span><strong>{driverProfileForm.mobile}</strong></div><div><span>Primary Vehicle</span><strong>{driverProfileForm.vehicle}</strong></div><div><span>Vehicle Number</span><strong>{driverProfileForm.vehicleNumber || "Not Available"}</strong></div><div><span>Approval</span><strong>{driverVehicles[0]?.approval_status || "Approved"}</strong></div><div><span>Account Type</span><strong>{driverProfileForm.accountType || "Driver-Cum-Owner"}</strong></div></section><section className="portal-surface"><div className="portal-section-heading"><div><span>Audit Trail</span><h3>Recent Status Activity</h3></div></div>{renderStatusActivity(bookingStatusHistory)}</section></div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "history" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Completed Work</span><h2>Trip History</h2></div><div className="portal-booking-list">{[...completedBookings, ...cancelledBookings].length ? [...completedBookings, ...cancelledBookings].map((booking) => renderPortalBookingCard(booking, false)) : <p className="portal-empty-state">No Completed Or Cancelled Ride Yet.</p>}</div></div>
+          ) : null}
+
+          {isDriver && activeDriverTab === "support" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Assistance</span><h2>Driver Help And Support</h2></div><section className="portal-support-panel"><div><strong>WhatsApp Operations Support</strong><p>Contact admin for assignment, document or settlement help.</p></div><a href={whatsappUrl} target="_blank">Open WhatsApp</a></section></div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "dashboard" ? (
+            <div className="role-dashboard-view">
+              <div className="portal-welcome-banner customer-welcome-banner"><div><span>Welcome Back</span><h2>{customerName}</h2><p>Book, track, pay and download trip details from one place.</p></div><button type="button" onClick={openPublicBookingForm}>Book A Cab</button></div>
+              <div className="portal-kpi-grid"><div><span>Total Bookings</span><strong>{portalBookings.length}</strong></div><div><span>Upcoming Trips</span><strong>{activeBookings.length}</strong></div><div><span>Completed Trips</span><strong>{completedBookings.length}</strong></div><div><span>Cancelled Trips</span><strong>{cancelledBookings.length}</strong></div></div>
+              <div className="portal-dashboard-columns">
+                <section className="portal-surface"><div className="portal-section-heading"><div><span>Next Journey</span><h3>Upcoming Trip</h3></div><button type="button" onClick={() => setActiveCustomerTab("bookings")}>View All</button></div>{activeBookings.length ? renderPortalBookingCard(activeBookings[0], false) : <p className="portal-empty-state">No Upcoming Booking.</p>}</section>
+                <section className="portal-surface"><div className="portal-section-heading"><div><span>Activity</span><h3>Recent Booking Updates</h3></div></div>{renderStatusActivity(bookingStatusHistory.slice(0, 6))}</section>
+              </div>
+            </div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "bookings" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Journeys</span><h2>My Bookings</h2></div><div className="portal-booking-list">{portalBookings.length ? portalBookings.map((booking) => renderPortalBookingCard(booking, false)) : <p className="portal-empty-state">No Bookings Found.</p>}</div></div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "payments" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Fare And Tax</span><h2>Payments And Invoices</h2><p>All amounts include applicable GST and final ride distance adjustments.</p></div><div className="portal-payment-list">{portalBookings.map((booking) => { const totals = getInvoiceTotals(booking); const due = getBalanceDue(booking); return <article key={`payment-${booking.booking_id}`}><div><strong>{booking.booking_id}</strong><span>{booking.vehicle} · {formatDisplayDateTime(booking.pickup_datetime)}</span></div><div><span>Total</span><b>{formatInr(totals.total)}</b></div><div><span>Paid</span><b className="ledger-collected-amount">{formatInr(Number(booking.payment_amount || 0))}</b></div><div><span>Due</span><b className={due ? "ledger-deducted-amount" : "ledger-collected-amount"}>{formatInr(due)}</b></div><button type="button" onClick={() => setActiveCustomerTab("bookings")}>View Invoice</button></article>; })}</div></div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "profile" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Account</span><h2>Profile And Saved Locations</h2></div><section className="portal-surface portal-profile-grid"><div><span>Customer Name</span><strong>{customerName}</strong></div><div><span>Mobile Number</span><strong>{portalBookings[0]?.customer_mobile || loginMobile}</strong></div><div><span>Recent Pickup</span><strong>{portalBookings[0]?.start_point || "No Saved Pickup"}</strong></div><div><span>Recent Destination</span><strong>{portalBookings[0]?.destination || "No Saved Destination"}</strong></div></section></div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "notifications" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Booking Updates</span><h2>Notifications</h2></div><section className="portal-surface">{renderStatusActivity(bookingStatusHistory)}</section></div>
+          ) : null}
+
+          {!isDriver && activeCustomerTab === "support" ? (
+            <div className="role-dashboard-view"><div className="portal-page-title"><span>Assistance</span><h2>Customer Help And Support</h2></div><section className="portal-support-panel"><div><strong>WhatsApp Customer Support</strong><p>Share your booking number for faster help with pickup, payment or cancellation.</p></div><a href={whatsappUrl} target="_blank">Open WhatsApp</a></section></div>
+          ) : null}
+        </section>
+      </div>
     );
   }
 
@@ -5492,6 +6182,11 @@ export default function Home() {
             </button>
 	            {!portalRole ? (
                 <>
+                  <div className="portal-login-brand">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={siteBranding.iconUrl} alt="Vishnu Tours" />
+                    <span>Secure Role Portal</span>
+                  </div>
                   <h2>Vishnu Tours Login</h2>
                   <p>
                     Enter Mobile Number To Open Admin, Driver Or Customer Portal.
@@ -5504,7 +6199,7 @@ export default function Home() {
                       inputMode="tel"
                     />
                     <button type="button" onClick={loadDashboard}>
-                      View
+                      Sign In
                     </button>
                   </div>
                 </>
@@ -5651,8 +6346,13 @@ export default function Home() {
                             },
                           ];
 
-	                          return (
+		                          return (
                               <>
+                                <div className="admin-sidebar-brand">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={siteBranding.iconUrl} alt="Vishnu Tours" />
+                                  <div><strong>Vishnu Tours</strong><span>Admin Console</span></div>
+                                </div>
                                 <div className="admin-sidebar-stat-group">
                                   <strong>Admin Workload</strong>
                                   <span>
@@ -6318,6 +7018,50 @@ export default function Home() {
                             </option>
                           ))}
                         </select>
+	                        <details className="onboarding-details">
+                            <summary>Driver, Owner And Compliance Details</summary>
+                            <div className="onboarding-details-grid">
+                              <input value={driverForm.email || ""} onChange={(event) => setDriverForm((form) => ({ ...form, email: event.target.value }))} placeholder="Email (Optional)" type="email" />
+                              <input value={driverForm.address || ""} onChange={(event) => setDriverForm((form) => ({ ...form, address: event.target.value }))} placeholder="Address (Optional)" />
+                              <input value={driverForm.emergencyContact || ""} onChange={(event) => setDriverForm((form) => ({ ...form, emergencyContact: event.target.value }))} placeholder="Emergency Contact" inputMode="tel" />
+                              <input value={driverForm.drivingLicense || ""} onChange={(event) => setDriverForm((form) => ({ ...form, drivingLicense: event.target.value }))} placeholder="Driving Licence Number" />
+                              <label><span>Licence Expiry</span><input value={driverForm.licenseExpiry || ""} onChange={(event) => setDriverForm((form) => ({ ...form, licenseExpiry: event.target.value }))} type="date" /></label>
+                              <input value={driverForm.identityDocument || ""} onChange={(event) => setDriverForm((form) => ({ ...form, identityDocument: event.target.value }))} placeholder="Identity Document Reference" />
+                              <input value={driverForm.addressProof || ""} onChange={(event) => setDriverForm((form) => ({ ...form, addressProof: event.target.value }))} placeholder="Address Proof Reference" />
+                              <input value={driverForm.policeVerification || ""} onChange={(event) => setDriverForm((form) => ({ ...form, policeVerification: event.target.value }))} placeholder="Police Verification Reference" />
+                              <select value={driverForm.accountType || "Driver-Cum-Owner"} onChange={(event) => setDriverForm((form) => ({ ...form, accountType: event.target.value }))}>
+                                <option value="Driver">Driver</option>
+                                <option value="Driver-Cum-Owner">Driver-Cum-Owner</option>
+                              </select>
+                              <select value={driverForm.approvalStatus || "Approved"} onChange={(event) => setDriverForm((form) => ({ ...form, approvalStatus: event.target.value }))}>
+                                <option value="Approved">Approved</option>
+                                <option value="Pending">Pending Approval</option>
+                                <option value="Rejected">Rejected</option>
+                              </select>
+                              <select value={driverForm.activeStatus || "Active"} onChange={(event) => setDriverForm((form) => ({ ...form, activeStatus: event.target.value }))}>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                              </select>
+                              <label><span>Joining Date</span><input value={driverForm.joiningDate || ""} onChange={(event) => setDriverForm((form) => ({ ...form, joiningDate: event.target.value }))} type="date" /></label>
+                              <input value={driverForm.ownerMobile || ""} onChange={(event) => setDriverForm((form) => ({ ...form, ownerMobile: event.target.value }))} placeholder="Vehicle Owner Mobile" inputMode="tel" />
+                              <input value={driverForm.seatingCapacity || ""} onChange={(event) => setDriverForm((form) => ({ ...form, seatingCapacity: event.target.value }))} placeholder="Seating Capacity" />
+                              <select value={driverForm.fuelType || ""} onChange={(event) => setDriverForm((form) => ({ ...form, fuelType: event.target.value }))}>
+                                <option value="">Select Fuel Type</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="Petrol">Petrol</option>
+                                <option value="Hybrid">Hybrid</option>
+                                <option value="CNG">CNG</option>
+                                <option value="EV">EV</option>
+                              </select>
+                              <input value={driverForm.registrationCertificate || ""} onChange={(event) => setDriverForm((form) => ({ ...form, registrationCertificate: event.target.value }))} placeholder="RC Reference" />
+                              <input value={driverForm.insurance || ""} onChange={(event) => setDriverForm((form) => ({ ...form, insurance: event.target.value }))} placeholder="Insurance Reference" />
+                              <label><span>Insurance Expiry</span><input value={driverForm.insuranceExpiry || ""} onChange={(event) => setDriverForm((form) => ({ ...form, insuranceExpiry: event.target.value }))} type="date" /></label>
+                              <input value={driverForm.permit || ""} onChange={(event) => setDriverForm((form) => ({ ...form, permit: event.target.value }))} placeholder="Permit Reference" />
+                              <input value={driverForm.fitnessCertificate || ""} onChange={(event) => setDriverForm((form) => ({ ...form, fitnessCertificate: event.target.value }))} placeholder="Fitness Certificate" />
+                              <input value={driverForm.puc || ""} onChange={(event) => setDriverForm((form) => ({ ...form, puc: event.target.value }))} placeholder="PUC Reference" />
+                              <input value={driverForm.vehiclePhoto || ""} onChange={(event) => setDriverForm((form) => ({ ...form, vehiclePhoto: event.target.value }))} placeholder="Vehicle Photo URL" type="url" />
+                            </div>
+                          </details>
 	                        <button type="button" onClick={onboardDriver}>
 	                          {editingVehicleNumber ? "Update Driver Vehicle" : "Register Driver Vehicle"}
 	                        </button>
@@ -6397,6 +7141,19 @@ export default function Home() {
                                         mobile: driver.mobile,
                                         vehicle: driver.vehicle || "Toyota Innova Crysta",
                                         vehicleNumber: driver.vehicleNumber,
+                                        email: driver.email,
+                                        address: driver.address,
+                                        emergencyContact: driver.emergencyContact,
+                                        drivingLicense: driver.drivingLicense,
+                                        licenseExpiry: driver.licenseExpiry,
+                                        accountType: driver.accountType || "Driver-Cum-Owner",
+                                        approvalStatus: driver.approvalStatus || "Approved",
+                                        activeStatus: driver.activeStatus || "Active",
+                                        joiningDate: driver.joiningDate,
+                                        ownerMobile: driver.ownerMobile,
+                                        seatingCapacity: driver.seatingCapacity,
+                                        fuelType: driver.fuelType,
+                                        insuranceExpiry: driver.insuranceExpiry,
                                       });
                                       setPortalStatus("Edit Driver Vehicle Details And Click Update.");
                                     }}
@@ -6456,6 +7213,41 @@ export default function Home() {
                         ) : (
                           <span>No Driver Cash Collection Yet.</span>
                         )}
+                      </div>
+                      <h3>Cash Collection History</h3>
+                      <div className="cash-history-table-wrap">
+                        <table className="cash-history-table">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Driver</th>
+                              <th>Vehicle</th>
+                              <th>Booking</th>
+                              <th>Mode</th>
+                              <th>Amount</th>
+                              <th>Receipt</th>
+                              <th>Remarks</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dashboard.cashCollectionHistory.length ? (
+                              dashboard.cashCollectionHistory.map((entry) => (
+                                <tr key={`cash-history-${entry.id}`}>
+                                  <td>{formatDisplayDateTime(entry.created_at)}</td>
+                                  <td>{entry.driver_name} · {entry.driver_mobile}</td>
+                                  <td>{entry.vehicle_number || "Not Linked"}</td>
+                                  <td>{entry.booking_id || "General Settlement"}</td>
+                                  <td>{entry.payment_mode}</td>
+                                  <td className="ledger-collected-amount">{formatInr(entry.amount)}</td>
+                                  <td>{entry.receipt_reference}</td>
+                                  <td>{entry.remarks || "Cash Handover"}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr><td colSpan={8}>No Cash Collection History Yet.</td></tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                     <div>
@@ -6571,7 +7363,8 @@ export default function Home() {
                 ) : null}
               </div>
             ) : null}
-            {portalRole && portalRole !== "admin" ? (
+            {portalRole && portalRole !== "admin" ? renderRolePortalDashboard() : null}
+            {false ? (
               <div
                 className={`admin-dashboard portal-dashboard ${
                   portalRole === "driver"
