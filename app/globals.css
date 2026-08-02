@@ -4367,7 +4367,7 @@ h4,
 .collection-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 2147483100;
   display: grid;
   place-items: center;
   padding: 18px;

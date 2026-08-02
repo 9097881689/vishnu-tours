@@ -71,6 +71,11 @@ test("ships responsive role dashboard styling and all public policy pages", asyn
   assert.match(css, /\.role-dashboard-sidebar/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /@media \(max-width: 500px\)/);
+  assert.match(
+    css,
+    /\.collection-modal-backdrop\s*\{[\s\S]*?z-index:\s*2147483100/,
+    "ride collection confirmation must stay above the role dashboard modal",
+  );
 
   for (const path of [
     "app/privacy-policy/page.tsx",
