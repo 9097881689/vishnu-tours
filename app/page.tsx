@@ -381,6 +381,50 @@ function normalizeSiteBranding(value?: Partial<SiteBranding> | null): SiteBrandi
   };
 }
 
+async function optimizeBrandingImage(file: File): Promise<string> {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const previewImage = new Image();
+      previewImage.onload = () => resolve(previewImage);
+      previewImage.onerror = () => reject(new Error("Image could not be decoded."));
+      previewImage.src = sourceUrl;
+    });
+    const maxDimension = 720;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Image editor is unavailable.");
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    let optimized = canvas.toDataURL("image/webp", 0.88);
+
+    if (optimized.length > 820000) {
+      optimized = canvas.toDataURL("image/webp", 0.7);
+    }
+
+    if (!optimized.startsWith("data:image/") || optimized.length > 880000) {
+      throw new Error("Image remains too large after optimization.");
+    }
+
+    return optimized;
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 function getAirportOption(value: string) {
   return (
     airportTripOptions.find((option) => option.value === value) ||
@@ -1219,6 +1263,7 @@ export default function Home() {
   const [siteBranding, setSiteBranding] =
     useState<SiteBranding>(defaultSiteBranding);
   const [brandingStatus, setBrandingStatus] = useState("");
+  const [isBrandingProcessing, setIsBrandingProcessing] = useState(false);
   const [vehicleRateOverrides, setVehicleRateOverrides] =
     useState<VehicleRateOverrides>({});
   const [rateEditorVehicle, setRateEditorVehicle] = useState("Toyota Innova Crysta");
@@ -2736,7 +2781,7 @@ export default function Home() {
     setBrandingStatus("");
   }
 
-  function handleSiteIconUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handleSiteIconUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -2748,19 +2793,24 @@ export default function Home() {
       return;
     }
 
-    if (file.size > 850 * 1024) {
-      setBrandingStatus("Image Is Too Large. Please Upload An Icon Under 850 KB.");
+    if (file.size > 8 * 1024 * 1024) {
+      setBrandingStatus("Image Is Too Large. Please Upload An Image Under 8 MB.");
       return;
     }
 
-    const reader = new FileReader();
+    setBrandingStatus("Preparing Icon Preview...");
+    setIsBrandingProcessing(true);
 
-    reader.onload = () => {
-      updateSiteBrandingField("iconUrl", String(reader.result || defaultSiteBranding.iconUrl));
+    try {
+      const optimizedIcon = await optimizeBrandingImage(file);
+      updateSiteBrandingField("iconUrl", optimizedIcon);
       setBrandingStatus("Icon Ready For Preview. Click Save Customization.");
-    };
-    reader.onerror = () => setBrandingStatus("Icon Upload Could Not Be Read.");
-    reader.readAsDataURL(file);
+    } catch {
+      setBrandingStatus("Icon Could Not Be Prepared. Please Try A PNG, JPG Or WebP Image.");
+    } finally {
+      setIsBrandingProcessing(false);
+      event.target.value = "";
+    }
   }
 
   async function saveSiteBranding() {
@@ -6929,8 +6979,12 @@ export default function Home() {
                         </label>
                       </div>
                       <div className="price-control-form individual-rate-actions">
-                        <button type="button" onClick={saveSiteBranding}>
-                          Save Customization
+                        <button
+                          type="button"
+                          disabled={isBrandingProcessing}
+                          onClick={saveSiteBranding}
+                        >
+                          {isBrandingProcessing ? "Preparing Icon..." : "Save Customization"}
                         </button>
                         <button
                           className="ghost-price-action"

@@ -1217,12 +1217,12 @@ function normalizeBrandingIconUrl(value: unknown) {
     return defaultSiteBranding.iconUrl;
   }
 
-  if (
-    iconUrl.startsWith("/") ||
-    iconUrl.startsWith("https://") ||
-    iconUrl.startsWith("data:image/")
-  ) {
-    return iconUrl.slice(0, 900000);
+  if (iconUrl.startsWith("data:image/")) {
+    return iconUrl.length <= 900000 ? iconUrl : defaultSiteBranding.iconUrl;
+  }
+
+  if (iconUrl.startsWith("/") || iconUrl.startsWith("https://")) {
+    return iconUrl.slice(0, 2048);
   }
 
   return defaultSiteBranding.iconUrl;
@@ -2157,7 +2157,23 @@ export async function PATCH(request: Request) {
         return Response.json({ error: "Only Admin Can Update Site Branding." }, { status: 401 });
       }
 
-      const siteBranding = normalizeSiteBranding(payload.siteBranding);
+      const rawSiteBranding =
+        payload.siteBranding && typeof payload.siteBranding === "object"
+          ? (payload.siteBranding as Partial<SiteBranding>)
+          : {};
+
+      if (
+        typeof rawSiteBranding.iconUrl === "string" &&
+        rawSiteBranding.iconUrl.startsWith("data:image/") &&
+        rawSiteBranding.iconUrl.length > 900000
+      ) {
+        return Response.json(
+          { error: "Icon Is Too Large. Please Upload The Image Again." },
+          { status: 413 },
+        );
+      }
+
+      const siteBranding = normalizeSiteBranding(rawSiteBranding);
 
       await env.DB.prepare(
         `INSERT INTO app_settings (key, value, updated_at)

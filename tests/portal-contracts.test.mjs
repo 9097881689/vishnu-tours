@@ -21,6 +21,8 @@ test("keeps the three role portals connected to real booking data", async () => 
   assert.match(page, /payPortalBooking/);
   assert.match(page, /cancelCustomerBooking/);
   assert.match(page, /logoutPortal/);
+  assert.match(page, /optimizeBrandingImage/);
+  assert.match(page, /canvas\.toDataURL\("image\/webp"/);
   assert.doesNotMatch(page, /Total Revenue[\s\S]{0,80}12,45,600/);
 });
 
@@ -44,6 +46,8 @@ test("persists audit, payment, assignment and status history without replacing b
   assert.match(bookingsApi, /recordPaymentTransaction/);
   assert.match(bookingsApi, /SameSite=Strict/);
   assert.match(bookingsApi, /customerCancelRide/);
+  assert.match(bookingsApi, /Icon Is Too Large\. Please Upload The Image Again\./);
+  assert.doesNotMatch(bookingsApi, /iconUrl\.slice\(0, 900000\)/);
   assert.match(bookingsApi, /DELETE FROM portal_sessions WHERE token/);
   assert.doesNotMatch(bookingsApi, /DROP TABLE/i);
 });

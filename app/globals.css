@@ -10829,3 +10829,53 @@ h6,
     display: none;
   }
 }
+
+/* Public homepage section alignment */
+.homepage-fleet-head,
+.homepage-section-head {
+  width: 100%;
+  text-align: center;
+}
+
+.homepage-fleet-head h2,
+.homepage-fleet-head p,
+.homepage-section-head h2,
+.homepage-section-head p {
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.homepage-step-card {
+  grid-template-columns: 1fr;
+  align-content: start;
+  justify-items: center;
+  text-align: center;
+}
+
+.homepage-step-card b {
+  grid-row: auto;
+}
+
+.homepage-step-card h3,
+.homepage-step-card p,
+.homepage-service-card h3,
+.homepage-service-card p,
+.homepage-service-body {
+  text-align: center;
+}
+
+.homepage-service-body {
+  justify-items: center;
+}
+
+.homepage-cta div {
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .homepage-cta {
+    justify-content: center;
+    text-align: center;
+  }
+}
