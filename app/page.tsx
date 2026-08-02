@@ -5939,6 +5939,9 @@ export default function Home() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
           </Link>
+          <span className="footer-legal-name">
+            <b>Legal Name:</b> Visnu S Tours &amp; Travels
+          </span>
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">

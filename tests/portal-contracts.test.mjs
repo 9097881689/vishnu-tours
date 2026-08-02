@@ -70,11 +70,17 @@ test("verifies Razorpay signatures on the server before updating payment", async
 
 test("ships responsive role dashboard styling and all public policy pages", async () => {
   const css = await source("app/globals.css");
+  const [homePage, publicChrome] = await Promise.all([
+    source("app/page.tsx"),
+    source("app/components/PublicChrome.tsx"),
+  ]);
 
   assert.match(css, /\.role-dashboard-shell/);
   assert.match(css, /\.role-dashboard-sidebar/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /@media \(max-width: 500px\)/);
+  assert.match(homePage, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
+  assert.match(publicChrome, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
   assert.match(
     css,
     /\.collection-modal-backdrop\s*\{[\s\S]*?z-index:\s*2147483100/,

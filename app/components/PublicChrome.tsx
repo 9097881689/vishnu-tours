@@ -135,6 +135,9 @@ export function PublicFooter() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
         </Link>
+        <span className="footer-legal-name">
+          <b>Legal Name:</b> Visnu S Tours &amp; Travels
+        </span>
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
           And Outstation Trips.
