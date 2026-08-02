@@ -8,18 +8,22 @@ import {
   Banknote,
   BarChart3,
   Bell,
+  Building2,
   CalendarDays,
   CarFront,
   CheckCircle2,
   ClipboardList,
   Clock3,
   CreditCard,
+  Crown,
   Headphones,
   Home as HomeIcon,
   LogOut,
   MapPinned,
   Menu,
   Navigation,
+  Plane,
+  Route,
   Settings,
   UserRound,
   Users,
@@ -5880,20 +5884,18 @@ export default function Home() {
         </div>
         <div className="homepage-service-grid">
           {[
-            ["Airport T1 And T2", "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", "airport", "/services/airport.png"],
-            ["Corporate Office Travel", "Meeting, Site Visit, Hotel And Guest Movement Support.", "office", "/services/corporate.png"],
-            ["Mumbai Local Duty", "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", "city", "/services/city.png"],
-            ["All India Outstation", "Mumbai Pickup For One Way And Round Trip Travel.", "route", "/services/outstation.png"],
-            ["VIP Event Movement", "Clean White Cars For Weddings, Events And Executive Guests.", "vip", "/services/executive.png"],
-            ["Booking Support", "Clear Fare, Cab Selection And Confirmation Before Travel.", "support", "/services/all-india.png"],
-          ].map(([title, text, icon, image]) => (
+            { title: "Airport T1 And T2", text: "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", icon: <Plane /> },
+            { title: "Corporate Office Travel", text: "Meeting, Site Visit, Hotel And Guest Movement Support.", icon: <Building2 /> },
+            { title: "Mumbai Local Duty", text: "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", icon: <MapPinned /> },
+            { title: "All India Outstation", text: "Mumbai Pickup For One Way And Round Trip Travel.", icon: <Route /> },
+            { title: "VIP Event Movement", text: "Clean White Cars For Weddings, Events And Executive Guests.", icon: <Crown /> },
+            { title: "Booking Support", text: "Clear Fare, Cab Selection And Confirmation Before Travel.", icon: <Headphones /> },
+          ].map(({ title, text, icon }) => (
             <article className="homepage-service-card" key={title}>
-              <div className="homepage-service-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image} alt={`${title} cab service`} />
+              <div className="homepage-service-image" aria-hidden="true">
+                {icon}
               </div>
               <div className="homepage-service-body">
-                <span className={`homepage-service-icon icon-${icon}`} aria-hidden="true" />
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>

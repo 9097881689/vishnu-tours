@@ -23,6 +23,8 @@ test("keeps the three role portals connected to real booking data", async () => 
   assert.match(page, /logoutPortal/);
   assert.match(page, /optimizeBrandingImage/);
   assert.match(page, /canvas\.toDataURL\("image\/webp"/);
+  assert.match(page, /icon: <Plane \/>/);
+  assert.match(page, /icon: <Building2 \/>/);
   assert.doesNotMatch(page, /Total Revenue[\s\S]{0,80}12,45,600/);
 });
 

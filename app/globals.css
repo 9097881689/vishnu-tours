@@ -10879,6 +10879,45 @@ h6,
   justify-items: center;
 }
 
+.homepage-service-card {
+  display: grid;
+  justify-items: center;
+  padding: 16px 12px;
+}
+
+.homepage-service-image {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  overflow: visible;
+  background: transparent;
+}
+
+.homepage-service-image svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: #111827;
+  stroke-width: 1.6;
+}
+
+.homepage-service-body {
+  padding: 8px 8px 2px;
+}
+
+@media (max-width: 760px) {
+  .homepage-service-image {
+    width: 42px;
+    height: 42px;
+  }
+
+  .homepage-service-image svg {
+    width: 30px;
+    height: 30px;
+  }
+}
+
 .homepage-cta div {
   text-align: center;
 }
