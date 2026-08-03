@@ -66,10 +66,15 @@ test("automates company cash held by drivers and earning settlements", async () 
   assert.match(bookingsApi, /action === "updateCashSettlement"/);
   assert.match(bookingsApi, /earning\.availableEarning/);
   assert.match(bookingsApi, /settlement_status = 'Completed'/);
+  assert.match(bookingsApi, /getDriverCashBalances/);
+  assert.match(bookingsApi, /current\.cash_amount \+= event\.amount/);
+  assert.match(bookingsApi, /current\.cash_amount = Math\.max\(0, current\.cash_amount - event\.amount\)/);
+  assert.match(bookingsApi, /Only A Driver Registered For.*Can Start Or Complete This Ride/);
   assert.match(page, /Company Cash With Drivers/);
   assert.match(page, /Keep Against Earning/);
   assert.match(page, /Send To Admin/);
   assert.match(page, /Awaiting Approval/);
+  assert.match(page, /loadDashboard\(\{ silent: true \}\)/);
 });
 
 test("verifies Razorpay signatures on the server before updating payment", async () => {

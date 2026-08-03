@@ -793,16 +793,11 @@ async function getAdminFinanceSummary() {
     total_collected: number;
     driver_cash_collected: number;
   }>();
-  const deposited = await env.DB.prepare(
-    `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
-     FROM driver_cash_deposits
-     WHERE settlement_status = 'Completed'`,
-  ).first<{ deposited_amount: number }>();
   const totalCollected = Number(summary?.total_collected || 0);
   const driverCashCollected = Number(summary?.driver_cash_collected || 0);
-  const driverCashInHand = Math.max(
+  const driverCashInHand = (await getDriverCashBalances()).reduce(
+    (total, driver) => total + Number(driver.cash_amount || 0),
     0,
-    driverCashCollected - Number(deposited?.deposited_amount || 0),
   );
 
   return {
@@ -919,44 +914,144 @@ async function getDriverEarning(driverMobile: string) {
   };
 }
 
-async function getDriverCashDeposited(driverMobile?: string) {
-  const query = `SELECT COALESCE(SUM(amount), 0) AS deposited_amount
+type DriverCashBalance = {
+  driver_mobile: string;
+  driver_name: string;
+  cash_amount: number;
+  cash_collected: number;
+  cash_refunded: number;
+  cash_deposited: number;
+  cash_adjusted_to_earning: number;
+  cash_sent_to_admin: number;
+  cash_rides: number;
+};
+
+async function getDriverCashBalances() {
+  const collections = await env.DB.prepare(
+    `SELECT driver_mobile, driver_name, driver_cash_collected AS amount,
+      COALESCE(NULLIF(ride_completed_at, ''), created_at) AS event_at
+     FROM bookings
+     WHERE driver_cash_collected > 0
+       AND COALESCE(driver_mobile, '') != ''
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  ).all<{ driver_mobile: string; driver_name: string; amount: number; event_at: string }>();
+  const refunds = await env.DB.prepare(
+    `SELECT refund_driver_mobile AS driver_mobile,
+      COALESCE(refund_driver_name, '') AS driver_name,
+      driver_cash_refunded AS amount,
+      COALESCE(NULLIF(ride_completed_at, ''), created_at) AS event_at
+     FROM bookings
+     WHERE driver_cash_refunded > 0
+       AND COALESCE(refund_driver_mobile, '') != ''
+       AND booking_id NOT LIKE 'PENDING-%'`,
+  ).all<{ driver_mobile: string; driver_name: string; amount: number; event_at: string }>();
+  const settlements = await env.DB.prepare(
+    `SELECT driver_mobile, driver_name, amount, created_at AS event_at,
+      COALESCE(settlement_type, 'admin_deposit') AS settlement_type
      FROM driver_cash_deposits
      WHERE settlement_status = 'Completed'
-     ${driverMobile ? "AND driver_mobile = ?" : ""}`;
-  const statement = env.DB.prepare(query);
-  const deposited = driverMobile
-    ? await statement.bind(driverMobile).first<{ deposited_amount: number }>()
-    : await statement.first<{ deposited_amount: number }>();
+       AND amount > 0
+       AND COALESCE(driver_mobile, '') != ''`,
+  ).all<{
+    driver_mobile: string;
+    driver_name: string;
+    amount: number;
+    event_at: string;
+    settlement_type: string;
+  }>();
+  const balances = new Map<string, DriverCashBalance>();
+  const events: Array<{
+    driverMobile: string;
+    driverName: string;
+    amount: number;
+    eventAt: string;
+    type: "collection" | "refund" | "settlement";
+    settlementType?: string;
+  }> = [];
 
-  return Number(deposited?.deposited_amount || 0);
+  (collections.results || []).forEach((row) =>
+    events.push({
+      driverMobile: row.driver_mobile,
+      driverName: row.driver_name,
+      amount: Number(row.amount || 0),
+      eventAt: row.event_at,
+      type: "collection",
+    }),
+  );
+  (refunds.results || []).forEach((row) =>
+    events.push({
+      driverMobile: row.driver_mobile,
+      driverName: row.driver_name,
+      amount: Number(row.amount || 0),
+      eventAt: row.event_at,
+      type: "refund",
+    }),
+  );
+  (settlements.results || []).forEach((row) =>
+    events.push({
+      driverMobile: row.driver_mobile,
+      driverName: row.driver_name,
+      amount: Number(row.amount || 0),
+      eventAt: row.event_at,
+      type: "settlement",
+      settlementType: row.settlement_type,
+    }),
+  );
+
+  events.sort((first, second) => {
+    const timeDifference = Date.parse(first.eventAt || "") - Date.parse(second.eventAt || "");
+    if (Number.isFinite(timeDifference) && timeDifference !== 0) {
+      return timeDifference;
+    }
+    return first.type === "collection" ? -1 : second.type === "collection" ? 1 : 0;
+  });
+
+  events.forEach((event) => {
+    const current = balances.get(event.driverMobile) || {
+      driver_mobile: event.driverMobile,
+      driver_name: event.driverName || "Driver",
+      cash_amount: 0,
+      cash_collected: 0,
+      cash_refunded: 0,
+      cash_deposited: 0,
+      cash_adjusted_to_earning: 0,
+      cash_sent_to_admin: 0,
+      cash_rides: 0,
+    };
+
+    if (event.driverName) {
+      current.driver_name = event.driverName;
+    }
+    if (event.type === "collection") {
+      current.cash_collected += event.amount;
+      current.cash_amount += event.amount;
+      current.cash_rides += 1;
+    } else {
+      current.cash_amount = Math.max(0, current.cash_amount - event.amount);
+      if (event.type === "refund") {
+        current.cash_refunded += event.amount;
+      } else {
+        current.cash_deposited += event.amount;
+        if (event.settlementType === "earning_adjustment") {
+          current.cash_adjusted_to_earning += event.amount;
+        } else {
+          current.cash_sent_to_admin += event.amount;
+        }
+      }
+    }
+    balances.set(event.driverMobile, current);
+  });
+
+  return Array.from(balances.values()).sort(
+    (first, second) => second.cash_amount - first.cash_amount,
+  );
 }
 
 async function getDriverCashInHand(driverMobile: string) {
-  const cash = await env.DB.prepare(
-    `SELECT COALESCE(SUM(driver_cash_collected), 0) AS cash_amount
-     FROM bookings
-     WHERE driver_mobile = ?
-       AND driver_cash_collected > 0
-       AND booking_id NOT LIKE 'PENDING-%'`,
-  )
-    .bind(driverMobile)
-    .first<{ cash_amount: number }>();
-  const refunded = await env.DB.prepare(
-    `SELECT COALESCE(SUM(driver_cash_refunded), 0) AS refund_amount
-     FROM bookings
-     WHERE refund_driver_mobile = ?
-       AND driver_cash_refunded > 0
-       AND booking_id NOT LIKE 'PENDING-%'`,
-  )
-    .bind(driverMobile)
-    .first<{ refund_amount: number }>();
-  const deposited = await getDriverCashDeposited(driverMobile);
-
-  return Math.max(
-    0,
-    Number(cash?.cash_amount || 0) - Number(refunded?.refund_amount || 0) - deposited,
+  const balance = (await getDriverCashBalances()).find(
+    (row) => row.driver_mobile === driverMobile,
   );
+  return Number(balance?.cash_amount || 0);
 }
 
 async function getPendingDriverCashTransfers(driverMobile: string) {
@@ -979,87 +1074,7 @@ async function getDriverWithdrawableBalance(driverMobile: string) {
 }
 
 async function getDriverCashSummary() {
-  const summary = await env.DB.prepare(
-    `SELECT driver_mobile, driver_name,
-      COALESCE(SUM(driver_cash_collected), 0) AS cash_collected,
-      COUNT(*) AS cash_rides
-     FROM bookings
-     WHERE driver_cash_collected > 0
-       AND booking_id NOT LIKE 'PENDING-%'
-     GROUP BY driver_mobile, driver_name
-     ORDER BY cash_collected DESC`,
-  ).all<{
-    driver_mobile: string;
-    driver_name: string;
-    cash_collected: number;
-    cash_rides: number;
-  }>();
-
-  const refunds = await env.DB.prepare(
-    `SELECT refund_driver_mobile AS driver_mobile,
-      COALESCE(SUM(driver_cash_refunded), 0) AS cash_refunded
-     FROM bookings
-     WHERE driver_cash_refunded > 0
-       AND COALESCE(refund_driver_mobile, '') != ''
-       AND booking_id NOT LIKE 'PENDING-%'
-     GROUP BY refund_driver_mobile`,
-  ).all<{ driver_mobile: string; cash_refunded: number }>();
-  const refundMap = new Map(
-    (refunds.results || []).map((row) => [
-      row.driver_mobile,
-      Number(row.cash_refunded || 0),
-    ]),
-  );
-
-  const deposits = await env.DB.prepare(
-    `SELECT driver_mobile,
-      COALESCE(SUM(amount), 0) AS deposited_amount,
-      COALESCE(SUM(CASE WHEN settlement_type = 'earning_adjustment' THEN amount ELSE 0 END), 0) AS earning_adjusted,
-      COALESCE(SUM(CASE WHEN settlement_type != 'earning_adjustment' THEN amount ELSE 0 END), 0) AS admin_deposited
-     FROM driver_cash_deposits
-     WHERE settlement_status = 'Completed'
-     GROUP BY driver_mobile`,
-  ).all<{
-    driver_mobile: string;
-    deposited_amount: number;
-    earning_adjusted: number;
-    admin_deposited: number;
-  }>();
-  const depositMap = new Map(
-    (deposits.results || []).map((row) => [
-      row.driver_mobile,
-      Number(row.deposited_amount || 0),
-    ]),
-  );
-  const earningAdjustmentMap = new Map(
-    (deposits.results || []).map((row) => [
-      row.driver_mobile,
-      Number(row.earning_adjusted || 0),
-    ]),
-  );
-  const adminDepositMap = new Map(
-    (deposits.results || []).map((row) => [
-      row.driver_mobile,
-      Number(row.admin_deposited || 0),
-    ]),
-  );
-
-  return (summary.results || []).map((row) => ({
-    driver_mobile: row.driver_mobile,
-    driver_name: row.driver_name,
-    cash_amount: Math.max(
-      0,
-      Number(row.cash_collected || 0) -
-        Number(refundMap.get(row.driver_mobile) || 0) -
-        Number(depositMap.get(row.driver_mobile) || 0),
-    ),
-    cash_collected: Number(row.cash_collected || 0),
-    cash_refunded: Number(refundMap.get(row.driver_mobile) || 0),
-    cash_deposited: Number(depositMap.get(row.driver_mobile) || 0),
-    cash_adjusted_to_earning: Number(earningAdjustmentMap.get(row.driver_mobile) || 0),
-    cash_sent_to_admin: Number(adminDepositMap.get(row.driver_mobile) || 0),
-    cash_rides: row.cash_rides,
-  }));
+  return getDriverCashBalances();
 }
 
 async function getDriverLedger(driverMobile?: string) {
@@ -2822,6 +2837,38 @@ export async function PATCH(request: Request) {
         if (!assignedBooking) {
           return Response.json(
             { error: "This Ride Is Not Assigned To This Driver." },
+            { status: 403 },
+          );
+        }
+
+        const matchingDriverVehicle = await env.DB.prepare(
+          `SELECT vehicle_type
+           FROM driver_vehicles
+           WHERE driver_mobile = ?
+             AND vehicle_type = ?
+             AND COALESCE(approval_status, 'Approved') = 'Approved'
+             AND COALESCE(active_status, 'Active') = 'Active'
+             AND (COALESCE(insurance_expiry, '') = '' OR insurance_expiry >= ?)
+           UNION ALL
+           SELECT vehicle_type
+           FROM drivers
+           WHERE driver_mobile = ? AND vehicle_type = ?
+           LIMIT 1`,
+        )
+          .bind(
+            driverMobile,
+            assignedBooking.vehicle,
+            now.slice(0, 10),
+            driverMobile,
+            assignedBooking.vehicle,
+          )
+          .first<{ vehicle_type: string }>();
+
+        if (!matchingDriverVehicle) {
+          return Response.json(
+            {
+              error: `Only A Driver Registered For ${assignedBooking.vehicle} Can Start Or Complete This Ride.`,
+            },
             { status: 403 },
           );
         }

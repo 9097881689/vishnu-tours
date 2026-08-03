@@ -2176,7 +2176,7 @@ export default function Home() {
     checkout.open();
   }
 
-  async function loadDashboard() {
+  async function loadDashboard(options: { silent?: boolean } = {}) {
     const normalizedMobile = loginMobile.replace(/\D/g, "");
 
     if (!normalizedMobile) {
@@ -2184,19 +2184,21 @@ export default function Home() {
       return;
     }
 
-    setPortalStatus("Loading Portal...");
-    setPortalRole(null);
-    setDashboard(null);
-    setPortalBookings([]);
-    setDriverVehicles([]);
-    setDriverLedger([]);
-    setBookingStatusHistory([]);
-    setAssignmentHistory([]);
-    setWithdrawalRequests([]);
-    setDriverCashHistory([]);
-    setNextRide(null);
-    setMaxWithdrawalAmount(0);
-    setPendingCashTransfer(0);
+    if (!options.silent) {
+      setPortalStatus("Loading Portal...");
+      setPortalRole(null);
+      setDashboard(null);
+      setPortalBookings([]);
+      setDriverVehicles([]);
+      setDriverLedger([]);
+      setBookingStatusHistory([]);
+      setAssignmentHistory([]);
+      setWithdrawalRequests([]);
+      setDriverCashHistory([]);
+      setNextRide(null);
+      setMaxWithdrawalAmount(0);
+      setPendingCashTransfer(0);
+    }
 
     try {
       const response = await fetch(
@@ -2241,8 +2243,10 @@ export default function Home() {
       if (!response.ok) {
         const loginError = result.error || "No User Found. Please Check Mobile Number.";
         setPortalStatus(loginError);
-        window.alert(loginError);
-        setDashboard(null);
+        if (!options.silent) {
+          window.alert(loginError);
+          setDashboard(null);
+        }
         return;
       }
 
@@ -2360,14 +2364,36 @@ export default function Home() {
         }));
       }
 
-      setPortalStatus("");
+      if (!options.silent) {
+        setPortalStatus("");
+      }
     } catch {
       const loginError = "Portal Could Not Load. Please Try Again.";
-      setPortalStatus(loginError);
-      window.alert(loginError);
-      setDashboard(null);
+      if (!options.silent) {
+        setPortalStatus(loginError);
+        window.alert(loginError);
+        setDashboard(null);
+      }
     }
   }
+
+  useEffect(() => {
+    const normalizedLoginMobile = loginMobile.replace(/\D/g, "");
+    const adminIsViewingAnotherDashboard =
+      normalizedLoginMobile === "7004291529" && portalRole !== "admin";
+
+    if (!portalRole || !normalizedLoginMobile || adminIsViewingAnotherDashboard) {
+      return;
+    }
+
+    const refreshTimer = window.setInterval(() => {
+      void loadDashboard({ silent: true });
+    }, 15000);
+
+    return () => window.clearInterval(refreshTimer);
+    // Dashboard refresh intentionally follows the active login identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalRole, loginMobile]);
 
   async function openAdminLookupDashboard(targetMobile = adminLookupMobile) {
     const normalizedMobile = targetMobile.replace(/\D/g, "");
