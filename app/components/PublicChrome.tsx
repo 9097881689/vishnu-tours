@@ -42,6 +42,7 @@ function normalizeSiteBranding(value?: Partial<typeof defaultSiteBranding> | nul
 
 function useSiteBrandSync() {
   const [branding, setBranding] = useState(defaultSiteBranding);
+  const [isBrandingReady, setIsBrandingReady] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,7 +78,10 @@ function useSiteBrandSync() {
 
         setBranding(nextBranding);
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (isMounted) setIsBrandingReady(true);
+      });
 
     return () => {
       isMounted = false;
@@ -86,6 +90,7 @@ function useSiteBrandSync() {
 
   return {
     branding,
+    isBrandingReady,
     style: {
       "--site-header-logo-size": `${branding.headerLogoSize}px`,
       "--site-footer-logo-size": `${branding.footerLogoSize}px`,
@@ -94,13 +99,17 @@ function useSiteBrandSync() {
 }
 
 export function PublicHeader() {
-  const { branding, style } = useSiteBrandSync();
+  const { branding, isBrandingReady, style } = useSiteBrandSync();
 
   return (
     <header className="top-strip main-menu public-page-menu" style={style}>
       <Link className="brand" href="/" aria-label="Vishnu Tours home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="brand-logo" src={branding.iconUrl} alt="Vishnu Tours logo" />
+        <img
+          className={`brand-logo ${isBrandingReady ? "branding-ready" : "branding-loading"}`}
+          src={branding.iconUrl}
+          alt="Vishnu Tours logo"
+        />
         <span>
           <strong>Vishnu Tours</strong>
         </span>
@@ -127,14 +136,18 @@ export function PublicHeader() {
 }
 
 export function PublicFooter() {
-  const { branding, style } = useSiteBrandSync();
+  const { branding, isBrandingReady, style } = useSiteBrandSync();
 
   return (
     <footer className="site-footer" id="contact" style={style}>
       <div className="footer-column footer-brand-column">
         <Link className="footer-brand-lockup" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="footer-logo" src={branding.iconUrl} alt="Vishnu Tours icon" />
+          <img
+            className={`footer-logo ${isBrandingReady ? "branding-ready" : "branding-loading"}`}
+            src={branding.iconUrl}
+            alt="Vishnu Tours icon"
+          />
           <span className="footer-brand-copy">
             <strong><b>Vishnu</b> <em>Tours</em></strong>
             <small>Corporate Cabs From Mumbai</small>

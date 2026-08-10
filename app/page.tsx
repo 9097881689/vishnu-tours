@@ -1329,6 +1329,7 @@ export default function Home() {
   const [siteFont, setSiteFont] = useState("Plus Jakarta Sans");
   const [siteBranding, setSiteBranding] =
     useState<SiteBranding>(defaultSiteBranding);
+  const [isBrandingReady, setIsBrandingReady] = useState(false);
   const [brandingStatus, setBrandingStatus] = useState("");
   const [isBrandingProcessing, setIsBrandingProcessing] = useState(false);
   const [vehicleRateOverrides, setVehicleRateOverrides] =
@@ -1602,6 +1603,10 @@ export default function Home() {
           setFleetVehicles(defaultFleetVehicles);
           setVehicleRateOverrides({});
           setRateEditorForm(buildEditableRateForm("Toyota Innova Crysta", {}));
+        }
+      } finally {
+        if (mounted) {
+          setIsBrandingReady(true);
         }
       }
     }
@@ -5344,7 +5349,11 @@ export default function Home() {
       <header className="top-strip main-menu">
         <Link className="brand" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src={siteBranding.iconUrl} alt="Vishnu Tours logo" />
+          <img
+            className={`brand-logo ${isBrandingReady ? "branding-ready" : "branding-loading"}`}
+            src={siteBranding.iconUrl}
+            alt="Vishnu Tours logo"
+          />
           <span>
             <strong>Vishnu Tours</strong>
           </span>
@@ -6163,7 +6172,11 @@ export default function Home() {
         <div className="footer-column footer-brand-column">
           <Link className="footer-brand-lockup" href="/" aria-label="Vishnu Tours home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="footer-logo" src={siteBranding.iconUrl} alt="Vishnu Tours icon" />
+            <img
+              className={`footer-logo ${isBrandingReady ? "branding-ready" : "branding-loading"}`}
+              src={siteBranding.iconUrl}
+              alt="Vishnu Tours icon"
+            />
             <span className="footer-brand-copy">
               <strong><b>Vishnu</b> <em>Tours</em></strong>
               <small>Corporate Cabs From Mumbai</small>
