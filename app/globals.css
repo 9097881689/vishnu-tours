@@ -11574,3 +11574,265 @@ h6,
     grid-column: 1;
   }
 }
+
+/* Final mobile visual alignment based on real-device screenshots. */
+@media (max-width: 560px) {
+  .savaari-booking-panel {
+    padding: 14px 12px 16px;
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    gap: 12px 10px;
+  }
+
+  .savaari-booking-panel .choose-trip-field {
+    grid-column: 1 / -1;
+  }
+
+  .savaari-booking-panel .booking-field {
+    display: grid;
+    align-content: end;
+    gap: 6px;
+  }
+
+  .savaari-booking-panel .booking-field > span {
+    color: #18345d;
+    font-size: 10px;
+    font-weight: 850;
+    line-height: 1.2;
+  }
+
+  .savaari-booking-panel .route-form-row .booking-field input,
+  .savaari-booking-panel .route-form-row .booking-field select,
+  .savaari-booking-panel .choose-trip-field select {
+    width: 100%;
+    height: 46px;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 0 11px;
+    border: 1px solid #c9d8eb;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #112645;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 44px;
+    box-shadow: 0 2px 7px rgba(15, 55, 102, 0.04);
+  }
+
+  .savaari-booking-panel .route-form-row .booking-field input:focus,
+  .savaari-booking-panel .route-form-row .booking-field select:focus {
+    border-color: #1768d7;
+    outline: 2px solid rgba(23, 104, 215, 0.12);
+    outline-offset: 0;
+  }
+
+  .savaari-booking-panel .location-input-wrap {
+    grid-template-columns: minmax(0, 1fr) 70px;
+    align-items: stretch;
+    gap: 7px;
+  }
+
+  .savaari-booking-panel .current-location-button {
+    width: 70px;
+    min-height: 46px;
+    margin: 0;
+    padding: 0 5px;
+    border-radius: 7px;
+    font-size: 9px;
+  }
+
+  .savaari-booking-panel .km-field {
+    grid-column: 1 / -1;
+  }
+
+  .savaari-booking-panel .explore-cabs-button {
+    width: min(240px, 78%);
+    min-height: 44px;
+    margin-top: 12px;
+    border-radius: 7px;
+  }
+
+  .homepage-section-head {
+    margin-bottom: 16px;
+  }
+
+  .homepage-section-head h2 {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  .homepage-step-card {
+    display: flex;
+    min-height: 150px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .homepage-step-card b {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .homepage-step-card h3,
+  .homepage-step-card p {
+    width: 100%;
+    margin: 0;
+    text-align: center;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .homepage-step-card h3 {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .homepage-step-card p {
+    color: #63738a;
+    font-size: 9px;
+    font-weight: 550;
+    line-height: 1.5;
+  }
+
+  .homepage-service-card {
+    display: flex;
+    min-height: 190px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .homepage-service-image {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    place-items: center;
+    margin: 0 auto 9px;
+  }
+
+  .homepage-service-body {
+    display: grid;
+    width: 100%;
+    gap: 6px;
+    padding: 0;
+    text-align: center;
+  }
+
+  .homepage-service-card h3,
+  .homepage-service-card p {
+    margin: 0;
+    text-align: center;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .homepage-service-card h3 {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .homepage-service-card p {
+    color: #63738a;
+    font-size: 9px;
+    font-weight: 550;
+    line-height: 1.5;
+  }
+
+  .site-footer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px 22px;
+    padding: 32px 22px 20px;
+  }
+
+  .site-footer > .footer-brand-column,
+  .site-footer > .footer-column:nth-child(4),
+  .site-footer > .footer-column:nth-child(5),
+  .site-footer > .footer-bottom {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer > .footer-brand-column {
+    display: grid;
+    width: 100%;
+    max-width: none;
+    gap: 9px;
+    justify-items: start;
+  }
+
+  .site-footer .footer-brand-lockup {
+    max-width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .site-footer .footer-brand-copy strong {
+    font-size: 18px;
+  }
+
+  .site-footer > .footer-column:nth-child(4) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+  }
+
+  .site-footer > .footer-column:nth-child(4) > strong {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer > .footer-column:nth-child(5) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 14px;
+    align-items: center;
+  }
+
+  .site-footer > .footer-column:nth-child(5) > strong,
+  .site-footer > .footer-column:nth-child(5) > a[href^="mailto"] {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer .footer-phone-link,
+  .site-footer .footer-whatsapp-link {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .site-footer .footer-bottom {
+    align-items: start;
+    justify-items: start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 370px) {
+  .savaari-booking-panel .choose-trip-field,
+  .savaari-booking-panel .km-field {
+    grid-column: 1;
+  }
+
+  .homepage-steps-grid,
+  .homepage-service-grid,
+  .site-footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-footer > .footer-column,
+  .site-footer > .footer-brand-column,
+  .site-footer > .footer-column:nth-child(4),
+  .site-footer > .footer-column:nth-child(5),
+  .site-footer > .footer-bottom {
+    grid-column: 1;
+  }
+}
