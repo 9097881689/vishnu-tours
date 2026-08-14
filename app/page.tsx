@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { WhatsAppIcon } from "./components/WhatsAppIcon";
 import type { CSSProperties, ChangeEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -21,7 +22,6 @@ import {
   LogOut,
   MapPinned,
   Menu,
-  MessageCircle,
   Navigation,
   Plane,
   PhoneCall,
@@ -6068,7 +6068,7 @@ export default function Home() {
       <>
       <a className="enquiry-tab" href={whatsappUrl} target="_blank">Enquiry</a>
       <a className="floating-whatsapp" href={whatsappUrl} target="_blank" aria-label="Chat With Vishnu Tours On WhatsApp" title="Chat On WhatsApp">
-        <MessageCircle aria-hidden="true" />
+        <WhatsAppIcon aria-hidden="true" />
         <span>WhatsApp</span>
       </a>
       <section className="homepage-steps-section" id="why-us" aria-label="Why choose Vishnu Tours">
@@ -6221,7 +6221,7 @@ export default function Home() {
             <span>+91 7004291529</span>
           </a>
           <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
-            <MessageCircle aria-hidden="true" />
+            <WhatsAppIcon aria-hidden="true" />
             <span>WhatsApp Booking</span>
           </a>
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, PhoneCall } from "lucide-react";
+import { PhoneCall } from "lucide-react";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 
@@ -186,7 +187,7 @@ export function PublicFooter() {
           <span>+91 7004291529</span>
         </a>
         <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
-          <MessageCircle aria-hidden="true" />
+          <WhatsAppIcon aria-hidden="true" />
           <span>WhatsApp Booking</span>
         </a>
       </div>

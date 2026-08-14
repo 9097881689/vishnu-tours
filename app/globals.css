@@ -11575,6 +11575,172 @@ h6,
   }
 }
 
+/* Authoritative mobile overrides: keep last in the stylesheet. */
+@media (max-width: 560px) {
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .savaari-booking-panel .route-form-row > *,
+  .savaari-booking-panel .choose-trip-field,
+  .savaari-booking-panel .place-field,
+  .savaari-booking-panel .local-pickup-field,
+  .savaari-booking-panel .km-field {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .savaari-booking-panel input,
+  .savaari-booking-panel select,
+  .savaari-booking-panel input[type="date"],
+  .savaari-booking-panel input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-min-logical-width: 0;
+  }
+
+  .homepage-step-card {
+    min-height: 118px;
+    gap: 5px;
+    padding: 10px 8px;
+  }
+
+  .homepage-step-card b {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .homepage-service-card {
+    min-height: 138px;
+    padding: 10px 8px;
+  }
+
+  .homepage-service-image {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    margin-bottom: 5px;
+  }
+
+  .homepage-service-image svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .homepage-service-body {
+    gap: 3px;
+  }
+}
+
+/* Compact mobile sections and strict no-overflow booking controls. */
+.site-footer {
+  background: linear-gradient(125deg, #185895, #1d6aaf 58%, #20588f);
+}
+
+.footer-whatsapp-link svg,
+.floating-whatsapp svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+@media (max-width: 560px) {
+  .savaari-booking-panel,
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row,
+  .savaari-booking-panel .route-form-row > *,
+  .savaari-booking-panel .booking-field,
+  .savaari-booking-panel .location-input-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .savaari-booking-panel .choose-trip-field,
+  .savaari-booking-panel .place-field,
+  .savaari-booking-panel .local-pickup-field,
+  .savaari-booking-panel .km-field {
+    grid-column: 1;
+  }
+
+  .savaari-booking-panel input,
+  .savaari-booking-panel select,
+  .savaari-booking-panel input[type="date"],
+  .savaari-booking-panel input[type="time"] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-min-logical-width: 0;
+  }
+
+  .savaari-booking-panel input[type="date"]::-webkit-date-and-time-value,
+  .savaari-booking-panel input[type="time"]::-webkit-date-and-time-value {
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+  }
+
+  .homepage-steps-section,
+  .homepage-services-section {
+    margin-top: 22px;
+  }
+
+  .homepage-steps-grid,
+  .homepage-service-grid {
+    gap: 7px;
+  }
+
+  .homepage-step-card {
+    min-height: 118px;
+    gap: 5px;
+    padding: 10px 8px;
+  }
+
+  .homepage-step-card b {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .homepage-service-card {
+    min-height: 138px;
+    padding: 10px 8px;
+  }
+
+  .homepage-service-image {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    margin-bottom: 5px;
+  }
+
+  .homepage-service-image svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .homepage-service-body {
+    gap: 3px;
+  }
+}
+
 /* Final mobile visual alignment based on real-device screenshots. */
 @media (max-width: 560px) {
   .savaari-booking-panel {
@@ -11834,5 +12000,72 @@ h6,
   .site-footer > .footer-column:nth-child(5),
   .site-footer > .footer-bottom {
     grid-column: 1;
+  }
+}
+
+/* Final mobile cascade guard. */
+@media (max-width: 560px) {
+  .savaari-booking-panel .route-form-row,
+  .savaari-booking-panel .route-form-row.local-route-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .savaari-booking-panel .route-form-row > *,
+  .savaari-booking-panel .choose-trip-field,
+  .savaari-booking-panel .place-field,
+  .savaari-booking-panel .local-pickup-field,
+  .savaari-booking-panel .km-field {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .savaari-booking-panel input,
+  .savaari-booking-panel select,
+  .savaari-booking-panel input[type="date"],
+  .savaari-booking-panel input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-min-logical-width: 0;
+  }
+
+  .homepage-step-card {
+    min-height: 118px;
+    gap: 5px;
+    padding: 10px 8px;
+  }
+
+  .homepage-step-card b {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .homepage-service-card {
+    min-height: 138px;
+    padding: 10px 8px;
+  }
+
+  .homepage-service-image {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    margin-bottom: 5px;
+  }
+
+  .homepage-service-image svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .homepage-service-body {
+    gap: 3px;
   }
 }
