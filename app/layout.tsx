@@ -69,7 +69,7 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: "Vishnu Tours | Corporate Cab Service Mumbai",
   description:
-    "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Innova Hycross, Ertiga, Rumion and Etios. Live fare, booking and Razorpay payment.",
+    "Book Mumbai airport, in-city and outstation corporate cabs with Innova Crysta, Innova Hycross, Ertiga, Rumion and Etios. Review live fares and pay securely online.",
   icons: {
     icon: "/logo-mark-v2.png",
     shortcut: "/logo-mark-v2.png",

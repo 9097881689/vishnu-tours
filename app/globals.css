@@ -6308,6 +6308,15 @@ h6,
   text-align: center;
 }
 
+.simple-page-card h2 {
+  max-width: 780px;
+  margin: 28px auto 0;
+  color: #0f172a;
+  font-size: clamp(18px, 2.2vw, 23px);
+  line-height: 1.35;
+  text-align: center;
+}
+
 .simple-page-card p,
 .simple-page-card small {
   display: block;
