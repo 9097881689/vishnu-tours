@@ -120,10 +120,10 @@ test("ships responsive role dashboard styling and all public policy pages", asyn
   assert.match(css, /\.role-dashboard-sidebar/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /@media \(max-width: 500px\)/);
-  assert.match(homePage, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
-  assert.match(publicChrome, /Legal Name:<\/b> Visnu S Tours &amp; Travels/);
-  assert.match(homePage, /Trade Name:<\/b> Munni Devi/);
-  assert.match(publicChrome, /Trade Name:<\/b> Munni Devi/);
+  assert.match(homePage, /Registered Enterprise:<\/b> VISHNU S\.TOURS &amp; TRAVELS/);
+  assert.match(publicChrome, /Registered Enterprise:<\/b> VISHNU S\.TOURS &amp; TRAVELS/);
+  assert.match(homePage, /Udyam:<\/b> UDYAM-MH-18-0242307/);
+  assert.match(publicChrome, /Udyam:<\/b> UDYAM-MH-18-0242307/);
   assert.match(
     css,
     /\.collection-modal-backdrop\s*\{[\s\S]*?z-index:\s*2147483100/,
@@ -137,6 +137,7 @@ test("ships responsive role dashboard styling and all public policy pages", asyn
     "app/cookie-policy/page.tsx",
     "app/disclaimer/page.tsx",
     "app/price-chart/page.tsx",
+    "app/about-us/page.tsx",
   ]) {
     await access(new URL(path, root));
   }

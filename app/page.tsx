@@ -5360,7 +5360,7 @@ export default function Home() {
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
           <a href="#home">Home</a>
-          <a href="#why-us">About Us</a>
+          <Link href="/about-us">About Us</Link>
           <a href="#fleet">Our Fleet</a>
           <a href="#booking">Outstation</a>
           <a href="#booking">Airport Transfer</a>
@@ -6183,17 +6183,17 @@ export default function Home() {
             </span>
           </Link>
           <span className="footer-legal-name">
-            <b>Legal Name:</b> Visnu S Tours &amp; Travels
+            <b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS
           </span>
           <span className="footer-legal-name">
-            <b>Trade Name:</b> Munni Devi
+            <b>Udyam:</b> UDYAM-MH-18-0242307
           </span>
           <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
         </div>
         <div className="footer-column">
           <strong>Quick Links</strong>
           <a href="#home">Home</a>
-          <a href="#why-us">About Us</a>
+          <Link href="/about-us">About Us</Link>
           <a href="#fleet">Our Fleet</a>
           <a href="#booking">Book Cab</a>
         </div>

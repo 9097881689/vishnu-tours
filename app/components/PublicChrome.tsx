@@ -117,7 +117,7 @@ export function PublicHeader() {
       </Link>
       <nav className="main-nav" aria-label="Primary navigation">
         <Link href="/#home">Home</Link>
-        <Link href="/#why-us">About Us</Link>
+        <Link href="/about-us">About Us</Link>
         <Link href="/#fleet">Our Fleet</Link>
         <Link href="/#booking">Outstation</Link>
         <Link href="/#booking">Airport Transfer</Link>
@@ -155,10 +155,10 @@ export function PublicFooter() {
           </span>
         </Link>
         <span className="footer-legal-name">
-          <b>Legal Name:</b> Visnu S Tours &amp; Travels
+          <b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS
         </span>
         <span className="footer-legal-name">
-          <b>Trade Name:</b> Munni Devi
+          <b>Udyam:</b> UDYAM-MH-18-0242307
         </span>
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
@@ -174,6 +174,7 @@ export function PublicFooter() {
       </div>
       <div className="footer-column">
         <strong>Company</strong>
+        <Link href="/about-us">About Us</Link>
         <Link href="/price-chart">Live Price Chart</Link>
         <Link href="/disclaimer">Disclaimer</Link>
         <Link href="/contact">Contact Page</Link>

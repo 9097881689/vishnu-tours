@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
         <h2>Who Operates This Website</h2>
         <p>
           This Website And The Vishnu Tours Cab Booking Service Are Operated By
-          Visnu S Tours &amp; Travels, Trade Name Munni Devi, From Mumbai,
+          VISHNU S.TOURS &amp; TRAVELS, Proprietorship, Under The Brand Vishnu Tours, From Mumbai,
           Maharashtra, India. This Policy Explains How We Handle Personal
           Information When You Visit The Website, Create A Booking, Make A
           Payment Or Contact Our Support Team.
@@ -88,7 +88,7 @@ export default function PrivacyPolicyPage() {
 
         <h2>Privacy And Grievance Contact</h2>
         <p>
-          For A Privacy Request Or Complaint, Contact Visnu S Tours &amp; Travels
+          For A Privacy Request Or Complaint, Contact VISHNU S.TOURS &amp; TRAVELS
           At cricketsikho@gmail.com Or +91 7004291529. Please Include Your
           Booking Number And Registered Mobile Number When The Request Concerns
           A Booking.
