@@ -91,6 +91,36 @@ test("verifies Razorpay signatures on the server before updating payment", async
   assert.match(verifyApi, /crypto\.subtle\.sign/);
   assert.match(verifyApi, /safeEqual\(expectedSignature, signature\)/);
   assert.match(verifyApi, /payment_transactions/);
+  assert.match(verifyApi, /sendBookingStatusEmail\(updatedBooking, "payment_received"\)/);
+});
+
+test("emails every important booking lifecycle update to customer and admin", async () => {
+  const [bookingsApi, emailService, envExample] = await Promise.all([
+    source("app/api/bookings/route.ts"),
+    source("app/lib/booking-email.ts"),
+    source(".env.example"),
+  ]);
+
+  for (const event of [
+    "booking_confirmed",
+    "booking_updated",
+    "payment_received",
+    "driver_assigned",
+    "ride_started",
+    "ride_cancelled",
+    "refund_updated",
+    "ride_complete",
+  ]) {
+    assert.match(emailService, new RegExp(`\\| "${event}"|${event}:`));
+  }
+
+  assert.match(bookingsApi, /sendBookingStatusEmail\(updatedBooking, "ride_cancelled"\)/);
+  assert.match(bookingsApi, /rideStatus === "Ride Complete" \? "ride_complete" : "ride_started"/);
+  assert.match(emailService, /BOOKING_ADMIN_EMAIL/);
+  assert.match(emailService, /bcc: adminEmail/);
+  assert.match(emailService, /Current Total Fare/);
+  assert.match(emailService, /Refund Status/);
+  assert.match(envExample, /BOOKING_ADMIN_EMAIL=cricketsikho@gmail\.com/);
 });
 
 test("persists per-hour vehicle fares and adds excess ride time to final fare", async () => {

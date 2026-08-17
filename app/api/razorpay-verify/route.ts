@@ -1,4 +1,8 @@
 import { env } from "cloudflare:workers";
+import {
+  sendBookingStatusEmail,
+  type BookingEmailRecord,
+} from "../../lib/booking-email";
 
 type VerifyPayload = {
   bookingId?: string;
@@ -202,6 +206,13 @@ export async function POST(request: Request) {
         now,
       ),
     ]);
+
+    const updatedBooking = await env.DB.prepare(
+      "SELECT * FROM bookings WHERE booking_id = ? LIMIT 1",
+    )
+      .bind(bookingId)
+      .first<BookingEmailRecord>();
+    await sendBookingStatusEmail(updatedBooking, "payment_received");
 
     return Response.json({ success: true, paymentStatus, paymentAmount: updatedPaid });
   } catch (error) {
