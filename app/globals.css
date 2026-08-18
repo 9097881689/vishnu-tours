@@ -12130,3 +12130,106 @@ h6,
     gap: 3px;
   }
 }
+
+/* Readability uplift: public body copy and the full booking form are 10% larger. */
+body {
+  font-size: 17.6px;
+}
+
+.hero-content:has(.savaari-booking-panel) .hero-copy > p:not(.hero-kicker) {
+  font-size: 15.4px;
+}
+
+.hero-service-points span {
+  font-size: 11px;
+}
+
+.hero-service-points b {
+  font-size: 13.2px;
+}
+
+.booking-title {
+  font-size: 26.4px;
+}
+
+.savaari-booking-panel .trip-tabs button,
+.savaari-booking-panel .trip-tabs button:first-child,
+.savaari-booking-panel .trip-tabs button:last-child {
+  font-size: 13.2px;
+}
+
+.savaari-booking-panel .booking-field > span {
+  font-size: 15.4px;
+}
+
+.savaari-booking-panel .booking-field input,
+.savaari-booking-panel .booking-field select {
+  font-size: 14.3px;
+}
+
+.savaari-booking-panel .route-form-row .booking-field input,
+.savaari-booking-panel .route-form-row .booking-field select,
+.savaari-booking-panel .choose-trip-field select {
+  font-size: 14.3px;
+}
+
+.savaari-booking-panel .current-location-button,
+.savaari-booking-panel .quick-suggestions button,
+.savaari-booking-panel .place-suggestions button,
+.savaari-booking-panel .field-hint,
+.savaari-booking-panel .field-error {
+  font-size: 12.1px;
+}
+
+.savaari-booking-panel .explore-cabs-button {
+  font-size: 20.9px;
+}
+
+.savaari-booking-panel .booking-rating-strip {
+  font-size: 13.2px;
+}
+
+.homepage-section-head p {
+  font-size: 12.1px;
+}
+
+.homepage-step-card p,
+.homepage-service-card p {
+  font-size: 10px;
+}
+
+.homepage-comfort-card p {
+  font-size: 11px;
+}
+
+.site-footer span,
+.site-footer a {
+  font-size: 11.6px;
+}
+
+.simple-page-card p,
+.simple-page-card small,
+.about-business-details dd {
+  font-size: 16.5px;
+}
+
+@media (max-width: 560px) {
+  .savaari-booking-panel .booking-field > span {
+    font-size: 11px;
+  }
+
+  .savaari-booking-panel .route-form-row .booking-field input,
+  .savaari-booking-panel .route-form-row .booking-field select,
+  .savaari-booking-panel .choose-trip-field select {
+    font-size: 13.2px;
+  }
+
+  .savaari-booking-panel .current-location-button {
+    font-size: 10px;
+  }
+
+  .homepage-step-card p,
+  .homepage-service-card p {
+    font-size: 10px;
+  }
+}
