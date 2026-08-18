@@ -136,7 +136,7 @@ export function PublicHeader() {
   );
 }
 
-export function PublicFooter() {
+export function PublicFooter({ hideEmail = false }: { hideEmail?: boolean } = {}) {
   const { branding, isBrandingReady, style } = useSiteBrandSync();
 
   return (
@@ -182,7 +182,9 @@ export function PublicFooter() {
       </div>
       <div className="footer-column">
         <strong>Contact</strong>
-        <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
+        {!hideEmail && (
+          <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
+        )}
         <a className="footer-phone-link" href="tel:+917004291529">
           <PhoneCall aria-hidden="true" />
           <span>+91 7004291529</span>

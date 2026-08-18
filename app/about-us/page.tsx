@@ -70,11 +70,11 @@ export default function AboutUsPage() {
 
         <h2>Booking Support</h2>
         <p>
-          For Cab Booking, Payment, Invoice Or Ride Support, Contact
-          cricketsikho@gmail.com Or +91 7004291529.
+          For Cab Booking, Payment, Invoice Or Ride Support, Call Or WhatsApp
+          +91 7004291529.
         </p>
       </section>
-      <PublicFooter />
+      <PublicFooter hideEmail />
     </main>
   );
 }

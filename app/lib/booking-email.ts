@@ -99,6 +99,41 @@ const eventCopy: Record<
   },
 };
 
+const adminEventCopy: Record<BookingEmailEvent, { title: string; action: string }> = {
+  booking_confirmed: {
+    title: "New Booking Confirmed",
+    action: "Review the journey and payment details, then arrange the requested cab and driver.",
+  },
+  booking_updated: {
+    title: "Booking Details Changed",
+    action: "Review the changed details and confirm that the existing cab and driver plan is still valid.",
+  },
+  payment_received: {
+    title: "Customer Payment Received",
+    action: "Verify the paid amount and monitor any remaining balance shown below.",
+  },
+  driver_assigned: {
+    title: "Driver And Vehicle Assigned",
+    action: "Confirm that the assigned driver has received the trip and customer contact details.",
+  },
+  ride_started: {
+    title: "Ride Started",
+    action: "The ride is now active. Monitor the trip and any pending customer balance.",
+  },
+  ride_cancelled: {
+    title: "Booking Cancelled",
+    action: "Review the cancellation reason and process any applicable refund or ledger adjustment.",
+  },
+  refund_updated: {
+    title: "Refund Status Updated",
+    action: "Verify the refund amount, payment source and corresponding ledger adjustment.",
+  },
+  ride_complete: {
+    title: "Ride Completed",
+    action: "Review the final fare, payment collection and driver cash ledger before closing the booking.",
+  },
+};
+
 export async function sendBookingStatusEmail(
   booking: BookingEmailRecord | null | undefined,
   event: BookingEmailEvent,
@@ -144,6 +179,12 @@ export async function sendBookingStatusEmail(
       : []),
     ...(booking.cancel_reason ? [["Cancellation Reason", booking.cancel_reason]] : []),
   ];
+  const adminRows = [
+    ["Booking ID", booking.booking_id],
+    ["Customer", `${booking.customer_name} | ${booking.customer_mobile}`],
+    ["Customer Email", booking.customer_email || "Not Provided"],
+    ...rows.slice(1),
+  ];
   const htmlRows = rows
     .map(
       ([label, value]) => `
@@ -180,6 +221,41 @@ export async function sendBookingStatusEmail(
     "Support: +91 7004291529",
     "Regards, Vishnu Tours",
   ].join("\n");
+  const adminCopy = adminEventCopy[event];
+  const adminHtmlRows = adminRows
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #dbe4f0;color:#52637a;font-weight:700;">${escapeHtml(label)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #dbe4f0;color:#0f172a;font-weight:800;">${escapeHtml(value)}</td>
+        </tr>`,
+    )
+    .join("");
+  const adminHtml = `
+    <div style="margin:0;padding:24px;background:#eef3f8;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #dbe4f0;border-radius:12px;overflow:hidden;">
+        <div style="padding:20px 24px;background:#082f58;color:#ffffff;">
+          <p style="margin:0 0 6px;color:#f6bd16;font-size:12px;font-weight:800;text-transform:uppercase;">Vishnu Tours Admin Notification</p>
+          <h1 style="margin:0;font-size:23px;line-height:1.3;">${escapeHtml(adminCopy.title)}</h1>
+        </div>
+        <div style="padding:22px 24px;">
+          <div style="margin:0 0 18px;padding:14px 16px;background:#fff8df;border-left:4px solid #f6bd16;color:#24364d;font-size:14px;line-height:1.55;">
+            <strong>Admin Action:</strong> ${escapeHtml(adminCopy.action)}
+          </div>
+          <table style="width:100%;border-collapse:collapse;border:1px solid #dbe4f0;">${adminHtmlRows}</table>
+          <p style="margin:18px 0 0;color:#52637a;font-size:13px;line-height:1.6;">This is an automated operational update from the Vishnu Tours booking system.</p>
+        </div>
+      </div>
+    </div>`;
+  const adminText = [
+    `VISHNU TOURS ADMIN - ${adminCopy.title}`,
+    "",
+    `ADMIN ACTION: ${adminCopy.action}`,
+    "",
+    ...adminRows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "Automated Vishnu Tours booking system update.",
+  ].join("\n");
 
   let adminSent = false;
   try {
@@ -201,9 +277,9 @@ export async function sendBookingStatusEmail(
         from: "bookings@instantbackgroundremove.com",
         to: adminEmail,
         replyTo: adminEmail,
-        subject: `${copy.subject} - ${booking.booking_id} | Vishnu Tours Admin Update`,
-        html,
-        text,
+        subject: `[Vishnu Tours Admin] ${copy.subject} | ${booking.booking_id}`,
+        html: adminHtml,
+        text: adminText,
       });
       adminSent = true;
     }
