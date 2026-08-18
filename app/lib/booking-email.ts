@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+
 export type BookingEmailEvent =
   | "booking_confirmed"
   | "booking_updated"
@@ -101,16 +103,11 @@ export async function sendBookingStatusEmail(
   booking: BookingEmailRecord | null | undefined,
   event: BookingEmailEvent,
 ) {
-  if (!booking?.customer_email) return { sent: false, reason: "missing_customer_email" };
+  if (!booking) return { sent: false, reason: "missing_booking" };
 
   const resendApiKey = process.env.RESEND_API_KEY || "";
   const fromEmail = process.env.CUSTOMER_EMAIL_FROM || "";
   const adminEmail = process.env.BOOKING_ADMIN_EMAIL || "cricketsikho@gmail.com";
-
-  if (!resendApiKey || !fromEmail) {
-    console.warn("Booking email is not configured. RESEND_API_KEY or CUSTOMER_EMAIL_FROM is missing.");
-    return { sent: false, reason: "email_not_configured" };
-  }
 
   const copy = eventCopy[event];
   const baseFareWithGst = Math.round(Number(booking.estimated_fare || 0) * 1.05);
@@ -183,6 +180,43 @@ export async function sendBookingStatusEmail(
     "Support: +91 7004291529",
     "Regards, Vishnu Tours",
   ].join("\n");
+
+  let adminSent = false;
+  try {
+    const emailBinding = (env as unknown as {
+      EMAIL?: {
+        send(message: {
+          from: string;
+          to: string;
+          subject: string;
+          html: string;
+          text: string;
+          replyTo?: string;
+        }): Promise<unknown>;
+      };
+    }).EMAIL;
+
+    if (emailBinding && adminEmail) {
+      await emailBinding.send({
+        from: "bookings@instantbackgroundremove.com",
+        to: adminEmail,
+        replyTo: adminEmail,
+        subject: `${copy.subject} - ${booking.booking_id} | Vishnu Tours Admin Update`,
+        html,
+        text,
+      });
+      adminSent = true;
+    }
+  } catch (error) {
+    console.warn("Cloudflare admin email notification failed.", error);
+  }
+
+  if (!booking.customer_email || !resendApiKey || !fromEmail) {
+    return adminSent
+      ? { sent: true, channel: "cloudflare_admin" }
+      : { sent: false, reason: "customer_email_not_configured" };
+  }
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -193,7 +227,9 @@ export async function sendBookingStatusEmail(
       body: JSON.stringify({
         from: fromEmail,
         to: booking.customer_email,
-        ...(adminEmail && adminEmail !== booking.customer_email ? { bcc: adminEmail } : {}),
+        ...(!adminSent && adminEmail && adminEmail !== booking.customer_email
+          ? { bcc: adminEmail }
+          : {}),
         reply_to: adminEmail || undefined,
         subject: `${copy.subject} - ${booking.booking_id} | Vishnu Tours`,
         html,

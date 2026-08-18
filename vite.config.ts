@@ -31,6 +31,13 @@ const localBindingConfig = {
         },
       ]
     : [],
+  send_email: [
+    {
+      name: "EMAIL",
+      destination_address: "cricketsikho@gmail.com",
+      allowed_sender_addresses: ["bookings@instantbackgroundremove.com"],
+    },
+  ],
 };
 
 export default defineConfig(async () => {
