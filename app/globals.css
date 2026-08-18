@@ -8386,6 +8386,115 @@ h6,
   }
 }
 
+/* Booking ticket actions stay compact on screen and are omitted from print. */
+.ticket-action-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ticket-action-bar button,
+.ticket-action-bar a {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #12345b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ticket-action-bar svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.ticket-action-bar .ticket-share-action {
+  border-color: #075985;
+  background: #075985;
+  color: #ffffff;
+}
+
+.ticket-action-bar .ticket-whatsapp-action {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.ticket-share-status {
+  display: block;
+  margin-top: 8px;
+  color: #475569;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .ticket-action-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .site-font-shell > * {
+    display: none !important;
+  }
+
+  .site-font-shell > .review-page {
+    display: block !important;
+  }
+
+  .review-page {
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .review-page > * {
+    display: none !important;
+  }
+
+  .review-page > .payment-complete-screen {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 760px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    border: 1px solid #b8c2cf !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ticket-action-bar,
+  .ticket-share-status,
+  .payment-complete-screen .inline-action {
+    display: none !important;
+  }
+}
+
 /* VTOURS Reference Match */
 .top-strip.main-menu,
 .top-strip.main-menu.public-page-menu {

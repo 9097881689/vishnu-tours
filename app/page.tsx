@@ -20,13 +20,16 @@ import {
   Headphones,
   Home as HomeIcon,
   LogOut,
+  Mail,
   MapPinned,
   Menu,
   Navigation,
   Plane,
   PhoneCall,
+  Printer,
   Route,
   Settings,
+  Share2,
   UserRound,
   Users,
   WalletCards,
@@ -1172,6 +1175,7 @@ export default function Home() {
   const [paymentStatus, setPaymentStatus] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [bookingStatus, setBookingStatus] = useState("");
+  const [ticketShareStatus, setTicketShareStatus] = useState("");
   const [isBooking, setIsBooking] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showBookingTicket, setShowBookingTicket] = useState(false);
@@ -1826,6 +1830,7 @@ export default function Home() {
     setAdvanceAmount("500");
     setPaymentStatus("");
     setBookingStatus("");
+    setTicketShareStatus("");
     setConfirmedBooking(null);
     setIsPaymentComplete(false);
     setShowBookingTicket(false);
@@ -5335,6 +5340,69 @@ export default function Home() {
     siteFontOptions.find((option) => option.value === siteFont)?.stack ||
     siteFontOptions[0].stack;
 
+  const bookingTicketText = confirmedBooking
+    ? [
+        "Vishnu Tours - Booking Confirmed",
+        `Booking Number: ${confirmedBooking.bookingId}`,
+        `Trip Type: ${effectiveTripType}`,
+        `Cab: ${vehicle}`,
+        `Pickup: ${startPoint}`,
+        `Drop: ${drop}`,
+        `Pickup Date And Time: ${formatDisplayDate(date)}, ${pickupTime}`,
+        ...(tripType === "Outstation" &&
+        outstationTripType === "Round Trip" &&
+        returnDate
+          ? [`Drop Date: ${formatDisplayDate(returnDate)}`]
+          : []),
+        `Billable Distance: ${confirmedBooking.billableKm} KM`,
+        `Customer: ${name}`,
+        `Mobile: ${mobile}`,
+        `Fare: ${formatInr(confirmedBooking.estimatedFare)}`,
+        `Payment: ${
+          isPaymentComplete
+            ? `${formatPaymentAmount(selectedPaymentAmount)} Paid`
+            : "Payment Pending"
+        }`,
+        "Support: +91 7004291529",
+      ].join("\n")
+    : "";
+  const ticketWhatsAppUrl = `https://wa.me/?text=${encodeURIComponent(
+    bookingTicketText,
+  )}`;
+  const ticketEmailUrl = `mailto:?subject=${encodeURIComponent(
+    `Vishnu Tours Booking ${confirmedBooking?.bookingId || ""}`,
+  )}&body=${encodeURIComponent(bookingTicketText)}`;
+
+  async function shareBookingTicket() {
+    if (!bookingTicketText || !confirmedBooking) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Vishnu Tours Booking ${confirmedBooking.bookingId}`,
+          text: bookingTicketText,
+        });
+        setTicketShareStatus("Booking details shared successfully.");
+        return;
+      }
+
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(bookingTicketText);
+        setTicketShareStatus(
+          "Booking details copied. You can paste and share them.",
+        );
+        return;
+      }
+
+      setTicketShareStatus("Please use WhatsApp or Email to share this booking.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setTicketShareStatus(
+        "Sharing was not completed. Please use WhatsApp or Email.",
+      );
+    }
+  }
+
   return (
     <main
       className="site-font-shell"
@@ -5954,6 +6022,38 @@ export default function Home() {
                   </strong>
                 </div>
               </div>
+              <div className="ticket-action-bar" aria-label="Booking ticket actions">
+                <button
+                  className="ticket-share-action"
+                  type="button"
+                  onClick={shareBookingTicket}
+                >
+                  <Share2 aria-hidden="true" />
+                  Share
+                </button>
+                <a
+                  className="ticket-whatsapp-action"
+                  href={ticketWhatsAppUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <WhatsAppIcon />
+                  WhatsApp
+                </a>
+                <a href={ticketEmailUrl}>
+                  <Mail aria-hidden="true" />
+                  Email
+                </a>
+                <button type="button" onClick={() => window.print()}>
+                  <Printer aria-hidden="true" />
+                  Print
+                </button>
+              </div>
+              {ticketShareStatus ? (
+                <small className="ticket-share-status" role="status">
+                  {ticketShareStatus}
+                </small>
+              ) : null}
               <button
                 className="primary-action inline-action"
                 type="button"
