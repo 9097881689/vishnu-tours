@@ -12367,3 +12367,332 @@ body {
     font-size: 10px;
   }
 }
+
+/* Final responsive layer for the public booking flow. */
+.hero.focused-booking-hero::before {
+  display: block;
+  background:
+    linear-gradient(90deg, rgba(239, 248, 255, 0.97) 0%, rgba(239, 248, 255, 0.88) 42%, rgba(239, 248, 255, 0.34) 68%, rgba(255, 245, 194, 0.12) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 58%, rgba(229, 243, 255, 0.4) 100%);
+  opacity: 1;
+}
+
+.focused-booking-hero .hero-copy,
+.focused-booking-hero .hero-copy h1,
+.focused-booking-hero .hero-copy p {
+  color: #09234d;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.login-card {
+  width: min(390px, calc(100vw - 28px));
+  padding: 28px;
+  border-radius: 8px;
+}
+
+.login-card button:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+
+@media (max-width: 640px) {
+  .hero.focused-booking-hero {
+    min-height: auto;
+    background-position: 59% top;
+  }
+
+  .hero.focused-booking-hero::before {
+    background:
+      linear-gradient(90deg, rgba(236, 247, 255, 0.96) 0%, rgba(236, 247, 255, 0.83) 56%, rgba(236, 247, 255, 0.34) 100%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(224, 241, 255, 0.48));
+  }
+
+  .focused-booking-hero .hero-content {
+    width: calc(100% - 20px);
+    padding: 22px 0 28px;
+  }
+
+  .focused-booking-hero .hero-copy {
+    width: min(69%, 266px);
+    min-height: 208px;
+    margin: 0;
+    text-align: left;
+  }
+
+  .focused-booking-hero .hero-copy h1 {
+    max-width: 260px;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .focused-booking-hero .hero-copy p {
+    max-width: 245px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .savaari-booking-panel {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px 12px 15px;
+    overflow: visible;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+  }
+
+  .savaari-booking-panel h2 {
+    margin-bottom: 10px;
+    font-size: 22px;
+  }
+
+  .savaari-booking-panel .route-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+
+  .savaari-booking-panel .route-form-row > * {
+    min-width: 0;
+    grid-column: auto;
+  }
+
+  .savaari-booking-panel .route-form-row > .choose-trip-field,
+  .savaari-booking-panel .route-form-row > .place-field,
+  .savaari-booking-panel .route-form-row > .local-duty-summary,
+  .savaari-booking-panel .route-form-row > .km-field,
+  .savaari-booking-panel .route-form-row > .route-swap {
+    grid-column: 1 / -1;
+  }
+
+  .savaari-booking-panel .route-form-row > .route-swap {
+    display: none;
+  }
+
+  .savaari-booking-panel .booking-field,
+  .savaari-booking-panel .place-field,
+  .savaari-booking-panel .location-input-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .savaari-booking-panel .booking-field input,
+  .savaari-booking-panel .booking-field select,
+  .savaari-booking-panel .place-field input,
+  .savaari-booking-panel input[type="date"],
+  .savaari-booking-panel input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+  }
+
+  .savaari-booking-panel .location-input-wrap:has(.current-location-button) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px;
+    gap: 7px;
+  }
+
+  .savaari-booking-panel .current-location-button {
+    width: 68px;
+    min-width: 0;
+    height: 44px;
+    padding: 0 4px;
+  }
+
+  .savaari-booking-panel .explore-cabs-button {
+    width: min(76%, 220px);
+    min-height: 42px;
+    margin: 14px auto 0;
+  }
+
+  .savaari-booking-panel .booking-rating-strip {
+    width: calc(100% - 12px);
+    margin: 12px auto -32px;
+    padding: 10px 12px;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .homepage-why-grid,
+  .homepage-services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .homepage-step-card,
+  .homepage-service-card {
+    min-width: 0;
+    min-height: 132px;
+    padding: 14px 10px;
+  }
+
+  .homepage-step-card h3,
+  .homepage-service-card h3 {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .car-results-section.savaari-results {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .select-car-topbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .select-car-topbar > :first-child,
+  .select-car-topbar > button {
+    grid-column: 1 / -1;
+  }
+
+  .select-car-card {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 12px 0;
+  }
+
+  .select-car-card .car-art {
+    width: 112px;
+    min-width: 0;
+  }
+
+  .select-car-card .car-art img {
+    width: 108px;
+    height: 86px;
+    object-fit: contain;
+  }
+
+  .select-car-card .car-detail-block {
+    min-width: 0;
+  }
+
+  .select-car-card .car-detail-block h3 {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .select-car-card .car-detail-block ul {
+    padding-left: 17px;
+    font-size: 11px;
+  }
+
+  .select-car-card .car-price-block {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    width: 100%;
+    padding: 12px 0;
+    text-align: left;
+  }
+
+  .select-car-card .car-price-block button {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    width: auto;
+    min-width: 112px;
+  }
+
+  .select-car-card .promise-line {
+    grid-column: 1 / -1;
+    margin: 0 -12px;
+  }
+
+  .price-chart-page .simple-page-card {
+    width: calc(100% - 16px);
+    padding: 16px 12px;
+  }
+
+  .price-chart-page .simple-page-card h1 {
+    max-width: 100%;
+    font-size: 24px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .price-table-wrap {
+    overflow: visible;
+  }
+
+  .price-table,
+  .price-table tbody,
+  .price-table tr,
+  .price-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .price-table thead {
+    display: none;
+  }
+
+  .price-table {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .price-table tr {
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: 1px solid #d8e3ef;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .price-table td {
+    display: grid;
+    grid-template-columns: minmax(118px, 42%) minmax(0, 1fr);
+    gap: 10px;
+    padding: 9px 11px;
+    border: 0;
+    border-bottom: 1px solid #edf2f7;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .price-table td::before {
+    content: attr(data-label);
+    color: #52647b;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .price-table td:first-child {
+    background: #eef6ff;
+    color: #0a3c78;
+    font-weight: 800;
+  }
+
+  .price-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .hourly-rate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 350px) {
+  .savaari-booking-panel .route-form-row,
+  .homepage-why-grid,
+  .homepage-services-grid,
+  .hourly-rate-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .savaari-booking-panel .route-form-row > * {
+    grid-column: 1;
+  }
+}

@@ -244,6 +244,9 @@ const driverAssignmentConflictWindowMs = 6 * 60 * 60 * 1000;
 const noStoreHeaders = {
   "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 };
+const publicSettingsHeaders = {
+  "Cache-Control": "public, max-age=30, stale-while-revalidate=300",
+};
 const portalSessionMaxAgeSeconds = 12 * 60 * 60;
 const allowedSiteFonts = new Set([
   "Plus Jakarta Sans",
@@ -1914,7 +1917,6 @@ export async function GET(request: Request) {
     const bookingId = clean(url.searchParams.get("bookingId"));
     const mobile = clean(url.searchParams.get("mobile"));
 
-    await ensureBookingsTable();
     const activePortalSession = await getPortalSession(request);
 
     if (url.searchParams.get("settings") === "pricing") {
@@ -1928,7 +1930,7 @@ export async function GET(request: Request) {
           siteFont: await getSiteFont(),
           siteBranding: await getSiteBranding(),
         },
-        { headers: noStoreHeaders },
+        { headers: publicSettingsHeaders },
       );
     }
 
@@ -1956,7 +1958,7 @@ export async function GET(request: Request) {
           vehicles: rates,
           siteBranding: await getSiteBranding(),
         },
-        { headers: noStoreHeaders },
+        { headers: publicSettingsHeaders },
       );
     }
 

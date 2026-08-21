@@ -1190,6 +1190,7 @@ export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const [loginMobile, setLoginMobile] = useState("");
   const [portalStatus, setPortalStatus] = useState("");
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [portalRole, setPortalRole] = useState<PortalRole | null>(null);
   const [portalBookings, setPortalBookings] = useState<DashboardBooking[]>([]);
   const [driverVehicles, setDriverVehicles] = useState<DriverRow[]>([]);
@@ -2222,12 +2223,13 @@ export default function Home() {
   async function loadDashboard(options: { silent?: boolean } = {}) {
     const normalizedMobile = loginMobile.replace(/\D/g, "");
 
-    if (!normalizedMobile) {
-      setPortalStatus("Please Enter Mobile Number.");
+    if (normalizedMobile.length !== 10) {
+      setPortalStatus("Please Enter A Valid 10 Digit Mobile Number.");
       return;
     }
 
     if (!options.silent) {
+      setIsPortalLoading(true);
       setPortalStatus("Loading Portal...");
       setPortalRole(null);
       setDashboard(null);
@@ -2416,6 +2418,10 @@ export default function Home() {
         setPortalStatus(loginError);
         window.alert(loginError);
         setDashboard(null);
+      }
+    } finally {
+      if (!options.silent) {
+        setIsPortalLoading(false);
       }
     }
   }
@@ -5901,7 +5907,12 @@ export default function Home() {
             <article className="homepage-fleet-card" key={`home-${item.name}`}>
               <div className="homepage-fleet-photo">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.photo} alt={`${item.name} white cab`} />
+                <img
+                  src={item.photo}
+                  alt={`${item.name} white cab`}
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
               <div>
                 <small>{item.type}</small>
@@ -5957,7 +5968,12 @@ export default function Home() {
                 <article className="select-car-card" key={item.name}>
                   <div className="car-art">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.photo} alt={`${item.name} cab`} />
+                    <img
+                      src={item.photo}
+                      alt={`${item.name} cab`}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                   <div className="car-detail-block">
                     <h3>
@@ -6300,7 +6316,7 @@ export default function Home() {
           ].map(([title, text, image]) => (
             <article className="homepage-comfort-card" key={title}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt={title} />
+              <img src={image} alt={title} loading="lazy" decoding="async" />
               <div>
                 <h3>{title}</h3>
                 <p>{text}</p>
@@ -6724,12 +6740,16 @@ export default function Home() {
                   <div className="admin-login-row">
                     <input
                       value={loginMobile}
-                      onChange={(event) => setLoginMobile(event.target.value)}
+                      onChange={(event) =>
+                        setLoginMobile(event.target.value.replace(/\D/g, "").slice(0, 10))
+                      }
                       placeholder="Enter Mobile Number"
                       inputMode="tel"
+                      maxLength={10}
+                      autoComplete="tel"
                     />
-                    <button type="button" onClick={loadDashboard}>
-                      Sign In
+                    <button type="button" onClick={() => loadDashboard()} disabled={isPortalLoading}>
+                      {isPortalLoading ? "Opening..." : "Sign In"}
                     </button>
                   </div>
                 </>

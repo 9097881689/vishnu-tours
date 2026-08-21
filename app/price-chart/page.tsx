@@ -71,14 +71,14 @@ export default function PriceChartPage() {
             <tbody>
               {vehicles.map((item) => (
                 <tr key={item.vehicleName}>
-                  <td>{item.vehicleName}</td>
-                  <td>{formatInr(item.rates.perKm)}</td>
-                  <td>{formatInr(item.rates.local4hr)}</td>
-                  <td>{formatInr(item.rates.local8hr)}</td>
-                  <td>{formatInr(item.rates.local10hr)}</td>
-                  <td>{formatInr(item.rates.perHour)}</td>
-                  <td>{formatInr(item.rates.fullDay)}</td>
-                  <td>{formatInr(item.rates.vip)}</td>
+                  <td data-label="Cab">{item.vehicleName}</td>
+                  <td data-label="Per KM">{formatInr(item.rates.perKm)}</td>
+                  <td data-label="4 Hr / 45 KM">{formatInr(item.rates.local4hr)}</td>
+                  <td data-label="8 Hr / 90 KM">{formatInr(item.rates.local8hr)}</td>
+                  <td data-label="10 Hr / 100 KM">{formatInr(item.rates.local10hr)}</td>
+                  <td data-label="Extra Hour">{formatInr(item.rates.perHour)}</td>
+                  <td data-label="Full Day">{formatInr(item.rates.fullDay)}</td>
+                  <td data-label="VIP Pack">{formatInr(item.rates.vip)}</td>
                 </tr>
               ))}
             </tbody>
