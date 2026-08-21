@@ -452,7 +452,15 @@ function getAirportOption(value: string) {
 
 declare global {
   interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (
+        event: "payment.failed",
+        handler: (response: {
+          error?: { description?: string; reason?: string };
+        }) => void,
+      ) => void;
+    };
     google?: {
       maps?: {
         places?: {
@@ -2140,6 +2148,7 @@ export default function Home() {
       prefill: {
         name,
         contact: mobile,
+        email,
       },
       notes: {
         bookingId: activeBooking.bookingId,
@@ -2182,6 +2191,14 @@ export default function Home() {
     }
 
     const checkout = new window.Razorpay(checkoutOptions);
+
+    checkout.on("payment.failed", (response) => {
+      setIsPaying(false);
+      setPaymentStatus(
+        response.error?.description ||
+          "Payment Failed. No Amount Has Been Marked As Received.",
+      );
+    });
 
     checkout.open();
   }
@@ -3506,6 +3523,14 @@ export default function Home() {
 
     const checkout = new window.Razorpay(checkoutOptions);
 
+    checkout.on("payment.failed", (response) => {
+      setIsPaying(false);
+      setCollectionStatus(
+        response.error?.description ||
+          "Payment Failed. Ride Balance Is Still Pending.",
+      );
+    });
+
     checkout.open();
   }
 
@@ -3937,6 +3962,14 @@ export default function Home() {
             setPortalStatus("Payment Window Was Closed Before Completion.");
           },
         },
+      });
+
+      checkout.on("payment.failed", (response) => {
+        setIsPaying(false);
+        setPortalStatus(
+          response.error?.description ||
+            "Payment Failed. No Amount Has Been Marked As Received.",
+        );
       });
 
       checkout.open();
