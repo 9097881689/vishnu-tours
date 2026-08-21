@@ -6293,14 +6293,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-cta" aria-label="Book Vishnu Tours cab">
-        <div>
-          <span>Need A Cab From Mumbai?</span>
-          <strong>Choose Your Journey And Get A Clear Fare Before You Confirm.</strong>
-        </div>
-        <a href="#booking">Book Your Cab Now</a>
-      </section>
-
       <footer className="site-footer" id="contact">
         <div className="footer-column footer-brand-column">
           <Link className="footer-brand-lockup" href="/" aria-label="Vishnu Tours home">
@@ -6357,6 +6349,13 @@ export default function Home() {
             <WhatsAppIcon aria-hidden="true" />
             <span>WhatsApp Booking</span>
           </a>
+        </div>
+        <div className="footer-booking-cta" aria-label="Book Vishnu Tours cab">
+          <div>
+            <strong>Need A Cab From Mumbai?</strong>
+            <span>Choose Your Journey And Get A Clear Fare Before You Confirm.</span>
+          </div>
+          <a href="#booking">Book Your Cab Now</a>
         </div>
         <div className="footer-bottom">
           <span>© 2026 Vishnu Tours. All Rights Reserved.</span>
