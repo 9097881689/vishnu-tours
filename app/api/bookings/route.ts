@@ -164,6 +164,7 @@ type BookingPayload = {
   email?: string;
   packageType?: string;
   paymentMode?: string;
+  requiresOnlinePayment?: boolean;
   address?: string;
   emergencyContact?: string;
   drivingLicense?: string;
@@ -4148,6 +4149,7 @@ export async function POST(request: Request) {
     const email = clean(payload.email).toLowerCase();
     const packageType = normalizePackage(payload.packageType);
     const paymentMode = clean(payload.paymentMode) || "Pay advance after booking";
+    const requiresOnlinePayment = payload.requiresOnlinePayment === true;
     const oneSideKm = Number(payload.distanceKm);
 
     if (!tripType || !vehicle || !destination || !date || !name || !mobile || !email) {
@@ -4207,7 +4209,9 @@ export async function POST(request: Request) {
         ? Math.round(billableKm * adjustedRate.perKm)
         : adjustedRate[packageType];
     const createdAt = new Date().toISOString();
-    const initialRideStatus = "Booking Confirmed";
+    const initialRideStatus = requiresOnlinePayment
+      ? "Payment Pending"
+      : "Booking Confirmed";
 
     const temporaryBookingId =
       typeof crypto.randomUUID === "function"
@@ -4251,7 +4255,7 @@ export async function POST(request: Request) {
       .bind(
         temporaryBookingId,
         createdAt,
-        "pending",
+        requiresOnlinePayment ? "payment_pending" : "pending",
         tripType,
         vehicle,
         startPoint,
@@ -4283,32 +4287,38 @@ export async function POST(request: Request) {
       )
       .run();
     const rowId = Number(insertResult.meta.last_row_id);
-    const bookingId = formatBookingId(rowId);
+    const bookingId = requiresOnlinePayment
+      ? temporaryBookingId
+      : formatBookingId(rowId);
 
-    await env.DB.prepare("UPDATE bookings SET booking_id = ? WHERE id = ?")
-      .bind(bookingId, rowId)
-      .run();
+    if (!requiresOnlinePayment) {
+      await env.DB.prepare("UPDATE bookings SET booking_id = ? WHERE id = ?")
+        .bind(bookingId, rowId)
+        .run();
+    }
 
-    await recordStatusHistory({
-      bookingId,
-      oldStatus: "",
-      newStatus: initialRideStatus,
-      actorRole: "customer",
-      actorMobile: mobile,
-      reason: "Website Booking Created",
-    });
-    await recordAuditLog({
-      action: "booking_created",
-      entityType: "booking",
-      entityId: bookingId,
-      actorRole: "customer",
-      actorMobile: mobile,
-      details: { tripType, vehicle, pickupDatetime: date, estimatedFare },
-    });
+    if (!requiresOnlinePayment) {
+      await recordStatusHistory({
+        bookingId,
+        oldStatus: "",
+        newStatus: initialRideStatus,
+        actorRole: "customer",
+        actorMobile: mobile,
+        reason: "Website Booking Created",
+      });
+      await recordAuditLog({
+        action: "booking_created",
+        entityType: "booking",
+        entityId: bookingId,
+        actorRole: "customer",
+        actorMobile: mobile,
+        details: { tripType, vehicle, pickupDatetime: date, estimatedFare },
+      });
+    }
 
     const booking = {
       bookingId,
-      status: "pending",
+      status: requiresOnlinePayment ? "payment_pending" : "pending",
       startPoint,
       destination,
       oneSideKm,
@@ -4320,24 +4330,26 @@ export async function POST(request: Request) {
       estimatedFare,
     };
 
-    await sendAdminWhatsAppNotification({
-      bookingId,
-      tripType,
-      vehicle,
-      startPoint,
-      destination,
-      oneSideKm,
-      billableKm,
-      ratePerKm: adjustedRate.perKm,
-      estimatedFare,
-      pickupDatetime: date,
-      customerName: name,
-      customerMobile: mobile,
-      paymentMode,
-    });
+    if (!requiresOnlinePayment) {
+      await sendAdminWhatsAppNotification({
+        bookingId,
+        tripType,
+        vehicle,
+        startPoint,
+        destination,
+        oneSideKm,
+        billableKm,
+        ratePerKm: adjustedRate.perKm,
+        estimatedFare,
+        pickupDatetime: date,
+        customerName: name,
+        customerMobile: mobile,
+        paymentMode,
+      });
 
-    const savedBooking = await getBookingById(bookingId);
-    await sendBookingStatusEmail(savedBooking, "booking_confirmed");
+      const savedBooking = await getBookingById(bookingId);
+      await sendBookingStatusEmail(savedBooking, "booking_confirmed");
+    }
 
     return Response.json(
       {

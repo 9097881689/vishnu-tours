@@ -1973,6 +1973,7 @@ export default function Home() {
           email,
           packageType: selectedPackage.label,
           paymentMode,
+          requiresOnlinePayment: selectedPaymentAmount > 0,
         }),
       });
       const result = (await response.json()) as {
@@ -1992,7 +1993,11 @@ export default function Home() {
 
       setConfirmedBooking(result.booking);
       setAdvanceAmount(String(selectedPaymentAmount || result.booking.estimatedFare));
-      setBookingStatus(`${selectedCab} Booking Has Been Saved Successfully.`);
+      setBookingStatus(
+        selectedPaymentAmount > 0
+          ? "Payment Pending. Booking Will Be Confirmed Only After Successful Payment."
+          : `${selectedCab} Booking Has Been Confirmed Successfully.`,
+      );
       return result.booking;
     } catch {
       setBookingStatus("Booking Could Not Be Saved Because Of A Network Issue.");
@@ -2165,9 +2170,18 @@ export default function Home() {
       },
 	      handler: async (gatewayPayment: RazorpaySuccess) => {
           try {
-            await verifyRazorpayPayment(activeBooking.bookingId, gatewayPayment);
+            const verification = await verifyRazorpayPayment(
+              activeBooking.bookingId,
+              gatewayPayment,
+            );
+            if (verification.bookingId) {
+              setConfirmedBooking((current) =>
+                current ? { ...current, bookingId: verification.bookingId! } : current,
+              );
+            }
             setIsPaymentComplete(true);
             setShowBookingTicket(true);
+            setBookingStatus("Booking Confirmed After Secure Payment Verification.");
             setPaymentStatus("Payment Verified And Received Successfully.");
             playBookingConfirmSound();
           } catch (error) {
@@ -2181,7 +2195,8 @@ export default function Home() {
       modal: {
         ondismiss: () => {
           setIsPaying(false);
-        setPaymentStatus("Payment Was Closed Before Completion.");
+          setBookingStatus("Booking Is Not Confirmed Because Payment Was Not Completed.");
+          setPaymentStatus("Payment Was Closed Before Completion.");
         },
       },
     };
@@ -2194,6 +2209,7 @@ export default function Home() {
 
     checkout.on("payment.failed", (response) => {
       setIsPaying(false);
+      setBookingStatus("Booking Is Not Confirmed Because Payment Failed.");
       setPaymentStatus(
         response.error?.description ||
           "Payment Failed. No Amount Has Been Marked As Received.",
@@ -3864,6 +3880,7 @@ export default function Home() {
     const result = (await response.json()) as {
       success?: boolean;
       paymentAmount?: number;
+      bookingId?: string;
       error?: string;
     };
 
@@ -6350,13 +6367,9 @@ export default function Home() {
             <span>WhatsApp Booking</span>
           </a>
         </div>
-        <div className="footer-booking-cta" aria-label="Book Vishnu Tours cab">
-          <div>
-            <strong>Need A Cab From Mumbai?</strong>
-            <span>Choose Your Journey And Get A Clear Fare Before You Confirm.</span>
-          </div>
-          <a href="#booking">Book Your Cab Now</a>
-        </div>
+        <a className="footer-booking-button" href="#booking">
+          Book Your Cab Now
+        </a>
         <div className="footer-bottom">
           <span>© 2026 Vishnu Tours. All Rights Reserved.</span>
           <span>Safe & Comfortable Travel From Mumbai</span>

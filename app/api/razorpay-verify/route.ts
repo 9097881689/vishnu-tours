@@ -101,7 +101,19 @@ export async function POST(request: Request) {
 
     if (order.status === "Verified") {
       if (order.payment_id === paymentId) {
-        return Response.json({ success: true, alreadyVerified: true });
+        const settledPayment = await env.DB.prepare(
+          `SELECT booking_id
+           FROM payment_transactions
+           WHERE reference_number = ?
+           LIMIT 1`,
+        )
+          .bind(paymentId)
+          .first<{ booking_id: string }>();
+        return Response.json({
+          success: true,
+          alreadyVerified: true,
+          bookingId: settledPayment?.booking_id || order.booking_id,
+        });
       }
       return Response.json({ error: "Payment order is already settled." }, { status: 409 });
     }
@@ -126,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     const booking = await env.DB.prepare(
-      `SELECT customer_mobile, driver_mobile, estimated_fare, extra_amount,
+      `SELECT id, customer_mobile, driver_mobile, estimated_fare, extra_amount,
         payment_amount, ride_status
        FROM bookings
        WHERE booking_id = ?
@@ -134,6 +146,7 @@ export async function POST(request: Request) {
     )
       .bind(bookingId)
       .first<{
+        id: number;
         customer_mobile: string;
         driver_mobile: string;
         estimated_fare: number;
@@ -145,6 +158,11 @@ export async function POST(request: Request) {
     if (!booking) {
       return Response.json({ error: "Booking was not found." }, { status: 404 });
     }
+
+    const isInitialBookingPayment = bookingId.startsWith("PENDING-");
+    const confirmedBookingId = isInitialBookingPayment
+      ? `VTT${String(booking.id).padStart(3, "0")}`
+      : bookingId;
 
     const paidNow = Math.round(Number(order.amount_paise || 0) / 100);
     const totalPayable =
@@ -169,10 +187,19 @@ export async function POST(request: Request) {
       ).bind(paymentId, now, orderId),
       env.DB.prepare(
         `UPDATE bookings
-         SET payment_amount = ?, payment_status = ?,
+         SET booking_id = ?, status = CASE WHEN ? THEN 'pending' ELSE status END,
+           ride_status = CASE WHEN ? THEN 'Booking Confirmed' ELSE ride_status END,
+           payment_amount = ?, payment_status = ?,
            payment_collection_mode = 'payment_gateway'
          WHERE booking_id = ?`,
-      ).bind(updatedPaid, paymentStatus, bookingId),
+      ).bind(
+        confirmedBookingId,
+        isInitialBookingPayment ? 1 : 0,
+        isInitialBookingPayment ? 1 : 0,
+        updatedPaid,
+        paymentStatus,
+        bookingId,
+      ),
       env.DB.prepare(
         `INSERT INTO payment_transactions (
           booking_id, customer_mobile, driver_mobile, amount,
@@ -180,7 +207,7 @@ export async function POST(request: Request) {
           settlement_status, created_by_role, created_by_mobile, created_at
         ) VALUES (?, ?, ?, ?, ?, 'Razorpay', ?, ?, 'Settled Online', ?, ?, ?)`,
       ).bind(
-        bookingId,
+        confirmedBookingId,
         booking.customer_mobile,
         booking.driver_mobile || order.created_by_mobile,
         paidNow,
@@ -199,22 +226,41 @@ export async function POST(request: Request) {
           details_json, created_at
         ) VALUES ('razorpay_payment_verified', 'booking', ?, ?, ?, ?, ?)`,
       ).bind(
-        bookingId,
+        confirmedBookingId,
         order.purpose === "driver_balance_collection" ? "driver" : "customer",
         order.created_by_mobile || booking.customer_mobile,
         JSON.stringify({ orderId, paymentId, paidNow, updatedPaid, paymentStatus }),
         now,
       ),
+      ...(isInitialBookingPayment
+        ? [
+            env.DB.prepare(
+              `INSERT INTO booking_status_history (
+                booking_id, old_status, new_status, actor_role, actor_mobile,
+                reason, remarks, created_at
+              ) VALUES (?, 'Payment Pending', 'Booking Confirmed', 'customer', ?,
+                'Razorpay Payment Verified', '', ?)`,
+            ).bind(confirmedBookingId, booking.customer_mobile, now),
+          ]
+        : []),
     ]);
 
     const updatedBooking = await env.DB.prepare(
       "SELECT * FROM bookings WHERE booking_id = ? LIMIT 1",
     )
-      .bind(bookingId)
+      .bind(confirmedBookingId)
       .first<BookingEmailRecord>();
-    await sendBookingStatusEmail(updatedBooking, "payment_received");
+    await sendBookingStatusEmail(
+      updatedBooking,
+      isInitialBookingPayment ? "booking_confirmed" : "payment_received",
+    );
 
-    return Response.json({ success: true, paymentStatus, paymentAmount: updatedPaid });
+    return Response.json({
+      success: true,
+      bookingId: confirmedBookingId,
+      paymentStatus,
+      paymentAmount: updatedPaid,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payment verification failed.";
     return Response.json({ error: message }, { status: 500 });

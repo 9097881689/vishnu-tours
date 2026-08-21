@@ -91,7 +91,9 @@ test("verifies Razorpay signatures on the server before updating payment", async
   assert.match(verifyApi, /crypto\.subtle\.sign/);
   assert.match(verifyApi, /safeEqual\(expectedSignature, signature\)/);
   assert.match(verifyApi, /payment_transactions/);
-  assert.match(verifyApi, /sendBookingStatusEmail\(updatedBooking, "payment_received"\)/);
+  assert.match(verifyApi, /isInitialBookingPayment \? "booking_confirmed" : "payment_received"/);
+  assert.match(verifyApi, /bookingId\.startsWith\("PENDING-"\)/);
+  assert.match(verifyApi, /ride_status = CASE WHEN \? THEN 'Booking Confirmed'/);
 });
 
 test("emails every important booking lifecycle update to customer and admin", async () => {
