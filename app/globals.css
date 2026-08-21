@@ -12696,3 +12696,394 @@ body {
     grid-column: 1;
   }
 }
+
+/* Premium cab-selection and booking feedback. */
+.mobile-results-heading {
+  width: min(1100px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 28px 0 18px;
+  text-align: center;
+}
+
+.mobile-results-heading span,
+.cab-category {
+  color: #0b63ce;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mobile-results-heading h1 {
+  margin: 4px 0;
+  color: #071b3f;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.mobile-results-heading p {
+  margin: 0;
+  color: #617089;
+  font-size: 13px;
+}
+
+.select-car-card {
+  position: relative;
+}
+
+.cab-value-badge {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: #08783e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cab-spec-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 9px 0 14px;
+}
+
+.cab-spec-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #40516a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cab-spec-row svg {
+  width: 14px;
+  height: 14px;
+  color: #0b63ce;
+}
+
+.booking-processing-overlay {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(4, 19, 43, 0.72);
+  color: #fff;
+  text-align: center;
+  backdrop-filter: blur(5px);
+}
+
+.booking-processing-overlay strong {
+  font-size: 18px;
+}
+
+.booking-processing-overlay small {
+  color: #dbeafe;
+}
+
+.booking-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ff7618;
+  border-radius: 50%;
+  animation: booking-spin 0.75s linear infinite;
+}
+
+@keyframes booking-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .savaari-results {
+    min-height: 100vh;
+    padding-bottom: 24px;
+    background: #f3f6fa;
+  }
+
+  .mobile-results-heading {
+    width: 100%;
+    padding: 18px 16px 12px;
+    background: #fff;
+  }
+
+  .mobile-results-heading h1 {
+    font-size: 24px;
+  }
+
+  .mobile-results-heading p {
+    font-size: 11px;
+  }
+
+  .select-car-topbar {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px 14px;
+    border-top: 1px solid #e3eaf2;
+    border-bottom: 1px solid #d6e0ec;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 6px 18px rgba(15, 35, 64, 0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  .select-car-topbar > :first-child {
+    grid-column: 1 / -1;
+    padding-right: 104px;
+  }
+
+  .select-car-topbar > :first-child span {
+    display: none;
+  }
+
+  .select-car-topbar > :first-child strong {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .select-car-topbar span {
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  .select-car-topbar strong {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .select-car-topbar > button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    padding: 7px 9px;
+    border: 1px solid #bfd4ed;
+    border-radius: 5px;
+    background: #f2f8ff;
+    color: #0759bd;
+    font-size: 10px;
+    text-decoration: none;
+  }
+
+  .vehicle-card-list {
+    width: calc(100% - 20px);
+    gap: 12px;
+    padding-top: 12px;
+  }
+
+  .select-car-card {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 12px 0;
+    border: 1px solid #dae3ee;
+    border-radius: 7px;
+    box-shadow: 0 5px 16px rgba(25, 50, 84, 0.08);
+  }
+
+  .select-car-card .car-art {
+    width: 112px;
+    min-height: 132px;
+    border-radius: 5px;
+    background: #fff;
+  }
+
+  .select-car-card .car-art img {
+    width: 108px;
+    height: 94px;
+    object-fit: contain;
+    filter: drop-shadow(0 9px 9px rgba(15, 23, 42, 0.14));
+  }
+
+  .cab-value-badge {
+    top: 8px;
+    left: 8px;
+  }
+
+  .select-car-card .car-detail-block {
+    padding: 4px 0 8px;
+  }
+
+  .select-car-card .car-detail-block h3 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 5px;
+    margin: 3px 0 4px;
+    color: #102342;
+    font-size: 15px;
+    line-height: 1.28;
+  }
+
+  .select-car-card .car-detail-block h3 span {
+    flex: 0 0 auto;
+    padding: 3px 5px;
+    font-size: 9px;
+  }
+
+  .cab-spec-row {
+    gap: 6px;
+    margin: 7px 0 8px;
+  }
+
+  .cab-spec-row span {
+    font-size: 9px;
+  }
+
+  .cab-spec-row svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .select-car-card .car-detail-block ul {
+    gap: 5px;
+    margin-bottom: 5px;
+    padding-left: 14px;
+    color: #526177;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+
+  .select-car-card .link-button {
+    font-size: 10px;
+  }
+
+  .select-car-card .car-price-block {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 128px;
+    gap: 3px 10px;
+    align-items: center;
+    padding: 11px 0 12px;
+    border-top: 1px solid #e7edf4;
+    text-align: left;
+  }
+
+  .select-car-card .car-price-block > :not(button) {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .select-car-card .discount-line,
+  .select-car-card .saving-line {
+    font-size: 10px;
+  }
+
+  .select-car-card .car-price-block del {
+    font-size: 10px;
+  }
+
+  .select-car-card .car-price-block strong {
+    color: #0a4fa9;
+    font-size: 25px;
+    line-height: 1.05;
+  }
+
+  .select-car-card .car-price-block small {
+    font-size: 9px;
+  }
+
+  .select-car-card .car-price-block button {
+    grid-column: 2;
+    grid-row: 1 / span 5;
+    width: 128px;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    border-radius: 5px;
+    font-size: 12px;
+  }
+
+  .select-car-card .promise-line {
+    grid-column: 1 / -1;
+    margin: 0 -12px;
+    padding: 8px 12px;
+    background: #eaf7ff;
+    color: #075985;
+    font-size: 9px;
+    text-align: center;
+  }
+
+  .result-promise-band {
+    display: flex;
+    width: calc(100% - 20px);
+    gap: 0;
+    padding: 12px 8px;
+    border-radius: 6px;
+    background: #082e63;
+  }
+
+  .result-promise-band strong {
+    flex: 1;
+    padding: 0 7px;
+    border-right: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 9px;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .result-promise-band strong:last-child {
+    border-right: 0;
+  }
+
+  .review-page {
+    width: 100%;
+    min-height: 100vh;
+    padding: 10px;
+    gap: 12px;
+    background: #f4f7fb;
+  }
+
+  .review-main,
+  .payment-sidebar,
+  .review-card,
+  .payment-options-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .review-card,
+  .payment-options-card {
+    padding: 15px 12px;
+    border-radius: 7px;
+  }
+
+  .review-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .review-form-grid > label,
+  .review-form-grid .wide-field,
+  .review-form-grid input {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1;
+    box-sizing: border-box;
+  }
+
+  .payment-option {
+    min-width: 0;
+    padding: 12px 10px;
+  }
+
+  .coupon-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-spinner { animation-duration: 1.5s; }
+}

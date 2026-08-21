@@ -1749,17 +1749,13 @@ export default function Home() {
 
   useEffect(() => {
     if (bookingView === "cars") {
-      window.setTimeout(() => {
-        carResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
     }
   }, [bookingView]);
 
   useEffect(() => {
     if (bookingView === "review") {
-      window.setTimeout(() => {
-        reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
     }
   }, [bookingView]);
 
@@ -5928,6 +5924,11 @@ export default function Home() {
 
       {bookingView === "cars" ? (
         <section className="car-results-section savaari-results" ref={carResultsRef}>
+          <div className="mobile-results-heading">
+            <span>{vehicleRates.length} Cabs Available</span>
+            <h1>Choose Your Cab</h1>
+            <p>Final Fare With GST, Capacity And Package Details In One Place.</p>
+          </div>
           <div className="select-car-topbar">
             <div>
               <span>Home &gt; Select Car</span>
@@ -5958,7 +5959,7 @@ export default function Home() {
             </button>
           </div>
           <div className="vehicle-card-list" aria-live="polite">
-            {vehicleRates.map((item) => {
+            {vehicleRates.map((item, index) => {
               const tax = Math.round(item.estimatedFare * 0.05);
               const total = item.estimatedFare + tax;
               const marketTotal = Math.round(total / 0.9);
@@ -5966,6 +5967,7 @@ export default function Home() {
 
               return (
                 <article className="select-car-card" key={item.name}>
+                  {index === 0 ? <span className="cab-value-badge">Best Value</span> : null}
                   <div className="car-art">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -5976,10 +5978,15 @@ export default function Home() {
                     />
                   </div>
                   <div className="car-detail-block">
+                    <small className="cab-category">{item.type}</small>
                     <h3>
                       {item.name} <span>4.8 ★</span>
                     </h3>
-                    <p>{item.type} | {item.seats} AC Cab</p>
+                    <div className="cab-spec-row">
+                      <span><Users aria-hidden="true" /> {item.seats}</span>
+                      <span><WalletCards aria-hidden="true" /> {item.luggage}</span>
+                      <span><CheckCircle2 aria-hidden="true" /> AC Cab</span>
+                    </div>
                     <ul>
                       <li>Driver Allowance Included</li>
                       <li>
@@ -6001,13 +6008,13 @@ export default function Home() {
                     <del>{formatInr(marketTotal)}</del>
                     <strong>{formatInr(total)}</strong>
                     <span className="saving-line">You Save {formatInr(saving)}</span>
-                    <small>Including GST 5%: {formatInr(tax)}</small>
+                    <small>Final Fare • Includes GST {formatInr(tax)}</small>
                     <button
                       className="book-cab-button select-car-button"
                       type="button"
                       onClick={() => reviewSelectedCab(item.name)}
                     >
-                      Select Car
+                      Book This Cab
                     </button>
                   </div>
                   <div className="promise-line">
@@ -6027,6 +6034,13 @@ export default function Home() {
 
       {bookingView === "review" ? (
         <section className="review-page" ref={reviewRef}>
+          {isBooking || isPaying ? (
+            <div className="booking-processing-overlay" role="status" aria-live="polite">
+              <span className="booking-spinner" aria-hidden="true" />
+              <strong>{isPaying ? "Opening Secure Payment" : "Confirming Your Booking"}</strong>
+              <small>Please Keep This Page Open.</small>
+            </div>
+          ) : null}
           {showBookingTicket && confirmedBooking ? (
             <article className="payment-complete-screen" aria-live="polite">
               <span>{isPaymentComplete ? "Payment Successful" : "Booking Confirmed"}</span>

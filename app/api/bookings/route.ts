@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import {
   sendBookingStatusEmail,
   type BookingEmailEvent,
@@ -1418,10 +1418,35 @@ async function getEffectiveBookingRate(vehicle: string) {
   };
 }
 
+let bookingSchemaReady = false;
+
 async function ensureBookingsTable() {
   const db = env.DB;
   if (!db) {
     throw new Error("D1 database binding DB is not configured.");
+  }
+
+  if (bookingSchemaReady) {
+    return;
+  }
+
+  const existingSchema = await db
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM sqlite_master
+       WHERE type = 'table'
+         AND name IN (
+           'app_settings', 'portal_sessions', 'bookings', 'drivers',
+           'driver_vehicles', 'driver_withdrawals', 'booking_status_history',
+           'assignment_history', 'payment_transactions', 'driver_cash_deposits',
+           'audit_logs', 'payment_gateway_orders'
+         )`,
+    )
+    .first<{ total: number }>();
+
+  if (Number(existingSchema?.total || 0) === 12) {
+    bookingSchemaReady = true;
+    return;
   }
 
   await db
@@ -1907,6 +1932,7 @@ async function ensureBookingsTable() {
   }
 
   await db.prepare("PRAGMA optimize").run().catch(() => undefined);
+  bookingSchemaReady = true;
 }
 
 export async function GET(request: Request) {
@@ -4333,24 +4359,30 @@ export async function POST(request: Request) {
     };
 
     if (!requiresOnlinePayment) {
-      await sendAdminWhatsAppNotification({
-        bookingId,
-        tripType,
-        vehicle,
-        startPoint,
-        destination,
-        oneSideKm,
-        billableKm,
-        ratePerKm: adjustedRate.perKm,
-        estimatedFare,
-        pickupDatetime: date,
-        customerName: name,
-        customerMobile: mobile,
-        paymentMode,
-      });
+      waitUntil(
+        (async () => {
+          await sendAdminWhatsAppNotification({
+            bookingId,
+            tripType,
+            vehicle,
+            startPoint,
+            destination,
+            oneSideKm,
+            billableKm,
+            ratePerKm: adjustedRate.perKm,
+            estimatedFare,
+            pickupDatetime: date,
+            customerName: name,
+            customerMobile: mobile,
+            paymentMode,
+          });
 
-      const savedBooking = await getBookingById(bookingId);
-      await sendBookingStatusEmail(savedBooking, "booking_confirmed");
+          const savedBooking = await getBookingById(bookingId);
+          await sendBookingStatusEmail(savedBooking, "booking_confirmed");
+        })().catch((error) => {
+          console.error("Booking notification failed", error);
+        }),
+      );
     }
 
     return Response.json(
