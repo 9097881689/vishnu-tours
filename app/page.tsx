@@ -5526,17 +5526,13 @@ export default function Home() {
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
           <a href="#home">Home</a>
-          <Link href="/about-us">About Us</Link>
           <a href="#fleet">Our Fleet</a>
-          <a href="#booking">Outstation</a>
-          <a href="#booking">Airport Transfer</a>
-          <a href="#booking">Local Rental</a>
+          <a href="#services">Services</a>
+          <Link href="/about-us">About Us</Link>
+          <Link href="/price-chart">Pricing</Link>
           <a href="#contact">Contact Us</a>
         </nav>
         <div className="header-actions">
-          <a className="call-button" href={whatsappUrl} target="_blank">
-            WhatsApp 7004291529
-          </a>
           <button
             className="login-button"
             type="button"
@@ -5544,6 +5540,7 @@ export default function Home() {
           >
             Login
           </button>
+          <a className="header-book-button" href="#booking">Book Now</a>
         </div>
       </header>
 
@@ -5552,19 +5549,18 @@ export default function Home() {
       <section className="hero focused-booking-hero" id="home">
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="hero-kicker">Mumbai&apos;s <b>Most Trusted</b> Cab Service</p>
-            <h1>Stress Free Travel <span>Every Mile With Us</span></h1>
+            <p className="hero-kicker">Mumbai&apos;s Most Trusted</p>
+            <h1>Stress Free Travel Every Mile With Us</h1>
             <p>
               Experience Safe, Comfortable And Timely Rides With Vishnu Tours.
             </p>
             <div className="hero-service-points" aria-label="Service benefits">
               <span><b>24x7 Support</b> Always Available</span>
               <span><b>Clean & Safe Cabs</b> Well Maintained</span>
-              <span><b>On-Time Service</b> Always On Time</span>
-              <span><b>Affordable Pricing</b> Best Fare Guarantee</span>
             </div>
           </div>
 
+          <div className="hero-booking-stack">
           <form
             className="booking-panel savaari-booking-panel"
             id="booking"
@@ -5573,7 +5569,10 @@ export default function Home() {
               continueToRates();
             }}
           >
-            <h2 className="booking-title">Cab Booking</h2>
+            <div className="booking-card-heading">
+              <h2 className="booking-title">Book A Ride</h2>
+              <span className="booking-steps" aria-label="Booking step 1 of 3"><b>1</b><i>2</i><i>3</i></span>
+            </div>
             <div className="trip-tabs" role="tablist" aria-label="Trip type">
               {bookingTypes.map((type) => (
                 <button
@@ -5931,12 +5930,18 @@ export default function Home() {
               <p className="booking-error">{bookingStatus}</p>
             ) : null}
             <button className="submit-button explore-cabs-button" type="submit">
-              Explore Cabs
+              Select Vehicle <span aria-hidden="true">→</span>
             </button>
             <p className="booking-rating-strip">
               24x7 Support | Free Cancellation Before Assignment | Mumbai Pickup Only
             </p>
           </form>
+          <div className="hero-tracking-card" aria-label="Live booking updates">
+            <span className="tracking-car-icon"><CarFront aria-hidden="true" /></span>
+            <span><small>Live Booking Updates</small><strong>Journey Updates After Confirmation</strong></span>
+            <b>Active</b>
+          </div>
+          </div>
         </div>
       </section>
 
@@ -5960,6 +5965,7 @@ export default function Home() {
                 <small>{item.type}</small>
                 <h3>{item.name}</h3>
                 <p>{item.seats} | {item.luggage} | White AC Cab</p>
+                <a className="fleet-book-button" href="#booking">Book Now</a>
               </div>
             </article>
           ))}
@@ -6354,7 +6360,6 @@ export default function Home() {
             { title: "Mumbai Local Duty", text: "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", icon: <MapPinned /> },
             { title: "All India Outstation", text: "Mumbai Pickup For One Way And Round Trip Travel.", icon: <Route /> },
             { title: "VIP Event Movement", text: "Clean White Cars For Weddings, Events And Executive Guests.", icon: <Crown /> },
-            { title: "Booking Support", text: "Clear Fare, Cab Selection And Confirmation Before Travel.", icon: <Headphones /> },
           ].map(({ title, text, icon }) => (
             <article className="homepage-service-card" key={title}>
               <div className="homepage-service-image" aria-hidden="true">
@@ -6406,52 +6411,34 @@ export default function Home() {
               <small>Corporate Cabs From Mumbai</small>
             </span>
           </Link>
-          <span className="footer-legal-name">
-            <b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS
-          </span>
-          <span className="footer-legal-name">
-            <b>Udyam:</b> UDYAM-MH-18-0242307
-          </span>
-          <span>Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers And Outstation Trips.</span>
+          <span>Corporate Cabs From Mumbai</span>
         </div>
         <div className="footer-column">
-          <strong>Quick Links</strong>
-          <a href="#home">Home</a>
-          <Link href="/about-us">About Us</Link>
-          <a href="#fleet">Our Fleet</a>
-          <a href="#booking">Book Cab</a>
-        </div>
-        <div className="footer-column">
-          <strong>Our Services</strong>
-          <a href="#booking">Outstation Trips</a>
-          <a href="#booking">Airport Transfers</a>
-          <a href="#booking">In-City Travel</a>
-          <a href="#services">Corporate Travel</a>
-        </div>
-        <div className="footer-column">
-          <strong>Company</strong>
-          <Link href="/privacy-policy">Privacy Policy</Link>
-          <Link href="/terms-and-conditions">Terms And Conditions</Link>
-          <Link href="/cancellation-refund">Cancellation And Refund</Link>
-          <Link href="/cookie-policy">Cookie Policy</Link>
+          <strong>Company Info</strong>
+          <span><b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS</span>
+          <span><b>Udyam:</b> UDYAM-MH-18-0242307</span>
         </div>
         <div className="footer-column">
           <strong>Contact Us</strong>
-          <Link href="/price-chart">Live Price Chart</Link>
-          <span>Mumbai, Maharashtra, India</span>
-          <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
           <a className="footer-phone-link" href="tel:+917004291529">
             <PhoneCall aria-hidden="true" />
             <span>+91 7004291529</span>
           </a>
+          <a href="mailto:cricketsikho@gmail.com">cricketsikho@gmail.com</a>
+          <span>Mumbai, Maharashtra, India</span>
           <a className="footer-whatsapp-link" href={whatsappUrl} target="_blank">
             <WhatsAppIcon aria-hidden="true" />
-            <span>WhatsApp Booking</span>
+            <span>WhatsApp</span>
           </a>
         </div>
-        <a className="footer-booking-button" href="#booking">
-          Book Your Cab Now
-        </a>
+        <div className="footer-column">
+          <strong>Legal</strong>
+          <Link href="/privacy-policy">Privacy Policy</Link>
+          <Link href="/terms-and-conditions">Terms And Conditions</Link>
+          <Link href="/cancellation-refund">Cancellation And Refund</Link>
+          <Link href="/cookie-policy">Cookie Policy</Link>
+          <Link href="/price-chart">Live Price Chart</Link>
+        </div>
         <div className="footer-bottom">
           <span>© 2026 Vishnu Tours. All Rights Reserved.</span>
           <span>Safe & Comfortable Travel From Mumbai</span>

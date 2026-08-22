@@ -117,19 +117,18 @@ export function PublicHeader() {
       </Link>
       <nav className="main-nav" aria-label="Primary navigation">
         <Link href="/#home">Home</Link>
-        <Link href="/about-us">About Us</Link>
         <Link href="/#fleet">Our Fleet</Link>
-        <Link href="/#booking">Outstation</Link>
-        <Link href="/#booking">Airport Transfer</Link>
-        <Link href="/#booking">Local Rental</Link>
+        <Link href="/#services">Services</Link>
+        <Link href="/about-us">About Us</Link>
+        <Link href="/price-chart">Pricing</Link>
         <Link href="/#contact">Contact Us</Link>
       </nav>
       <div className="header-actions">
-        <a className="call-button" href={whatsappUrl} target="_blank">
-          WhatsApp 7004291529
-        </a>
         <Link className="login-button header-login-link" href="/">
           Login
+        </Link>
+        <Link className="header-book-button" href="/#booking">
+          Book Now
         </Link>
       </div>
     </header>
