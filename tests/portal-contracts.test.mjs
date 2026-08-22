@@ -96,6 +96,22 @@ test("verifies Razorpay signatures on the server before updating payment", async
   assert.match(verifyApi, /ride_status = CASE WHEN \? THEN 'Booking Confirmed'/);
 });
 
+test("allows only admin-approved normal Razorpay refunds", async () => {
+  const [refundApi, page] = await Promise.all([
+    source("app/api/razorpay-refund/route.ts"),
+    source("app/page.tsx"),
+  ]);
+
+  assert.match(refundApi, /Only Admin Can Initiate Refund/);
+  assert.match(refundApi, /X-Refund-Idempotency/);
+  assert.match(refundApi, /speed: "normal"/);
+  assert.match(refundApi, /payment_gateway_refunds/);
+  assert.match(refundApi, /razorpay_refund_initiated/);
+  assert.match(refundApi, /sendBookingStatusEmail\(updatedBooking, "refund_updated"\)/);
+  assert.match(page, /Approve Razorpay Refund/);
+  assert.match(page, /\/api\/razorpay-refund/);
+});
+
 test("emails every important booking lifecycle update to customer and admin", async () => {
   const [bookingsApi, emailService, envExample] = await Promise.all([
     source("app/api/bookings/route.ts"),

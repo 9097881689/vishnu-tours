@@ -13087,3 +13087,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .booking-spinner { animation-duration: 1.5s; }
 }
+
+.razorpay-refund-note {
+  margin: 10px 0 2px;
+  padding: 11px 12px;
+  border: 1px solid #b8d8f7;
+  border-radius: 6px;
+  background: #eff7ff;
+  color: #244464;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.collection-actions button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}

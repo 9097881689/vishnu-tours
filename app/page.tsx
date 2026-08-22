@@ -1336,6 +1336,7 @@ export default function Home() {
     "online",
   );
   const [adminRefundDriverMobile, setAdminRefundDriverMobile] = useState("");
+  const [isAdminRefunding, setIsAdminRefunding] = useState(false);
   const [priceAdjustmentPercent, setPriceAdjustmentPercent] = useState(0);
   const [priceAdjustmentInput, setPriceAdjustmentInput] = useState("0");
   const [priceAdjustmentStatus, setPriceAdjustmentStatus] = useState("");
@@ -3816,7 +3817,7 @@ export default function Home() {
   }
 
   async function submitAdminRefund() {
-    if (!adminRefundPrompt) {
+    if (!adminRefundPrompt || isAdminRefunding) {
       return;
     }
 
@@ -3841,6 +3842,46 @@ export default function Home() {
       return;
     }
 
+    if (adminRefundSource === "online") {
+      setIsAdminRefunding(true);
+      setPortalStatus("Initiating Razorpay Normal Refund...");
+
+      try {
+        const response = await fetch("/api/razorpay-refund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: adminRefundPrompt.booking_id,
+            amount: refundAmount,
+          }),
+        });
+        const result = (await response.json()) as {
+          error?: string;
+          amount?: number;
+          refundIds?: string[];
+          estimatedSettlement?: string;
+          warning?: string;
+        };
+
+        if (!response.ok) {
+          setPortalStatus(result.error || "Razorpay Refund Could Not Be Initiated.");
+          return;
+        }
+
+        setAdminRefundPrompt(null);
+        await loadDashboard();
+        setPortalStatus(
+          `Razorpay Normal Refund Of ${formatInr(Number(result.amount || refundAmount))} Initiated. Customer Settlement: ${result.estimatedSettlement || "5-7 Working Days"}.${result.warning ? ` ${result.warning}` : ""}`,
+        );
+        return;
+      } catch {
+        setPortalStatus("Razorpay Refund Could Not Be Initiated. Please Try Again.");
+        return;
+      } finally {
+        setIsAdminRefunding(false);
+      }
+    }
+
     const selectedRefundDriver = drivers.find(
       (driver) => driver.mobile === adminRefundDriverMobile,
     );
@@ -3855,17 +3896,22 @@ export default function Home() {
       .includes("complete");
     const refundDriver = adminRefundSource === "driver_cash" ? selectedRefundDriver : undefined;
 
-    await updateBookingOperation(adminRefundPrompt.booking_id, {
-      refundStatus:
-        refundAmount === refundableAmount ? "Refund Completed" : "Partial Refund Completed",
-      refundAmount,
-      rideStatus: isRideComplete ? "Ride Complete With Refund" : "Ride Cancelled",
-      cancelReason: isRideComplete ? "" : "Cancelled After Refund",
-      collectionMode: adminRefundSource === "driver_cash" ? "refund_driver_cash" : "refund_online",
-      refundDriverName: refundDriver?.name,
-      refundDriverMobile: refundDriver?.mobile,
-    });
-    setAdminRefundPrompt(null);
+    setIsAdminRefunding(true);
+    try {
+      await updateBookingOperation(adminRefundPrompt.booking_id, {
+        refundStatus:
+          refundAmount === refundableAmount ? "Refund Completed" : "Partial Refund Completed",
+        refundAmount,
+        rideStatus: isRideComplete ? "Ride Complete With Refund" : "Ride Cancelled",
+        cancelReason: isRideComplete ? "" : "Cancelled After Refund",
+        collectionMode: "refund_driver_cash",
+        refundDriverName: refundDriver?.name,
+        refundDriverMobile: refundDriver?.mobile,
+      });
+      setAdminRefundPrompt(null);
+    } finally {
+      setIsAdminRefunding(false);
+    }
   }
 
   async function verifyRazorpayPayment(bookingId: string, payment: RazorpaySuccess) {
@@ -6684,17 +6730,23 @@ export default function Home() {
               </>
             ) : null}
             <label className="admin-payment-field">
-              <span>Refund Paid By</span>
+              <span>Refund Method</span>
               <select
                 value={adminRefundSource}
                 onChange={(event) =>
                   setAdminRefundSource(event.target.value as "online" | "driver_cash")
                 }
               >
-                <option value="online">Online / Admin</option>
-                <option value="driver_cash">Driver Cash</option>
+                <option value="online">Razorpay Normal Refund</option>
+                <option value="driver_cash">Manual Driver Cash Refund</option>
               </select>
             </label>
+            {adminRefundSource === "online" ? (
+              <p className="razorpay-refund-note">
+                Admin Approval Required. Normal Refund Has No Instant Refund Fee And Usually
+                Reaches The Original Payment Method In 5-7 Working Days.
+              </p>
+            ) : null}
             {adminRefundSource === "driver_cash" ? (
               <label className="admin-payment-field">
                 <span>Select Driver</span>
@@ -6715,13 +6767,22 @@ export default function Home() {
               </label>
             ) : null}
             <div className="collection-actions">
-              <button type="button" onClick={submitAdminRefund}>
-                Confirm Refund
+              <button
+                type="button"
+                onClick={submitAdminRefund}
+                disabled={isAdminRefunding}
+              >
+                {isAdminRefunding
+                  ? "Processing Refund..."
+                  : adminRefundSource === "online"
+                    ? "Approve Razorpay Refund"
+                    : "Confirm Manual Refund"}
               </button>
               <button
                 className="ghost-action"
                 type="button"
                 onClick={() => setAdminRefundPrompt(null)}
+                disabled={isAdminRefunding}
               >
                 Close
               </button>
