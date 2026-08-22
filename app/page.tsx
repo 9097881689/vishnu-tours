@@ -5761,7 +5761,7 @@ export default function Home() {
                 </label>
               ) : (
               <>
-              <label className="place-field booking-field">
+              <label className="place-field booking-field from-location-field">
                 <span>{isAirportDrop ? "Pickup Location" : "From"}</span>
                 <div className="location-input-wrap">
                   <input
@@ -5827,7 +5827,7 @@ export default function Home() {
               <button className="route-swap" type="button" aria-label="Mumbai pickup only">
                 ⇄
               </button>
-              <label className="place-field booking-field">
+              <label className="place-field booking-field destination-location-field">
                 <span>{isAirportPickup ? "Drop Location" : "To"}</span>
                 <input
                   ref={toInputRef}
@@ -6426,7 +6426,6 @@ export default function Home() {
         <div className="footer-column">
           <strong>Company Info</strong>
           <span><b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS</span>
-          <span><b>Udyam:</b> UDYAM-MH-18-0242307</span>
         </div>
         <div className="footer-column">
           <strong>Contact Us</strong>

@@ -159,9 +159,10 @@ test("persists per-hour vehicle fares and adds excess ride time to final fare", 
 
 test("ships responsive role dashboard styling and all public policy pages", async () => {
   const css = await source("app/globals.css");
-  const [homePage, publicChrome] = await Promise.all([
+  const [homePage, publicChrome, aboutPage] = await Promise.all([
     source("app/page.tsx"),
     source("app/components/PublicChrome.tsx"),
+    source("app/about-us/page.tsx"),
   ]);
 
   assert.match(css, /\.role-dashboard-shell/);
@@ -170,8 +171,9 @@ test("ships responsive role dashboard styling and all public policy pages", asyn
   assert.match(css, /@media \(max-width: 500px\)/);
   assert.match(homePage, /Registered Enterprise:<\/b> VISHNU S\.TOURS &amp; TRAVELS/);
   assert.match(publicChrome, /Registered Enterprise:<\/b> VISHNU S\.TOURS &amp; TRAVELS/);
-  assert.match(homePage, /Udyam:<\/b> UDYAM-MH-18-0242307/);
-  assert.match(publicChrome, /Udyam:<\/b> UDYAM-MH-18-0242307/);
+  assert.doesNotMatch(homePage, /Udyam:<\/b> UDYAM-MH-18-0242307/);
+  assert.doesNotMatch(publicChrome, /Udyam:<\/b> UDYAM-MH-18-0242307/);
+  assert.match(aboutPage, /UDYAM-MH-18-0242307/);
   assert.match(
     css,
     /\.collection-modal-backdrop\s*\{[\s\S]*?z-index:\s*2147483100/,

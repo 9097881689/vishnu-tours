@@ -161,9 +161,6 @@ export function PublicFooter({ hideEmail = false }: { hideEmail?: boolean } = {}
         <span className="footer-legal-name">
           <b>Registered Enterprise:</b> VISHNU S.TOURS &amp; TRAVELS
         </span>
-        <span className="footer-legal-name">
-          <b>Udyam:</b> UDYAM-MH-18-0242307
-        </span>
         <span>
           Premium Cab Booking From Mumbai For Corporate Guests, Airport Transfers
           And Outstation Trips.
