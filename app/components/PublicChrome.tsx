@@ -101,30 +101,35 @@ function useSiteBrandSync() {
 
 export function PublicHeader() {
   const { branding, isBrandingReady, style } = useSiteBrandSync();
+  const [hasWideLogo, setHasWideLogo] = useState(false);
 
   return (
     <header className="top-strip main-menu public-page-menu" style={style}>
-      <Link className="brand" href="/" aria-label="Vishnu Tours home">
+      <Link className={`brand ${hasWideLogo ? "brand-has-wordmark" : ""}`} href="/" aria-label="Vishnu Tours home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className={`brand-logo ${isBrandingReady ? "branding-ready" : "branding-loading"}`}
           src={branding.iconUrl}
           alt="Vishnu Tours logo"
+          onLoad={(event) => {
+            const image = event.currentTarget;
+            setHasWideLogo(image.naturalWidth / Math.max(image.naturalHeight, 1) > 1.8);
+          }}
         />
         <span>
           <strong>Vishnu Tours</strong>
         </span>
       </Link>
       <nav className="main-nav" aria-label="Primary navigation">
-        <Link href="/#home">Home</Link>
-        <Link href="/#fleet">Our Fleet</Link>
-        <Link href="/#services">Services</Link>
+        <Link href="/">Home</Link>
+        <Link href="/fleet">Our Fleet</Link>
+        <Link href="/services">Services</Link>
         <Link href="/about-us">About Us</Link>
         <Link href="/price-chart">Pricing</Link>
-        <Link href="/#contact">Contact Us</Link>
+        <Link href="/contact">Contact Us</Link>
       </nav>
       <div className="header-actions">
-        <Link className="login-button header-login-link" href="/">
+        <Link className="login-button header-login-link" href="/?login=1">
           Login
         </Link>
         <Link className="header-book-button" href="/#booking">
@@ -174,6 +179,9 @@ export function PublicFooter({ hideEmail = false }: { hideEmail?: boolean } = {}
       <div className="footer-column">
         <strong>Company</strong>
         <Link href="/about-us">About Us</Link>
+        <Link href="/fleet">Our Fleet</Link>
+        <Link href="/services">Services</Link>
+        <Link href="/corporate-travel">Corporate Travel</Link>
         <Link href="/price-chart">Live Price Chart</Link>
         <Link href="/disclaimer">Disclaimer</Link>
         <Link href="/contact">Contact Page</Link>

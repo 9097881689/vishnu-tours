@@ -1550,6 +1550,16 @@ export default function Home() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get("login") === "1") {
+        setShowLogin(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
       setShowCookieConsent(
         localStorage.getItem("vishnuToursCookieConsent") !== "accepted",
       );
@@ -5525,12 +5535,12 @@ export default function Home() {
           </span>
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
-          <a href="#home">Home</a>
-          <a href="#fleet">Our Fleet</a>
-          <a href="#services">Services</a>
+          <Link href="/">Home</Link>
+          <Link href="/fleet">Our Fleet</Link>
+          <Link href="/services">Services</Link>
           <Link href="/about-us">About Us</Link>
           <Link href="/price-chart">Pricing</Link>
-          <a href="#contact">Contact Us</a>
+          <Link href="/contact">Contact Us</Link>
         </nav>
         <div className="header-actions">
           <button
