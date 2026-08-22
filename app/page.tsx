@@ -5503,7 +5503,7 @@ export default function Home() {
 
   return (
     <main
-      className="site-font-shell"
+      className="site-font-shell executive-premiere"
       style={
         {
           "--active-site-font": activeSiteFontStack,
@@ -6306,30 +6306,36 @@ export default function Home() {
             {
               title: "24x7 Customer Support",
               text: "We Are Always Here To Help You.",
+              icon: <Headphones />,
             },
             {
               title: "Mumbai Pickup Coverage",
               text: "Pickup And Drop Support Across Mumbai.",
+              icon: <MapPinned />,
             },
             {
               title: "Sanitized And Safe Cars",
               text: "Your Safety And Comfort Are Our Priority.",
+              icon: <CheckCircle2 />,
             },
             {
               title: "Professional Drivers",
               text: "Polite, Experienced And Verified Drivers.",
+              icon: <UserRound />,
             },
             {
               title: "Transparent Pricing",
               text: "No Hidden Charges. See Your Fare Clearly.",
+              icon: <BadgePercent />,
             },
             {
               title: "Easy Booking",
               text: "Quick Website Booking And Confirmation.",
+              icon: <ClipboardList />,
             },
-          ].map((item, index) => (
+          ].map((item) => (
             <article className="homepage-step-card" key={item.title}>
-              <b aria-hidden="true">{["☎", "⌖", "▣", "♙", "₹", "✓"][index]}</b>
+              <b aria-hidden="true">{item.icon}</b>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
