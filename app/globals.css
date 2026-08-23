@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./bharatvoyage.css";
+@import "./bharatvoyage-exact.css";
 
 :root {
   --ink: #111111;

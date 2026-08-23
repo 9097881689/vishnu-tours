@@ -147,7 +147,6 @@ const destinationSuggestions = [
   "Vapi",
 ];
 
-const bookingTypes = ["Outstation", "Airport", "In-City"];
 const outstationTripOptions = ["One Way", "Round Trip"];
 const airportTripOptions = [
   {
@@ -1163,6 +1162,9 @@ export default function Home() {
   );
   const [tripType, setTripType] = useState("Outstation");
   const [outstationTripType, setOutstationTripType] = useState("One Way");
+  const [designTripTab, setDesignTripTab] = useState<
+    "one-way" | "round-trip" | "local" | "airport" | "multi-city"
+  >("one-way");
   const [airportTripType, setAirportTripType] = useState(airportTripOptions[0].value);
   const [localPackageType, setLocalPackageType] =
     useState<(typeof localPackageOptions)[number]["id"]>("local8hr");
@@ -5538,7 +5540,7 @@ export default function Home() {
             alt="Vishnu Tours logo"
           />
           <span>
-            <strong>Vishnu Tours</strong>
+            <span className="bv-brand-title"><strong>Vishnu <em>Tours</em></strong><b>Tours &amp; Cabs</b></span>
             <small>Chauffeured Outstation &amp; Airport Cabs</small>
           </span>
         </Link>
@@ -5586,42 +5588,53 @@ export default function Home() {
           <div className="hero-copy">
             <p className="hero-kicker"><CarFront aria-hidden="true" /> 24×7 All-India Verified Chauffeured Cabs</p>
             <h1>Book Outstation &amp; Airport Cabs <span>Instantly</span></h1>
-            <p>Doorstep Pickup • Clean White AC Cabs • Clear Fare Before Confirmation</p>
+            <p>Doorstep Pickup • Clean Sanitized White AC Cabs • Zero Cancellation Fee Guarantee</p>
           </div>
 
           <div className="hero-booking-stack">
           <form
-            className="booking-panel savaari-booking-panel"
+            className={`booking-panel savaari-booking-panel bv-trip-${designTripTab}`}
             id="booking"
             onSubmit={(event) => {
               event.preventDefault();
               continueToRates();
             }}
           >
-            <div className="booking-card-heading">
-              <h2 className="booking-title">Book A Ride</h2>
-              <span className="booking-steps" aria-label="Booking step 1 of 3"><b>1</b><i>2</i><i>3</i></span>
-            </div>
-            <div className="trip-tabs" role="tablist" aria-label="Trip type">
-              {bookingTypes.map((type) => (
+            <div className="trip-tabs bv-trip-tabs" role="tablist" aria-label="Trip type">
+              {[
+                { id: "one-way", label: "One Way", icon: <Navigation aria-hidden="true" /> },
+                { id: "round-trip", label: "Round Trip", icon: <ArrowRight aria-hidden="true" /> },
+                { id: "local", label: "Local / Hourly", icon: <Clock3 aria-hidden="true" /> },
+                { id: "airport", label: "Airport Taxi", icon: <Plane aria-hidden="true" /> },
+                { id: "multi-city", label: "Multi City", icon: <MapPinned aria-hidden="true" /> },
+              ].map((tab) => (
                 <button
-                  key={type}
+                  key={tab.id}
                   type="button"
-                  className={tripType === type ? "active" : ""}
+                  className={designTripTab === tab.id ? "active" : ""}
                   onClick={() => {
-                    setTripType(type);
-                    if (type !== "Outstation") {
-                      setReturnDate("");
+                    const selectedTab = tab.id as typeof designTripTab;
+                    setDesignTripTab(selectedTab);
+                    setBookingStatus("");
+                    if (selectedTab === "one-way" || selectedTab === "round-trip" || selectedTab === "multi-city") {
+                      setTripType("Outstation");
+                      setOutstationTripType(selectedTab === "round-trip" ? "Round Trip" : "One Way");
+                      if (selectedTab !== "round-trip") setReturnDate("");
+                      if (selectedTab === "multi-city") {
+                        setBookingStatus("Enter Your Main Destination. Additional Stops Can Be Added After Cab Selection.");
+                      }
                     }
-                    if (type === "In-City") {
+                    if (selectedTab === "local") {
+                      setTripType("In-City");
+                      setReturnDate("");
                       setStartPoint(headOffice);
                       setDrop(localRoute);
                       setDistanceKm(String(selectedLocalPackage.km));
                     }
-                    if (type === "Airport" && !distanceKm) {
-                      setDistanceKm("40");
-                    }
-                    if (type === "Airport") {
+                    if (selectedTab === "airport") {
+                      setTripType("Airport");
+                      setReturnDate("");
+                      if (!distanceKm) setDistanceKm("40");
                       const selectedAirport = getAirportOption(airportTripType);
 
                       if (selectedAirport.mode === "pickup") {
@@ -5636,7 +5649,7 @@ export default function Home() {
                     setBookingView("home");
                   }}
                 >
-                  {type}
+                  {tab.icon}<span>{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -5893,6 +5906,13 @@ export default function Home() {
                 <span>Pick Up Date</span>
                 <input
                   value={date}
+                  onInput={(event) => {
+                    const selectedPickupDate = (event.target as HTMLInputElement).value;
+                    setDate(selectedPickupDate);
+                    if (returnDate && returnDate < selectedPickupDate) setReturnDate("");
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
                   onChange={(event) => {
                     const selectedPickupDate = event.target.value;
 
@@ -5927,6 +5947,11 @@ export default function Home() {
                 <span>Pick Up Time</span>
                 <input
                   value={pickupTime}
+                  onInput={(event) => {
+                    setPickupTime((event.target as HTMLInputElement).value);
+                    setShowVehicleStep(false);
+                    setBookingView("home");
+                  }}
                   onChange={(event) => {
                     setPickupTime(event.target.value);
                     setShowVehicleStep(false);
@@ -5958,17 +5983,22 @@ export default function Home() {
             {bookingStatus && bookingView === "home" ? (
               <p className="booking-error">{bookingStatus}</p>
             ) : null}
-            <button className="submit-button explore-cabs-button" type="submit">
-              Select Vehicle <span aria-hidden="true">→</span>
-            </button>
-            <p className="booking-rating-strip">
-              24x7 Support | Free Cancellation Before Assignment | Mumbai Pickup Only
-            </p>
+            <div className="bv-form-footer">
+              <div className="bv-form-inclusions" aria-label="Fare inclusions">
+                <span><CheckCircle2 aria-hidden="true" /> Doorstep Pickup</span>
+                <span><CheckCircle2 aria-hidden="true" /> Zero Cancellation Fee</span>
+                <span><CheckCircle2 aria-hidden="true" /> Toll &amp; Fuel Included</span>
+              </div>
+              <button className="submit-button explore-cabs-button" type="submit">
+                <CarFront aria-hidden="true" /> Search Cars
+              </button>
+            </div>
           </form>
-          <div className="hero-tracking-card" aria-label="Live booking updates">
-            <span className="tracking-car-icon"><CarFront aria-hidden="true" /></span>
-            <span><small>Live Booking Updates</small><strong>Journey Updates After Confirmation</strong></span>
-            <b>Active</b>
+          <div className="bv-hero-trust" aria-label="Vishnu Tours service assurances">
+            <span><Star aria-hidden="true" /> 4.9★ Rated (50k+ Rides)</span>
+            <span><ShieldCheck aria-hidden="true" /> Commercial Badge Drivers</span>
+            <span><BadgePercent aria-hidden="true" /> Transparent Pricing</span>
+            <span><Clock3 aria-hidden="true" /> 24×7 Instant Dispatch</span>
           </div>
           </div>
         </div>
