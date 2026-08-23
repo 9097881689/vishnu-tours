@@ -5148,8 +5148,11 @@ export default function Home() {
                 className="refund-action"
                 type="button"
                 onClick={() => openAdminRefundPrompt(booking)}
+                disabled={
+                  Number(booking.payment_amount || 0) - Number(booking.refund_amount || 0) < 1
+                }
               >
-                Refund
+                Initiate Refund
               </button>
               <button
                 className="danger-action"
