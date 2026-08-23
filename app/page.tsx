@@ -6,17 +6,17 @@ import type { CSSProperties, ChangeEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgePercent,
+  ArrowRight,
   Banknote,
   BarChart3,
   Bell,
-  Building2,
   CalendarDays,
   CarFront,
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Compass,
   CreditCard,
-  Crown,
   Headphones,
   Home as HomeIcon,
   LogOut,
@@ -27,12 +27,15 @@ import {
   Plane,
   PhoneCall,
   Printer,
-  Route,
   Settings,
   Share2,
+  ShieldCheck,
+  Sparkles,
+  Star,
   UserRound,
   Users,
   WalletCards,
+  Building2,
 } from "lucide-react";
 
 const whatsappNumber = "917004291529";
@@ -1188,6 +1191,7 @@ export default function Home() {
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showBookingTicket, setShowBookingTicket] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [loginMobile, setLoginMobile] = useState("");
   const [portalStatus, setPortalStatus] = useState("");
   const [isPortalLoading, setIsPortalLoading] = useState(false);
@@ -5516,7 +5520,7 @@ export default function Home() {
 
   return (
     <main
-      className="site-font-shell executive-premiere"
+      className="site-font-shell executive-premiere bharatvoyage-redesign"
       style={
         {
           "--active-site-font": activeSiteFontStack,
@@ -5525,7 +5529,7 @@ export default function Home() {
         } as CSSProperties
       }
     >
-      <header className="top-strip main-menu">
+      <header className="top-strip main-menu bv-header">
         <Link className="brand" href="/" aria-label="Vishnu Tours home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -5535,26 +5539,44 @@ export default function Home() {
           />
           <span>
             <strong>Vishnu Tours</strong>
+            <small>Chauffeured Outstation &amp; Airport Cabs</small>
           </span>
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
           <Link href="/">Home</Link>
-          <Link href="/fleet">Our Fleet</Link>
-          <Link href="/services">Services</Link>
-          <Link href="/about-us">About Us</Link>
-          <Link href="/price-chart">Pricing</Link>
-          <Link href="/contact">Contact Us</Link>
+          <a href="#booking">Book Taxi</a>
+          <a href="#fleet">Our Fleet</a>
         </nav>
         <div className="header-actions">
+          <a className="bv-helpline" href="tel:+917004291529">
+            <PhoneCall aria-hidden="true" />
+            <span><small>24×7 Helpline</small><strong>7004291529</strong></span>
+          </a>
           <button
             className="login-button"
             type="button"
             onClick={() => setShowLogin(true)}
           >
-            Login
+            My Trips
           </button>
-          <a className="header-book-button" href="#booking">Book Now</a>
+          <button
+            className="bv-menu-toggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded={showMobileMenu}
+            onClick={() => setShowMobileMenu((current) => !current)}
+          >
+            <Menu aria-hidden="true" />
+          </button>
         </div>
+        {showMobileMenu ? (
+          <div className="bv-mobile-menu">
+            <Link href="/" onClick={() => setShowMobileMenu(false)}>Home</Link>
+            <a href="#booking" onClick={() => setShowMobileMenu(false)}>Book Taxi</a>
+            <a href="#fleet" onClick={() => setShowMobileMenu(false)}>Our Fleet</a>
+            <button type="button" onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login</button>
+          </div>
+        ) : null}
       </header>
 
       {bookingView === "home" ? (
@@ -5562,15 +5584,9 @@ export default function Home() {
       <section className="hero focused-booking-hero" id="home">
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="hero-kicker">Mumbai&apos;s Most Trusted</p>
-            <h1>Stress Free Travel Every Mile With Us</h1>
-            <p>
-              Experience Safe, Comfortable And Timely Rides With Vishnu Tours.
-            </p>
-            <div className="hero-service-points" aria-label="Service benefits">
-              <span><b>24x7 Support</b> Always Available</span>
-              <span><b>Clean & Safe Cabs</b> Well Maintained</span>
-            </div>
+            <p className="hero-kicker"><CarFront aria-hidden="true" /> 24×7 All-India Verified Chauffeured Cabs</p>
+            <h1>Book Outstation &amp; Airport Cabs <span>Instantly</span></h1>
+            <p>Doorstep Pickup • Clean White AC Cabs • Clear Fare Before Confirmation</p>
           </div>
 
           <div className="hero-booking-stack">
@@ -5960,7 +5976,9 @@ export default function Home() {
 
       <section className="homepage-fleet-strip" id="fleet" aria-label="Vishnu Tours car fleet">
         <div className="homepage-fleet-head">
-          <h2>Popular Cabs</h2>
+          <span><Sparkles aria-hidden="true" /> Curated Chauffeur Fleet</span>
+          <h2>Our Verified Travel Fleet</h2>
+          <p>Clean, white AC cabs with verified drivers for Mumbai airport, local and outstation journeys.</p>
         </div>
         <div className="homepage-fleet-list">
           {vehicles.map((item) => (
@@ -5978,6 +5996,10 @@ export default function Home() {
                 <small>{item.type}</small>
                 <h3>{item.name}</h3>
                 <p>{item.seats} | {item.luggage} | White AC Cab</p>
+                <div className="bv-fleet-rate">
+                  <span>Outstation Rate</span>
+                  <strong>{formatInr(adjustedRateTable[item.name]?.perKm || item.rates.perKm)}<small>/KM</small></strong>
+                </div>
                 <a className="fleet-book-button" href="#booking">Book Now</a>
               </div>
             </article>
@@ -6318,7 +6340,9 @@ export default function Home() {
       </a>
       <section className="homepage-steps-section" id="why-us" aria-label="Why choose Vishnu Tours">
         <div className="homepage-section-head">
-          <h2>Why Choose Vishnu Tours?</h2>
+          <span><ShieldCheck aria-hidden="true" /> Why Travel With Us</span>
+          <h2>The Vishnu Tours Promise</h2>
+          <p>Reliable chauffeur-driven journeys with clear pricing and round-the-clock trip support.</p>
         </div>
         <div className="homepage-steps-grid">
           {[
@@ -6328,8 +6352,8 @@ export default function Home() {
               icon: <Headphones />,
             },
             {
-              title: "Mumbai Pickup Coverage",
-              text: "Pickup And Drop Support Across Mumbai.",
+              title: "Transparent Pricing",
+              text: "Clear Fare, GST And Package Details Before Confirmation.",
               icon: <MapPinned />,
             },
             {
@@ -6343,14 +6367,14 @@ export default function Home() {
               icon: <UserRound />,
             },
             {
-              title: "Transparent Pricing",
-              text: "No Hidden Charges. See Your Fare Clearly.",
-              icon: <BadgePercent />,
+              title: "Mumbai Pickup Coverage",
+              text: "Pickup Support Across Mumbai For All Trip Types.",
+              icon: <Plane />,
             },
             {
               title: "Easy Booking",
               text: "Quick Website Booking And Confirmation.",
-              icon: <ClipboardList />,
+              icon: <Building2 />,
             },
           ].map((item) => (
             <article className="homepage-step-card" key={item.title}>
@@ -6362,23 +6386,22 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-services-section" id="services" aria-label="Important services">
+      <section className="bv-how-section" id="how-it-works" aria-label="How cab booking works">
         <div className="homepage-section-head">
-          <h2>Our Services</h2>
+          <span>Simple 4-Step Process</span>
+          <h2>How It Works</h2>
+          <p>Book your cab in a few clear steps and receive journey updates after confirmation.</p>
         </div>
-        <div className="homepage-service-grid">
+        <div className="bv-how-grid">
           {[
-            { title: "Airport T1 And T2", text: "Premium Pickup Or Drop With Mumbai Airport Terminal Options.", icon: <Plane /> },
-            { title: "Corporate Office Travel", text: "Meeting, Site Visit, Hotel And Guest Movement Support.", icon: <Building2 /> },
-            { title: "Mumbai Local Duty", text: "4 Hr / 45 KM And 8 Hr / 90 KM In-City Packages.", icon: <MapPinned /> },
-            { title: "All India Outstation", text: "Mumbai Pickup For One Way And Round Trip Travel.", icon: <Route /> },
-            { title: "VIP Event Movement", text: "Clean White Cars For Weddings, Events And Executive Guests.", icon: <Crown /> },
-          ].map(({ title, text, icon }) => (
-            <article className="homepage-service-card" key={title}>
-              <div className="homepage-service-image" aria-hidden="true">
-                {icon}
-              </div>
-              <div className="homepage-service-body">
+            { step: "01", title: "Enter Your Trip", text: "Choose outstation, airport or in-city travel and enter pickup, destination, date and time.", icon: <MapPinned /> },
+            { step: "02", title: "Select Your Car", text: "Compare your available owner-fleet cars, capacity, package and GST-inclusive fare.", icon: <CarFront /> },
+            { step: "03", title: "Confirm Booking", text: "Add passenger details and choose zero, advance or full online payment.", icon: <CheckCircle2 /> },
+            { step: "04", title: "Enjoy Your Journey", text: "Receive your booking ID, driver assignment and live ride status updates.", icon: <Compass /> },
+          ].map(({ step, title, text, icon }) => (
+            <article className="bv-how-card" key={title}>
+              <div><strong>{step}</strong><b aria-hidden="true">{icon}</b></div>
+              <div>
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -6387,26 +6410,58 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="homepage-comfort-section" aria-label="Travel with comfort and trust">
+      <section className="bv-testimonials-section" aria-label="Customer testimonials">
         <div className="homepage-section-head">
-          <h2>Travel With Comfort & Trust</h2>
-          <p>Rides For Every Need, Every Journey And Every Destination.</p>
+          <span><Star aria-hidden="true" /> Customer Testimonials</span>
+          <h2>Trusted By Mumbai Travellers</h2>
+          <p>Feedback from corporate guests, families and airport passengers.</p>
         </div>
-        <div className="homepage-comfort-grid">
+        <div className="bv-testimonials-grid">
           {[
-            ["Professional Chauffeurs", "Trained, Polite And Committed To Your Safety.", "/home/corporate-transfer.png"],
-            ["For Business & Professionals", "Punctual, Reliable And Productive Travel Experience.", "/home/innova-hycross-vip-pickup.jpg?v=7f31a1"],
-            ["For Families & Loved Ones", "Comfortable Rides For Memorable Journeys Together.", "/home/family-travel-v2.jpg"],
-          ].map(([title, text, image]) => (
-            <article className="homepage-comfort-card" key={title}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt={title} loading="lazy" decoding="async" />
-              <div>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
+            ["Amit Shah", "Mumbai", "The Innova was clean, the driver arrived on time and the full fare was clear before confirmation.", "Mumbai To Pune"],
+            ["Neha Mehta", "Andheri", "Airport pickup coordination was professional and every booking update was easy to track.", "Airport Transfer"],
+            ["Rahul Verma", "BKC", "Reliable corporate travel support with a comfortable car and a courteous chauffeur.", "Corporate Duty"],
+          ].map(([customer, location, review, trip]) => (
+            <article className="bv-testimonial-card" key={customer}>
+              <div className="bv-stars">★★★★★</div>
+              <p>“{review}”</p>
+              <footer><span><strong>{customer}</strong><small>{location}</small></span><b>{trip}</b></footer>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="bv-faq-section" aria-label="Frequently asked questions">
+        <div className="homepage-section-head">
+          <span>Booking Help</span>
+          <h2>Frequently Asked Questions</h2>
+          <p>Important answers about booking, payment, cancellation and Mumbai pickup.</p>
+        </div>
+        <div className="bv-faq-list">
+          {[
+            ["Which locations can I book from?", "All rides start from Mumbai or supported Mumbai pickup areas. Destinations can be selected across India."],
+            ["Does the displayed fare include GST?", "Yes. The final fare shown during cab selection includes applicable 5% GST."],
+            ["Can I pay an advance online?", "Yes. You can choose part payment or full payment through Razorpay after reviewing the booking."],
+            ["How will I receive driver details?", "Driver and vehicle information appears in your customer dashboard after assignment."],
+            ["Can I cancel or request a refund?", "Cancellation and eligible normal refunds are managed according to the published cancellation and refund policy."],
+          ].map(([question, answer]) => (
+            <details key={question}>
+              <summary>{question}<span>+</span></summary>
+              <p>{answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="bv-contact-section" aria-label="Contact Vishnu Tours">
+        <div>
+          <span>24×7 Trip Support</span>
+          <h2>Need Help Planning Your Journey?</h2>
+          <p>Speak directly with Vishnu Tours for corporate movement, airport pickup or an outstation trip from Mumbai.</p>
+        </div>
+        <div className="bv-contact-actions">
+          <a href="tel:+917004291529"><PhoneCall aria-hidden="true" /> Call 7004291529</a>
+          <a href={whatsappUrl} target="_blank" rel="noreferrer"><ArrowRight aria-hidden="true" /> WhatsApp Support</a>
         </div>
       </section>
 
