@@ -5546,7 +5546,7 @@ export default function Home() {
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
           <Link href="/">Home</Link>
-          <a href="#booking">Book Taxi</a>
+          <a href="#booking">Book Cab</a>
           <a href="#fleet">Our Fleet</a>
         </nav>
         <div className="header-actions">
@@ -5559,7 +5559,8 @@ export default function Home() {
             type="button"
             onClick={() => setShowLogin(true)}
           >
-            My Trips
+            <UserRound aria-hidden="true" />
+            Login
           </button>
           <button
             className="bv-menu-toggle"
@@ -5574,7 +5575,7 @@ export default function Home() {
         {showMobileMenu ? (
           <div className="bv-mobile-menu">
             <Link href="/" onClick={() => setShowMobileMenu(false)}>Home</Link>
-            <a href="#booking" onClick={() => setShowMobileMenu(false)}>Book Taxi</a>
+            <a href="#booking" onClick={() => setShowMobileMenu(false)}>Book Cab</a>
             <a href="#fleet" onClick={() => setShowMobileMenu(false)}>Our Fleet</a>
             <button type="button" onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login</button>
           </div>
@@ -5605,7 +5606,7 @@ export default function Home() {
                 { id: "one-way", label: "One Way", icon: <Navigation aria-hidden="true" /> },
                 { id: "round-trip", label: "Round Trip", icon: <ArrowRight aria-hidden="true" /> },
                 { id: "local", label: "Local / Hourly", icon: <Clock3 aria-hidden="true" /> },
-                { id: "airport", label: "Airport Taxi", icon: <Plane aria-hidden="true" /> },
+                { id: "airport", label: "Airport Cab", icon: <Plane aria-hidden="true" /> },
                 { id: "multi-city", label: "Multi City", icon: <MapPinned aria-hidden="true" /> },
               ].map((tab) => (
                 <button
@@ -6902,6 +6903,11 @@ export default function Home() {
                   <p>
                     Enter Mobile Number To Open Admin, Driver Or Customer Portal.
                   </p>
+                  <div className="portal-login-roles" aria-label="Available login portals">
+                    <span><ShieldCheck aria-hidden="true" /> Admin</span>
+                    <span><CarFront aria-hidden="true" /> Driver</span>
+                    <span><UserRound aria-hidden="true" /> Customer</span>
+                  </div>
                   <div className="admin-login-row">
                     <input
                       value={loginMobile}
