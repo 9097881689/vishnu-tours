@@ -15591,3 +15591,627 @@ body {
     min-height: 0;
   }
 }
+
+/* Launch polish: lighter premium travel palette, compact cards and mobile-first booking flow. */
+.executive-premiere {
+  --vt-blue: #0b56c5;
+  --vt-blue-dark: #063a88;
+  --vt-green: #087f5b;
+  --vt-green-dark: #065f46;
+  --vt-sky: #eef8ff;
+  --vt-mint: #edfdf6;
+  --vt-line: #d8e6f2;
+  background:
+    linear-gradient(180deg, #f6fbff 0%, #ffffff 34%, #f3fbf7 100%);
+  color: #12213a;
+}
+
+.executive-premiere .bv-header,
+.executive-premiere .top-strip.main-menu {
+  background: rgba(255, 255, 255, .96);
+  border-bottom: 1px solid var(--vt-line);
+  box-shadow: 0 8px 26px rgba(8, 127, 91, .08);
+}
+
+.executive-premiere .header-book-button,
+.executive-premiere .login-button,
+.executive-premiere .submit-button,
+.executive-premiere .explore-cabs-button,
+.executive-premiere .book-cab-button,
+.executive-premiere .select-car-button,
+.executive-premiere .fleet-book-button,
+.executive-premiere .proceed-button,
+.executive-premiere .portal-welcome-banner button,
+.executive-premiere .portal-section-heading button,
+.executive-premiere .admin-panel-heading button,
+.executive-premiere .admin-switch-panel button,
+.executive-premiere .payment-choice-row button,
+.executive-premiere .site-footer .footer-whatsapp-link {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, var(--vt-green), var(--vt-blue)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(6, 95, 70, .16);
+}
+
+.executive-premiere .header-actions .bv-helpline {
+  background: #e9f9f2;
+  color: var(--vt-green-dark);
+}
+
+.executive-premiere .hero.focused-booking-hero {
+  background:
+    linear-gradient(105deg, rgba(232, 247, 255, .9) 0%, rgba(242, 255, 249, .72) 42%, rgba(255, 245, 218, .64) 100%),
+    url("https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=2400&q=92") center/cover no-repeat;
+}
+
+.executive-premiere .hero.focused-booking-hero::before {
+  background: linear-gradient(90deg, rgba(239, 248, 255, .92), rgba(237, 253, 246, .62), rgba(255, 244, 214, .58));
+}
+
+.executive-premiere .focused-booking-hero .hero-copy h1,
+.executive-premiere .focused-booking-hero .hero-copy p {
+  color: #0b1f3a;
+  text-shadow: none;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs {
+  background: #eaf5ff !important;
+  border: 1px solid #cfe1f2;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs button {
+  color: #17345c !important;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs button.active {
+  background: linear-gradient(135deg, var(--vt-blue), var(--vt-green)) !important;
+  color: #ffffff !important;
+}
+
+.executive-premiere .homepage-fleet-strip {
+  padding: 50px max(18px, calc((100vw - 1240px) / 2)) 46px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.executive-premiere .homepage-fleet-head {
+  margin-bottom: 22px;
+}
+
+.executive-premiere .homepage-fleet-head h2 {
+  margin-bottom: 8px;
+}
+
+.executive-premiere .homepage-fleet-head p {
+  max-width: 690px;
+}
+
+.executive-premiere .homepage-fleet-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.executive-premiere .homepage-fleet-card {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--vt-line);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(15, 60, 95, .08);
+}
+
+.executive-premiere .homepage-fleet-photo {
+  min-height: 178px;
+  height: 178px;
+  padding: 18px 22px 10px;
+  background: linear-gradient(180deg, #f8fbfd, #ffffff);
+}
+
+.executive-premiere .homepage-fleet-photo img {
+  width: 100%;
+  height: 146px;
+  object-fit: contain;
+}
+
+.executive-premiere .homepage-fleet-card > div:last-child {
+  padding: 18px 22px 22px;
+}
+
+.executive-premiere .homepage-fleet-card h3 {
+  margin: 5px 0 5px;
+  font-size: 22px;
+  line-height: 1.16;
+}
+
+.executive-premiere .homepage-fleet-card p {
+  min-height: 0;
+  margin-bottom: 13px;
+  color: #526276;
+  font-size: 13px;
+}
+
+.executive-premiere .bv-fleet-rate {
+  margin-top: 8px;
+  padding: 12px 0;
+  border-top: 1px solid #edf2f7;
+}
+
+.executive-premiere .fleet-book-button {
+  min-height: 42px;
+  margin-top: 10px;
+  border-radius: 11px;
+}
+
+.executive-premiere .homepage-inclusion-section {
+  padding: 48px max(18px, calc((100vw - 1180px) / 2));
+  background: linear-gradient(135deg, #eef8ff, #f0fff8);
+}
+
+.executive-premiere .homepage-inclusion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.executive-premiere .homepage-inclusion-card {
+  padding: 24px;
+  border: 1px solid var(--vt-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 18px 42px rgba(15, 60, 95, .08);
+}
+
+.executive-premiere .homepage-inclusion-card > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--vt-green-dark);
+  font-size: 18px;
+}
+
+.executive-premiere .homepage-inclusion-card svg {
+  width: 26px;
+  height: 26px;
+}
+
+.executive-premiere .homepage-inclusion-card ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+  color: #43536a;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.executive-premiere .homepage-steps-section,
+.executive-premiere .homepage-services-section {
+  padding-top: 48px;
+  padding-bottom: 48px;
+}
+
+.executive-premiere .homepage-steps-grid,
+.executive-premiere .homepage-service-grid {
+  gap: 16px;
+}
+
+.executive-premiere .homepage-step-card,
+.executive-premiere .homepage-service-card {
+  padding: 22px;
+}
+
+.executive-premiere .car-results-section {
+  background: linear-gradient(180deg, #f6fbff, #ffffff);
+}
+
+.executive-premiere .select-car-card {
+  border: 1px solid var(--vt-line);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 60, 95, .08);
+}
+
+.executive-premiere .select-car-card .car-art {
+  background: linear-gradient(180deg, #f8fbfd, #ffffff);
+}
+
+.executive-premiere .select-car-card .car-price-block strong {
+  color: var(--vt-green-dark);
+}
+
+.executive-premiere .site-footer {
+  background: linear-gradient(135deg, #164e63, #0f766e) !important;
+}
+
+.executive-premiere .admin-card {
+  width: min(100%, 1480px);
+}
+
+.executive-premiere .admin-tabs {
+  background: #f2fbf6 !important;
+  border-right: 1px solid #d7efe3;
+}
+
+.executive-premiere .admin-sidebar-nav button.is-active {
+  background: linear-gradient(135deg, #dff7ec, #eaf5ff) !important;
+  color: #073b31 !important;
+}
+
+@media (max-width: 1180px) {
+  .executive-premiere .homepage-fleet-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .executive-premiere .homepage-fleet-strip,
+  .executive-premiere .homepage-inclusion-section,
+  .executive-premiere .homepage-steps-section,
+  .executive-premiere .homepage-services-section {
+    padding: 34px 14px;
+  }
+
+  .executive-premiere .homepage-fleet-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .executive-premiere .homepage-fleet-card {
+    display: grid !important;
+    grid-template-columns: 38% 62% !important;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .executive-premiere .homepage-fleet-photo {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 12px !important;
+  }
+
+  .executive-premiere .homepage-fleet-photo img {
+    height: 120px !important;
+  }
+
+  .executive-premiere .homepage-fleet-card > div:last-child {
+    padding: 14px 14px 16px !important;
+  }
+
+  .executive-premiere .homepage-fleet-card small {
+    font-size: 9px;
+  }
+
+  .executive-premiere .homepage-fleet-card h3 {
+    font-size: 17px;
+  }
+
+  .executive-premiere .homepage-fleet-card p {
+    font-size: 11px;
+  }
+
+  .executive-premiere .bv-fleet-rate {
+    padding: 8px 0;
+  }
+
+  .executive-premiere .fleet-book-button {
+    min-height: 36px;
+    font-size: 11px;
+  }
+
+  .executive-premiere .homepage-inclusion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .executive-premiere .homepage-inclusion-card {
+    padding: 18px;
+  }
+
+  .executive-premiere .homepage-steps-grid,
+  .executive-premiere .homepage-service-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .executive-premiere .homepage-step-card,
+  .executive-premiere .homepage-service-card,
+  .executive-premiere .homepage-service-card:first-child {
+    min-height: 0;
+    padding: 14px 10px;
+    grid-column: auto;
+  }
+
+  .executive-premiere .homepage-service-image {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 8px;
+  }
+
+  .executive-premiere .car-results-section {
+    padding: 14px 10px 28px;
+  }
+
+  .executive-premiere .select-car-topbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .executive-premiere .select-car-topbar > :first-child,
+  .executive-premiere .select-car-topbar > button {
+    grid-column: 1 / -1;
+  }
+
+  .executive-premiere .select-car-card {
+    display: grid !important;
+    grid-template-columns: 118px minmax(0, 1fr) !important;
+    gap: 10px;
+    padding: 12px !important;
+  }
+
+  .executive-premiere .select-car-card .car-art {
+    grid-row: span 2;
+    width: 118px !important;
+    height: 118px !important;
+    padding: 8px !important;
+    border-radius: 14px;
+  }
+
+  .executive-premiere .select-car-card .car-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: none !important;
+  }
+
+  .executive-premiere .select-car-card .car-detail-block {
+    min-width: 0;
+  }
+
+  .executive-premiere .select-car-card .car-detail-block h3 {
+    margin: 3px 0 6px;
+    font-size: 16px;
+    line-height: 1.18;
+  }
+
+  .executive-premiere .select-car-card .cab-spec-row {
+    gap: 4px;
+  }
+
+  .executive-premiere .select-car-card .cab-spec-row span {
+    padding: 4px 5px;
+    font-size: 9px;
+  }
+
+  .executive-premiere .select-car-card .car-detail-block ul,
+  .executive-premiere .select-car-card .link-button,
+  .executive-premiere .select-car-card .promise-line {
+    display: none;
+  }
+
+  .executive-premiere .select-car-card .car-price-block {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 12px;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid #e8eef5;
+  }
+
+  .executive-premiere .select-car-card .car-price-block strong {
+    font-size: 24px;
+  }
+
+  .executive-premiere .select-car-card .car-price-block button {
+    grid-row: span 3;
+    min-width: 112px;
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .executive-premiere .admin-card {
+    width: calc(100vw - 18px);
+    max-height: calc(100svh - 28px);
+    border-radius: 18px;
+  }
+
+  .executive-premiere .admin-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid #d7efe3;
+  }
+
+  .executive-premiere .admin-sidebar-brand,
+  .executive-premiere .admin-sidebar-stat-group {
+    display: none;
+  }
+
+  .executive-premiere .admin-sidebar-nav {
+    display: flex;
+    min-width: max-content;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .executive-premiere .admin-sidebar-nav button {
+    min-width: 128px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+}
+
+/* Final booking-hero correction requested from live screenshot. */
+.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero {
+  min-height: calc(100svh - 80px) !important;
+  height: auto !important;
+  max-height: none !important;
+  padding: 16px max(18px, calc((100vw - 1240px) / 2)) 42px !important;
+  background:
+    linear-gradient(90deg, rgba(3, 45, 38, .82) 0%, rgba(3, 79, 64, .56) 48%, rgba(249, 177, 28, .28) 100%),
+    url("/home/innova-hycross-vip-pickup.jpg") center/cover no-repeat !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero::before {
+  background: linear-gradient(180deg, rgba(5, 46, 36, .16), rgba(5, 46, 36, .45)) !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-content {
+  display: flex !important;
+  width: min(100%, 1160px) !important;
+  min-height: calc(100svh - 150px) !important;
+  padding: 10px 0 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy {
+  width: 100% !important;
+  max-width: 960px !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-kicker {
+  margin-bottom: 8px !important;
+  background: rgba(255, 255, 255, .14) !important;
+  border-color: rgba(255, 255, 255, .28) !important;
+  color: #fff !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy h1 {
+  color: #fff !important;
+  font-size: clamp(34px, 4.1vw, 58px) !important;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, .34) !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy h1 span {
+  color: #f7b928 !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy > p:not(.hero-kicker) {
+  max-width: none !important;
+  margin: 8px 0 0 !important;
+  color: rgba(255, 255, 255, .9) !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .hero-booking-stack {
+  width: min(100%, 1120px) !important;
+  max-width: 1120px !important;
+  gap: 11px !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .booking-panel.savaari-booking-panel {
+  width: 100% !important;
+  max-width: 1120px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, .97) !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 18px 18px 0 0 !important;
+  background: linear-gradient(135deg, #064e3b, #087f5b) !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs button {
+  min-width: 0 !important;
+  min-height: 56px !important;
+  padding: 8px 10px !important;
+  border-radius: 0 !important;
+  color: #e7fff5 !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs button.active {
+  background: linear-gradient(135deg, #fbbf24, #f97316) !important;
+  color: #082f25 !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .route-form-row,
+.executive-premiere.bharatvoyage-redesign .route-form-row.local-route-row,
+.executive-premiere.bharatvoyage-redesign .bv-trip-round-trip .route-form-row {
+  padding: 30px 28px 16px !important;
+  gap: 14px !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .bv-form-footer {
+  margin: 4px 28px 0 !important;
+  min-height: 76px !important;
+  padding: 12px 0 16px !important;
+}
+
+.executive-premiere.bharatvoyage-redesign .submit-button.explore-cabs-button {
+  background: linear-gradient(135deg, #087f5b, #0b56c5) !important;
+}
+
+@media (max-width: 760px) {
+  .executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero {
+    padding: 12px 10px 30px !important;
+    background-position: 56% center !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-content {
+    min-height: auto !important;
+    gap: 12px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy h1 {
+    font-size: 31px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy > p:not(.hero-kicker) {
+    font-size: 12px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs button {
+    min-height: 44px !important;
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .route-form-row,
+  .executive-premiere.bharatvoyage-redesign .route-form-row.local-route-row,
+  .executive-premiere.bharatvoyage-redesign .bv-trip-round-trip .route-form-row {
+    grid-template-columns: 1fr !important;
+    padding: 16px 14px 10px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .booking-field input,
+  .executive-premiere.bharatvoyage-redesign .booking-field select,
+  .executive-premiere.bharatvoyage-redesign .current-location-button {
+    height: 46px !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .location-input-wrap {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .executive-premiere.bharatvoyage-redesign .bv-form-footer {
+    margin: 0 14px !important;
+    min-height: 0 !important;
+    padding: 12px 0 14px !important;
+  }
+}

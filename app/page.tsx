@@ -4529,10 +4529,10 @@ export default function Home() {
     return {
       allBookings,
       ledgerBookings,
-      totalBookingAmount: activeDashboard.totalBookingAmount || totalBookingAmount,
-      totalCollected: activeDashboard.totalCollected || totalCollected,
-      onlineCollected: activeDashboard.onlineCollected || onlineCollected,
-      driverCashInHand: activeDashboard.driverCashInHand || driverCashInHand,
+      totalBookingAmount,
+      totalCollected,
+      onlineCollected,
+      driverCashInHand,
     };
   }
 
@@ -5490,6 +5490,15 @@ export default function Home() {
     `Vishnu Tours Booking ${confirmedBooking?.bookingId || ""}`,
   )}&body=${encodeURIComponent(bookingTicketText)}`;
 
+  function openHomeSection(sectionId = "home") {
+    setBookingView("home");
+    setShowMobileMenu(false);
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(sectionId);
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   async function shareBookingTicket() {
     if (!bookingTicketText || !confirmedBooking) return;
 
@@ -5545,9 +5554,9 @@ export default function Home() {
           </span>
         </Link>
         <nav className="main-nav" aria-label="Primary navigation">
-          <Link href="/">Home</Link>
-          <a href="#booking">Book Cab</a>
-          <a href="#fleet">Our Fleet</a>
+          <a href="#home" onClick={(event) => { event.preventDefault(); openHomeSection("home"); }}>Home</a>
+          <a href="#booking" onClick={(event) => { event.preventDefault(); openHomeSection("booking"); }}>Book Cab</a>
+          <a href="#fleet" onClick={(event) => { event.preventDefault(); openHomeSection("fleet"); }}>Our Fleet</a>
         </nav>
         <div className="header-actions">
           <a className="bv-helpline" href="tel:+917004291529">
@@ -5574,9 +5583,9 @@ export default function Home() {
         </div>
         {showMobileMenu ? (
           <div className="bv-mobile-menu">
-            <Link href="/" onClick={() => setShowMobileMenu(false)}>Home</Link>
-            <a href="#booking" onClick={() => setShowMobileMenu(false)}>Book Cab</a>
-            <a href="#fleet" onClick={() => setShowMobileMenu(false)}>Our Fleet</a>
+            <a href="#home" onClick={(event) => { event.preventDefault(); openHomeSection("home"); }}>Home</a>
+            <a href="#booking" onClick={(event) => { event.preventDefault(); openHomeSection("booking"); }}>Book Cab</a>
+            <a href="#fleet" onClick={(event) => { event.preventDefault(); openHomeSection("fleet"); }}>Our Fleet</a>
             <button type="button" onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login</button>
           </div>
         ) : null}
@@ -5607,7 +5616,6 @@ export default function Home() {
                 { id: "round-trip", label: "Round Trip", icon: <ArrowRight aria-hidden="true" /> },
                 { id: "local", label: "Local / Hourly", icon: <Clock3 aria-hidden="true" /> },
                 { id: "airport", label: "Airport Cab", icon: <Plane aria-hidden="true" /> },
-                { id: "multi-city", label: "Multi City", icon: <MapPinned aria-hidden="true" /> },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -6035,6 +6043,34 @@ export default function Home() {
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="homepage-inclusion-section" aria-label="Vishnu Tours inclusions and exclusions">
+        <div className="homepage-section-head">
+          <span><ShieldCheck aria-hidden="true" /> Clear Fare Policy</span>
+          <h2>Inclusions And Exclusions</h2>
+          <p>Every booking shows clear fare details before confirmation, so corporate guests and families know what is covered.</p>
+        </div>
+        <div className="homepage-inclusion-grid">
+          <article className="homepage-inclusion-card included">
+            <div><CheckCircle2 aria-hidden="true" /><strong>Included</strong></div>
+            <ul>
+              <li>Clean AC cab with verified driver</li>
+              <li>Fuel, driver allowance and GST in displayed fare</li>
+              <li>Booked package kilometres and hours</li>
+              <li>Booking ticket, invoice and status updates</li>
+            </ul>
+          </article>
+          <article className="homepage-inclusion-card excluded">
+            <div><BadgePercent aria-hidden="true" /><strong>Extra If Applicable</strong></div>
+            <ul>
+              <li>Toll, parking, permit and state tax when applicable</li>
+              <li>Extra kilometres beyond booked package</li>
+              <li>Extra waiting or extra hours after package limit</li>
+              <li>Route change, night halt or special guest request</li>
+            </ul>
+          </article>
         </div>
       </section>
       </>
