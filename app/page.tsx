@@ -41,6 +41,7 @@ import {
 const whatsappNumber = "917004291529";
 const headOffice = "Mumbai, Maharashtra";
 const perKmRate = 16;
+const partPaymentPercent = 25;
 const siteFontOptions = [
   { label: "Plus Jakarta Sans", value: "Plus Jakarta Sans", stack: "var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif" },
   { label: "Inter", value: "Inter", stack: "var(--font-inter), Inter, sans-serif" },
@@ -1510,9 +1511,13 @@ export default function Home() {
   const fareTotal = selectedVehicleRate?.estimatedFare || 0;
   const chargesAndTaxes = fareTotal ? Math.round(fareTotal * 0.05) : 0;
   const payableFare = fareTotal + chargesAndTaxes;
-  const partPayAmount = Math.max(500, Math.round(payableFare * 0.25));
+  const partPayAmount = payableFare
+    ? Math.min(payableFare, Math.max(1, Math.round((payableFare * partPaymentPercent) / 100)))
+    : 0;
   const selectedPaymentAmount =
-    paymentChoice === "zero" ? 0 : paymentChoice === "part" ? partPayAmount : payableFare;
+    paymentChoice === "zero"
+      ? 0
+      : Math.min(payableFare, paymentChoice === "part" ? partPayAmount : payableFare);
   const formattedFare = formatInr(fareTotal);
   const pickupDateTime = date && pickupTime ? `${date}T${pickupTime}` : "";
   const localRoute = "Mumbai, Maharashtra Local Duty";
@@ -1849,7 +1854,7 @@ export default function Home() {
     setEmail("");
     setPaymentMode("Pay Advance After Fare Confirmation");
     setPaymentChoice("part");
-    setAdvanceAmount("500");
+    setAdvanceAmount("0");
     setPaymentStatus("");
     setBookingStatus("");
     setTicketShareStatus("");
@@ -6352,7 +6357,7 @@ export default function Home() {
               <h2>Payment Options</h2>
               {[
                 { id: "zero", label: "Book At Zero", note: `Pay ${formatInr(payableFare)} Later`, amount: 0 },
-                { id: "part", label: "Part Pay", note: "Pay 25% Now And Rest To The Driver", amount: partPayAmount },
+                { id: "part", label: "Part Pay", note: `Pay ${partPaymentPercent}% Now And Rest To The Driver`, amount: partPayAmount },
                 { id: "full", label: "Full Pay", note: "Full Amount", amount: payableFare },
               ].map((option) => (
                 <button

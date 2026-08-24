@@ -16215,3 +16215,186 @@ body {
     padding: 12px 0 14px !important;
   }
 }
+
+/* Premium admin dashboard polish: visual only, all workflow remains unchanged. */
+.admin-card:has(.admin-dashboard) {
+  border: 1px solid rgba(207, 224, 242, 0.95) !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at top right, rgba(234, 179, 8, 0.13), transparent 28%),
+    linear-gradient(135deg, #f8fbff 0%, #eef6ff 46%, #f8fffb 100%) !important;
+  box-shadow: 0 32px 90px rgba(4, 31, 62, 0.28) !important;
+}
+
+.admin-card:has(.admin-dashboard) > .admin-close {
+  top: 14px !important;
+  right: 16px !important;
+  border: 1px solid #dce8f5 !important;
+  background: #ffffff !important;
+  color: #0b274a !important;
+  box-shadow: 0 10px 28px rgba(11, 39, 74, 0.12) !important;
+}
+
+.admin-dashboard {
+  gap: 16px !important;
+  padding: 16px !important;
+  background: transparent !important;
+}
+
+.admin-tabs {
+  padding: 14px 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(6, 40, 75, 0.98) 0%, rgba(4, 70, 92, 0.96) 58%, rgba(6, 95, 70, 0.96) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 18px 44px rgba(7, 31, 55, 0.18) !important;
+}
+
+.admin-sidebar-brand {
+  margin-bottom: 12px !important;
+  padding: 8px 8px 14px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.admin-sidebar-brand img {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.20) !important;
+}
+
+.admin-sidebar-brand strong {
+  color: #ffffff !important;
+  letter-spacing: 0.01em !important;
+}
+
+.admin-sidebar-brand span {
+  color: rgba(226, 241, 255, 0.72) !important;
+}
+
+.admin-tabs .admin-sidebar-nav {
+  gap: 5px !important;
+}
+
+.admin-tabs .admin-sidebar-nav button {
+  min-height: 39px !important;
+  padding: 7px 8px !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+  color: rgba(239, 246, 255, 0.86) !important;
+  background: transparent !important;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease !important;
+}
+
+.admin-tabs .admin-sidebar-nav button i {
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+.admin-tabs .admin-sidebar-nav button:hover,
+.admin-tabs .admin-sidebar-nav button.is-active {
+  border-color: rgba(191, 219, 254, 0.34) !important;
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.95), rgba(8, 145, 178, 0.78)) !important;
+  color: #ffffff !important;
+}
+
+.admin-sidebar-stat-group {
+  padding: 10px !important;
+  border-radius: 14px !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(14px);
+}
+
+.admin-sidebar-stat-group span {
+  min-height: 28px !important;
+}
+
+.admin-sidebar-stat-group b {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(14, 165, 233, 0.22) !important;
+}
+
+.admin-content-topbar,
+.admin-overview,
+.admin-ops-panel,
+.admin-recent,
+.admin-switch-panel,
+.vehicle-admin-panel,
+.price-control-panel,
+.admin-refund-panel,
+.admin-analytics-card,
+.metric-breakup-panel {
+  border: 1px solid rgba(215, 229, 244, 0.92) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 16px 42px rgba(20, 52, 84, 0.07) !important;
+}
+
+.admin-content-topbar {
+  min-height: 62px !important;
+  padding: 10px 50px 10px 14px !important;
+}
+
+.admin-overview {
+  padding: 14px !important;
+}
+
+.admin-overview-kpis {
+  gap: 12px !important;
+}
+
+.admin-overview-kpis article,
+.admin-metric {
+  border: 1px solid rgba(214, 228, 244, 0.95) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  box-shadow: 0 14px 34px rgba(15, 60, 95, 0.07) !important;
+}
+
+.admin-overview-kpis article > span {
+  border-radius: 13px !important;
+  background: linear-gradient(135deg, #eaf3ff, #dff7ec) !important;
+}
+
+.admin-overview-title h2,
+.admin-panel-heading h3,
+.admin-recent h3,
+.admin-ops-panel h3 {
+  color: #082542 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.admin-overview-title span,
+.admin-panel-heading span {
+  color: #0e7490 !important;
+}
+
+.admin-overview-title button,
+.admin-panel-heading button {
+  border-radius: 10px !important;
+  border-color: #cfe4f6 !important;
+  background: #f8fcff !important;
+  color: #075985 !important;
+}
+
+.admin-compact-bookings > button,
+.admin-top-vehicles > div,
+.admin-recent li,
+.vehicle-list-row,
+.registered-vehicle-row {
+  border-radius: 12px !important;
+}
+
+@media (max-width: 900px) {
+  .admin-card:has(.admin-dashboard) {
+    border-radius: 18px !important;
+  }
+
+  .admin-dashboard {
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+
+  .admin-tabs {
+    border-radius: 14px !important;
+  }
+}

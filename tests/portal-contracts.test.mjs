@@ -96,6 +96,15 @@ test("verifies Razorpay signatures on the server before updating payment", async
   assert.match(verifyApi, /ride_status = CASE WHEN \? THEN 'Booking Confirmed'/);
 });
 
+test("caps part payment to the configured percentage of total fare", async () => {
+  const page = await source("app/page.tsx");
+
+  assert.match(page, /const partPaymentPercent = 25/);
+  assert.match(page, /Math\.min\(payableFare, Math\.max\(1, Math\.round\(\(payableFare \* partPaymentPercent\) \/ 100\)\)\)/);
+  assert.doesNotMatch(page, /Math\.max\(500,\s*Math\.round\(payableFare/);
+  assert.match(page, /Math\.min\(payableFare, paymentChoice === "part" \? partPayAmount : payableFare\)/);
+});
+
 test("allows only admin-approved normal Razorpay refunds", async () => {
   const [refundApi, page] = await Promise.all([
     source("app/api/razorpay-refund/route.ts"),
