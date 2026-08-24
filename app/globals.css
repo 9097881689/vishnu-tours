@@ -16346,3 +16346,594 @@ body {
     font-size: 25px !important;
   }
 }
+
+/* Instant BG inspired visual theme for Vishnu Tours public experience. */
+:root {
+  --vti-primary: #6552e8;
+  --vti-primary-dark: #4635c7;
+  --vti-ink: #202231;
+  --vti-muted: #686b7c;
+  --vti-line: #e7e7ef;
+  --vti-soft: #f7f6fc;
+  --vti-card: #ffffff;
+}
+
+body,
+.site-font-shell,
+.executive-premiere,
+.stitch-public-page,
+.simple-page-with-chrome {
+  font-family: Arial, Helvetica, sans-serif !important;
+  color: var(--vti-ink) !important;
+  background: #ffffff !important;
+}
+
+.executive-premiere h1,
+.executive-premiere h2,
+.executive-premiere h3,
+.executive-premiere h4,
+.executive-premiere p,
+.executive-premiere span,
+.executive-premiere a,
+.executive-premiere label,
+.executive-premiere input,
+.executive-premiere select,
+.executive-premiere textarea,
+.executive-premiere button,
+.stitch-public-page h1,
+.stitch-public-page h2,
+.stitch-public-page h3,
+.stitch-public-page h4,
+.stitch-public-page p,
+.stitch-public-page span,
+.stitch-public-page a,
+.stitch-public-page label,
+.stitch-public-page input,
+.stitch-public-page select,
+.stitch-public-page textarea,
+.stitch-public-page button,
+.simple-page-with-chrome h1,
+.simple-page-with-chrome h2,
+.simple-page-with-chrome h3,
+.simple-page-with-chrome h4,
+.simple-page-with-chrome p,
+.simple-page-with-chrome span,
+.simple-page-with-chrome a,
+.simple-page-with-chrome label,
+.simple-page-with-chrome input,
+.simple-page-with-chrome select,
+.simple-page-with-chrome textarea,
+.simple-page-with-chrome button {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.executive-premiere .top-strip.main-menu,
+.executive-premiere .bv-header,
+.top-strip.main-menu.public-page-menu {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 60 !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 26px !important;
+  padding: 0 max(20px, calc((100vw - 1120px) / 2)) !important;
+  border-bottom: 1px solid var(--vti-line) !important;
+  background: rgba(255, 255, 255, .98) !important;
+  box-shadow: none !important;
+}
+
+.executive-premiere .brand,
+.top-strip.main-menu.public-page-menu .brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: max-content !important;
+  color: var(--vti-ink) !important;
+  letter-spacing: -1px !important;
+  text-decoration: none !important;
+}
+
+.executive-premiere .brand-logo,
+.top-strip.main-menu.public-page-menu .brand-logo {
+  width: var(--site-header-logo-size, 42px) !important;
+  height: var(--site-header-logo-size, 42px) !important;
+  border-radius: 8px !important;
+  object-fit: contain !important;
+  box-shadow: none !important;
+}
+
+.executive-premiere .bv-brand-title strong,
+.executive-premiere .brand strong,
+.top-strip.main-menu.public-page-menu .brand strong {
+  font-size: 25px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  color: var(--vti-ink) !important;
+  letter-spacing: -1.5px !important;
+  text-transform: none !important;
+}
+
+.executive-premiere .bv-brand-title em,
+.top-strip.main-menu.public-page-menu .brand strong em {
+  color: var(--vti-primary) !important;
+  font-style: normal !important;
+}
+
+.executive-premiere .brand small,
+.executive-premiere .bv-brand-title b {
+  display: none !important;
+}
+
+.executive-premiere .main-nav,
+.top-strip.main-menu.public-page-menu .main-nav {
+  display: flex !important;
+  align-items: center !important;
+  gap: 23px !important;
+  flex: 1 1 auto !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.executive-premiere .main-nav a,
+.top-strip.main-menu.public-page-menu .main-nav a {
+  color: var(--vti-ink) !important;
+  text-decoration: none !important;
+}
+
+.executive-premiere .main-nav a:hover,
+.top-strip.main-menu.public-page-menu .main-nav a:hover {
+  color: var(--vti-primary) !important;
+}
+
+.executive-premiere .header-actions,
+.top-strip.main-menu.public-page-menu .header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  font-size: 14px !important;
+}
+
+.executive-premiere .header-actions .bv-helpline {
+  min-height: 40px !important;
+  padding: 8px 14px !important;
+  border: 1px solid #ddd9ff !important;
+  border-radius: 6px !important;
+  background: #f1efff !important;
+  color: var(--vti-primary-dark) !important;
+  box-shadow: none !important;
+}
+
+.executive-premiere .header-actions .bv-helpline small {
+  color: var(--vti-muted) !important;
+}
+
+.executive-premiere .header-book-button,
+.executive-premiere .login-button,
+.executive-premiere .submit-button,
+.executive-premiere .explore-cabs-button,
+.executive-premiere .book-cab-button,
+.executive-premiere .select-car-button,
+.executive-premiere .fleet-book-button,
+.executive-premiere .proceed-button,
+.top-strip.main-menu.public-page-menu .login-button,
+.top-strip.main-menu.public-page-menu .header-book-button,
+.site-footer .footer-whatsapp-link {
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: var(--vti-primary) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+.executive-premiere .header-book-button:hover,
+.executive-premiere .login-button:hover,
+.executive-premiere .submit-button:hover,
+.executive-premiere .explore-cabs-button:hover,
+.executive-premiere .book-cab-button:hover,
+.executive-premiere .select-car-button:hover,
+.executive-premiere .fleet-book-button:hover,
+.executive-premiere .proceed-button:hover,
+.top-strip.main-menu.public-page-menu .login-button:hover,
+.top-strip.main-menu.public-page-menu .header-book-button:hover,
+.site-footer .footer-whatsapp-link:hover {
+  background: var(--vti-primary-dark) !important;
+}
+
+.executive-premiere .hero.focused-booking-hero {
+  min-height: calc(100svh - 64px) !important;
+  padding: 56px max(18px, calc((100vw - 1180px) / 2)) 70px !important;
+  background: linear-gradient(180deg, #ffffff 0%, var(--vti-soft) 100%) !important;
+}
+
+.executive-premiere .hero.focused-booking-hero::before,
+.executive-premiere .hero.focused-booking-hero::after {
+  content: none !important;
+}
+
+.executive-premiere .focused-booking-hero .hero-content {
+  width: min(100%, 1180px) !important;
+  min-height: calc(100svh - 178px) !important;
+  gap: 28px !important;
+}
+
+.executive-premiere .focused-booking-hero .hero-copy h1 {
+  color: var(--vti-ink) !important;
+  font-size: clamp(32px, 4vw, 52px) !important;
+  line-height: 1.1 !important;
+  letter-spacing: -1.4px !important;
+  text-shadow: none !important;
+}
+
+.executive-premiere .focused-booking-hero .hero-copy h1 span {
+  color: var(--vti-primary) !important;
+}
+
+.executive-premiere .focused-booking-hero .hero-copy > p:not(.hero-kicker),
+.executive-premiere .homepage-fleet-head p,
+.executive-premiere .homepage-section-head p,
+.executive-premiere .homepage-service-card p,
+.executive-premiere .homepage-step-card p {
+  color: var(--vti-muted) !important;
+}
+
+.executive-premiere .focused-booking-hero .hero-kicker {
+  border: 0 !important;
+  background: #eaf0ff !important;
+  color: var(--vti-primary) !important;
+}
+
+.executive-premiere .booking-panel.savaari-booking-panel,
+.executive-premiere .savaari-booking-panel {
+  border: 1px solid var(--vti-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(101, 82, 232, .10) !important;
+  backdrop-filter: none !important;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs {
+  gap: 10px !important;
+  padding: 12px 14px 0 !important;
+  border: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+  background: #ffffff !important;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs button {
+  min-height: 42px !important;
+  border-radius: 24px !important;
+  background: transparent !important;
+  color: #586174 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.executive-premiere .trip-tabs.bv-trip-tabs button.active {
+  background: #eaf0ff !important;
+  color: var(--vti-primary) !important;
+}
+
+.executive-premiere .booking-field {
+  color: var(--vti-ink) !important;
+}
+
+.executive-premiere .booking-field span:first-child {
+  color: var(--vti-muted) !important;
+  font-size: 11px !important;
+  letter-spacing: .08em !important;
+}
+
+.executive-premiere .booking-field input,
+.executive-premiere .booking-field select,
+.executive-premiere .current-location-button,
+.executive-premiere .review-field input,
+.executive-premiere .review-field select,
+.executive-premiere .review-field textarea,
+.executive-premiere .portal-input,
+.executive-premiere input,
+.executive-premiere select,
+.executive-premiere textarea {
+  border: 1px solid var(--vti-line) !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  color: var(--vti-ink) !important;
+  box-shadow: none !important;
+}
+
+.executive-premiere .booking-field input:focus,
+.executive-premiere .booking-field select:focus,
+.executive-premiere input:focus,
+.executive-premiere select:focus,
+.executive-premiere textarea:focus {
+  border-color: #cfc8ff !important;
+  outline: 3px solid rgba(101, 82, 232, .12) !important;
+}
+
+.executive-premiere .bv-form-footer {
+  border-top: 1px solid var(--vti-line) !important;
+}
+
+.executive-premiere .bv-form-inclusions span,
+.executive-premiere .bv-hero-trust span {
+  color: var(--vti-muted) !important;
+}
+
+.executive-premiere .homepage-fleet-strip,
+.executive-premiere .homepage-inclusion-section,
+.executive-premiere .homepage-steps-section,
+.executive-premiere .homepage-services-section,
+.executive-premiere .car-results-section,
+.stitch-public-page .stitch-section,
+.stitch-public-page .stitch-muted-band {
+  background: #ffffff !important;
+}
+
+.executive-premiere .homepage-fleet-card,
+.executive-premiere .homepage-inclusion-card,
+.executive-premiere .homepage-step-card,
+.executive-premiere .homepage-service-card,
+.executive-premiere .select-car-card,
+.stitch-public-page article,
+.stitch-public-page .stitch-price-table-wrap,
+.stitch-public-page .stitch-loading-card {
+  border: 1px solid var(--vti-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 5px rgba(18, 34, 58, .04) !important;
+}
+
+.executive-premiere .homepage-fleet-card:hover,
+.executive-premiere .homepage-inclusion-card:hover,
+.executive-premiere .homepage-step-card:hover,
+.executive-premiere .homepage-service-card:hover,
+.executive-premiere .select-car-card:hover {
+  border-color: #cfc8ff !important;
+  box-shadow: 0 10px 25px rgba(31, 61, 113, .10) !important;
+}
+
+.executive-premiere .homepage-fleet-photo,
+.executive-premiere .select-car-card .car-art {
+  background: linear-gradient(145deg, #ffffff 0%, var(--vti-soft) 100%) !important;
+}
+
+.executive-premiere .homepage-fleet-head span,
+.executive-premiere .homepage-section-head span,
+.executive-premiere .homepage-fleet-card small,
+.stitch-public-page .stitch-kicker {
+  color: var(--vti-primary) !important;
+}
+
+.site-footer,
+.executive-premiere .site-footer,
+.stitch-public-page .site-footer,
+.simple-page-with-chrome .site-footer {
+  display: grid !important;
+  grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr)) !important;
+  gap: 28px !important;
+  padding: 44px max(22px, calc((100vw - 1120px) / 2)) !important;
+  border-top: 1px solid var(--vti-line) !important;
+  background: var(--vti-soft) !important;
+  color: var(--vti-muted) !important;
+  text-align: left !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+
+.site-footer .footer-column,
+.executive-premiere .site-footer .footer-column,
+.stitch-public-page .site-footer .footer-column,
+.simple-page-with-chrome .site-footer .footer-column {
+  min-height: 0 !important;
+  gap: 7px !important;
+  color: var(--vti-muted) !important;
+}
+
+.site-footer .footer-brand-lockup {
+  margin-bottom: 10px !important;
+  color: var(--vti-ink) !important;
+}
+
+.site-footer .footer-logo {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.site-footer .footer-brand-copy strong,
+.site-footer .footer-column > strong {
+  color: var(--vti-ink) !important;
+}
+
+.site-footer .footer-brand-copy strong em {
+  color: var(--vti-primary) !important;
+}
+
+.site-footer span,
+.site-footer a {
+  color: var(--vti-muted) !important;
+}
+
+.site-footer a:hover {
+  color: var(--vti-primary) !important;
+}
+
+.site-footer .footer-bottom {
+  grid-column: 1 / -1 !important;
+  margin-top: 10px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid #e3e2ec !important;
+  text-align: center !important;
+  color: #7b7f91 !important;
+}
+
+.site-footer .footer-whatsapp-link,
+.site-footer .footer-phone-link {
+  width: fit-content !important;
+  padding: 9px 12px !important;
+}
+
+.site-footer .footer-whatsapp-link span,
+.site-footer .footer-whatsapp-link svg {
+  color: #ffffff !important;
+}
+
+@media (max-width: 1050px) {
+  .site-footer,
+  .executive-premiere .site-footer,
+  .stitch-public-page .site-footer,
+  .simple-page-with-chrome .site-footer {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .executive-premiere .top-strip.main-menu,
+  .executive-premiere .bv-header,
+  .top-strip.main-menu.public-page-menu {
+    height: auto !important;
+    min-height: 62px !important;
+    padding: 8px 16px !important;
+    gap: 12px !important;
+    overflow: visible !important;
+  }
+
+  .executive-premiere .main-nav,
+  .top-strip.main-menu.public-page-menu .main-nav {
+    display: none !important;
+  }
+
+  .executive-premiere .bv-brand-title strong,
+  .executive-premiere .brand strong,
+  .top-strip.main-menu.public-page-menu .brand strong {
+    font-size: 21px !important;
+  }
+
+  .executive-premiere .header-actions .bv-helpline {
+    display: none !important;
+  }
+
+  .executive-premiere .hero.focused-booking-hero {
+    padding: 36px 13px 42px !important;
+  }
+
+  .executive-premiere .focused-booking-hero .hero-content {
+    min-height: auto !important;
+  }
+
+  .executive-premiere .focused-booking-hero .hero-copy h1 {
+    font-size: 30px !important;
+  }
+
+  .executive-premiere .trip-tabs.bv-trip-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 10px 10px 0 !important;
+  }
+
+  .executive-premiere .trip-tabs.bv-trip-tabs button {
+    min-height: 40px !important;
+    font-size: 11px !important;
+  }
+
+  .site-footer,
+  .executive-premiere .site-footer,
+  .stitch-public-page .site-footer,
+  .simple-page-with-chrome .site-footer {
+    grid-template-columns: 1fr !important;
+    padding: 34px 22px !important;
+  }
+
+  .site-footer .footer-bottom {
+    text-align: left !important;
+  }
+}
+
+/* High-specificity landing overrides so the Instant BG theme wins over older travel skins. */
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero {
+  min-height: calc(100svh - 64px) !important;
+  padding: 56px max(18px, calc((100vw - 1180px) / 2)) 70px !important;
+  background: linear-gradient(180deg, #ffffff 0%, var(--vti-soft) 100%) !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero::before,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero::after {
+  content: none !important;
+  background: none !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-content {
+  min-height: calc(100svh - 178px) !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy h1 {
+  color: var(--vti-ink) !important;
+  text-shadow: none !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy h1 span {
+  color: var(--vti-primary) !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-copy > p:not(.hero-kicker) {
+  color: var(--vti-muted) !important;
+  text-shadow: none !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-kicker {
+  background: #eaf0ff !important;
+  color: var(--vti-primary) !important;
+  border: 0 !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .booking-panel.savaari-booking-panel,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .savaari-booking-panel {
+  border: 1px solid var(--vti-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(101, 82, 232, .10) !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs {
+  gap: 10px !important;
+  padding: 12px 14px 0 !important;
+  border: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+  background: #ffffff !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs button {
+  min-height: 42px !important;
+  border-radius: 24px !important;
+  background: transparent !important;
+  color: #586174 !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .trip-tabs.bv-trip-tabs button.active {
+  background: #eaf0ff !important;
+  color: var(--vti-primary) !important;
+}
+
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .submit-button.explore-cabs-button,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .fleet-book-button,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .select-car-button,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .book-cab-button,
+main.site-font-shell.executive-premiere.bharatvoyage-redesign .proceed-button {
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: var(--vti-primary) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 760px) {
+  main.site-font-shell.executive-premiere.bharatvoyage-redesign .hero.focused-booking-hero {
+    padding: 36px 13px 42px !important;
+  }
+
+  main.site-font-shell.executive-premiere.bharatvoyage-redesign .focused-booking-hero .hero-content {
+    min-height: auto !important;
+  }
+}
