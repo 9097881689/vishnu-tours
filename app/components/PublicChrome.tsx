@@ -179,7 +179,7 @@ export function PublicFooter({ hideEmail = false }: { hideEmail?: boolean } = {}
         <Link href="/fleet">Our Fleet</Link>
         <Link href="/services">Services</Link>
         <Link href="/corporate-travel">Corporate Travel</Link>
-        <Link href="/price-chart">Price Page</Link>
+        <Link href="/price-chart">Live Price Chart</Link>
         <Link href="/disclaimer">Disclaimer</Link>
         <Link href="/contact">Contact Page</Link>
         <span>Mumbai, Maharashtra, India</span>

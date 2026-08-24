@@ -6035,6 +6035,10 @@ export default function Home() {
                 <small>{item.type}</small>
                 <h3>{item.name}</h3>
                 <p>{item.seats} | {item.luggage} | White AC Cab</p>
+                <div className="bv-fleet-rate">
+                  <span>Outstation Rate</span>
+                  <strong>{formatInr(adjustedRateTable[item.name]?.perKm || item.rates.perKm)}<small>/KM</small></strong>
+                </div>
                 <a className="fleet-book-button" href="#booking">Book Now</a>
               </div>
             </article>
@@ -6567,7 +6571,7 @@ export default function Home() {
           <Link href="/terms-and-conditions">Terms And Conditions</Link>
           <Link href="/cancellation-refund">Cancellation And Refund</Link>
           <Link href="/cookie-policy">Cookie Policy</Link>
-          <Link href="/price-chart">Price Page</Link>
+          <Link href="/price-chart">Live Price Chart</Link>
         </div>
         <div className="footer-bottom">
           <span>© 2026 Vishnu Tours. All Rights Reserved.</span>
